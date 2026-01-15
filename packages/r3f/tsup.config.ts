@@ -4,6 +4,7 @@ export default defineConfig({
 	entry: {
 		index: "src/index.ts",
 		helpers: "src/helpers.ts",
+		test: "src/test.ts",
 	},
 	format: ["cjs", "esm"],
 	dts: true,
@@ -12,7 +13,8 @@ export default defineConfig({
 		"react",
 		"three",
 		"@react-three/fiber",
+		"@playwright/test",
 		"@0xbigboss/rn-playwright-driver",
-		"@0xbigboss/rn-playwright-driver/harness",
+		"@0xbigboss/rn-playwright-driver/test",
 	],
 });

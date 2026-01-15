@@ -12,8 +12,25 @@ Repository overview for automated agents and contributors.
 - `packages/view-tree` - Native view tree module (Expo Modules API)
 - `packages/screenshot` - Native screenshot module (Expo Modules API)
 - `packages/lifecycle` - Native lifecycle module (Expo Modules API)
-- `example` - Expo app and E2E tests
+- `packages/r3f` - React Three Fiber integration (separate optional package)
+- `examples/basic-app` - Expo app and E2E tests
 - `docs/NATIVE-MODULES-ARCHITECTURE.md` - Architecture reference
+
+## Package architecture
+
+**Core principle:** Optional integrations are separate packages to avoid polluting the dependency tree.
+
+| Package | Purpose | Dependencies |
+|---------|---------|--------------|
+| `@0xbigboss/rn-playwright-driver` | Core driver + fixtures | None (R3F-free) |
+| `@0xbigboss/rn-driver-r3f` | R3F/Three.js integration | Peer: three, @react-three/fiber |
+
+Users who don't use Three.js never install or import r3f code. The r3f package:
+- Exports `TestBridge` component (app-side, inside Canvas)
+- Exports `test` fixture with `device.r3f` namespace (test-side)
+- Has its own README with setup instructions
+
+See `docs/NATIVE-MODULES-ARCHITECTURE.md` for full architecture details.
 
 ## Read-first files
 
