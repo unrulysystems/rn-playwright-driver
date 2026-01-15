@@ -46,6 +46,9 @@ export type TestBridgeProps = {
 	rapier?: boolean;
 };
 
+/**
+ * TestBridge component - renders nothing, registers R3F scene bridge on global.
+ */
 export function TestBridge({ id, rapier = false }: TestBridgeProps): null {
 	const { scene, camera, raycaster, size } = useThree();
 	const cacheRef = useRef<Map<string, Object3D>>(new Map());
@@ -357,21 +360,21 @@ export function TestBridge({ id, rapier = false }: TestBridgeProps): null {
 		// Register bridge
 		if (id) {
 			// Multi-canvas: use registry
-			if (!globalThis.__RN_DRIVER_R3F_REGISTRY__) {
-				globalThis.__RN_DRIVER_R3F_REGISTRY__ = {};
+			if (!global.__RN_DRIVER_R3F_REGISTRY__) {
+				global.__RN_DRIVER_R3F_REGISTRY__ = {};
 			}
-			globalThis.__RN_DRIVER_R3F_REGISTRY__[id] = bridge;
+			global.__RN_DRIVER_R3F_REGISTRY__[id] = bridge;
 		} else {
 			// Single canvas: use direct global
-			globalThis.__RN_DRIVER_R3F__ = bridge;
+			global.__RN_DRIVER_R3F__ = bridge;
 		}
 
 		return () => {
 			cacheRef.current.clear();
-			if (id && globalThis.__RN_DRIVER_R3F_REGISTRY__) {
-				delete globalThis.__RN_DRIVER_R3F_REGISTRY__[id];
+			if (id && global.__RN_DRIVER_R3F_REGISTRY__) {
+				delete global.__RN_DRIVER_R3F_REGISTRY__[id];
 			} else {
-				globalThis.__RN_DRIVER_R3F__ = undefined;
+				global.__RN_DRIVER_R3F__ = undefined;
 			}
 		};
 	}, [scene, camera, raycaster, size, id, rapier]);
