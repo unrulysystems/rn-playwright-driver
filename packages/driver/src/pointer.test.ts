@@ -11,6 +11,8 @@ interface TimeoutProvider {
   waitForTimeout(ms: number): Promise<void>;
 }
 
+const FRAME_DELAY_MS = 16;
+
 describe("Pointer Path Methods", () => {
   let pointer: Pointer;
   let mockBackend: TouchBackend;
@@ -84,9 +86,12 @@ describe("Pointer Path Methods", () => {
 
       await pointer.dragPath(points, { delay: 50 });
 
-      // Delay should be applied after each move
-      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2);
-      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledWith(50);
+      // Delay should be applied after each move, plus frame delays for down/up.
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(4);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, FRAME_DELAY_MS);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, 50);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(3, 50);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(4, FRAME_DELAY_MS);
     });
 
     it("should not apply delay when delay is 0", async () => {
@@ -97,7 +102,9 @@ describe("Pointer Path Methods", () => {
 
       await pointer.dragPath(points, { delay: 0 });
 
-      expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled();
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, FRAME_DELAY_MS);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, FRAME_DELAY_MS);
     });
 
     it("should execute in correct order: down, moves, up", async () => {

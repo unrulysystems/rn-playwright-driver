@@ -37,7 +37,9 @@ export class HarnessTouchBackend implements TouchBackend {
 
   async tap(x: number, y: number): Promise<void> {
     await this.ensureHarness();
-    await this.context.evaluate<void>(`globalThis.__RN_DRIVER__.pointer.tap(${x}, ${y})`);
+    await this.down(x, y);
+    await this.context.waitForTimeout(FRAME_INTERVAL);
+    await this.up();
   }
 
   async down(x: number, y: number): Promise<void> {
@@ -79,6 +81,7 @@ export class HarnessTouchBackend implements TouchBackend {
     await this.ensureHarness();
     const duration = Math.max(0, durationMs);
     await this.down(x, y);
+    await this.context.waitForTimeout(FRAME_INTERVAL);
     if (duration > 0) {
       await this.context.waitForTimeout(duration);
     }

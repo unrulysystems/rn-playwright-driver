@@ -5,6 +5,7 @@ import type { PointerOptions, PointerPathOptions, SwipeOptions } from "./types";
 const DEFAULT_DRAG_STEPS = 10;
 const DEFAULT_DRAG_DELAY = 0;
 const DEFAULT_SWIPE_DURATION = 300;
+const FRAME_DELAY_MS = 16; // ~60fps
 
 /**
  * Interface for device that supports evaluate().
@@ -75,6 +76,7 @@ export class Pointer {
     // Press at start position
     const backend = this.getBackend();
     await backend.down(from.x, from.y);
+    await this.timeoutProvider.waitForTimeout(FRAME_DELAY_MS);
 
     // Interpolate movement
     for (let i = 1; i <= steps; i++) {
@@ -89,6 +91,7 @@ export class Pointer {
     }
 
     // Release at end position
+    await this.timeoutProvider.waitForTimeout(FRAME_DELAY_MS);
     await backend.up();
   }
 
@@ -118,6 +121,7 @@ export class Pointer {
 
     // Press at first point
     await backend.down(points[0].x, points[0].y);
+    await this.timeoutProvider.waitForTimeout(FRAME_DELAY_MS);
 
     // Move through remaining points
     for (let i = 1; i < points.length; i++) {
@@ -128,6 +132,7 @@ export class Pointer {
     }
 
     // Release at last point
+    await this.timeoutProvider.waitForTimeout(FRAME_DELAY_MS);
     await backend.up();
   }
 
