@@ -208,6 +208,20 @@ describe("Harness Core Primitives", () => {
       expect(upEvent).toBeDefined();
       expect(upEvent!.data).toEqual({ x: 150, y: 150 }); // Uses last position
     });
+
+    it("should include pointerId in trace events when provided", async () => {
+      await import("../harness/index");
+      const harness = globalThis.__RN_DRIVER__;
+      expect(harness).toBeDefined();
+
+      harness!.startTracing();
+      harness!.pointer.down(5, 6, { pointerId: 2 });
+
+      const result = harness!.stopTracing();
+      const downEvent = result.events.find((e) => e.type === "pointer:down");
+      expect(downEvent).toBeDefined();
+      expect(downEvent!.data).toEqual({ x: 5, y: 6, pointerId: 2 });
+    });
   });
 
   describe("Touch Handler Registration", () => {

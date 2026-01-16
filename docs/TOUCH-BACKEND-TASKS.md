@@ -91,7 +91,7 @@ packages/touch-injector/
   - `move(x, y)` → update touch location
   - `up()` → end touch
   - `swipe(fromX, fromY, toX, toY, durationMs)` → interpolated move sequence
-  - `longPress(x, y, durationMs)` → down + delay + up
+  - `longPress(x, y, durationMs)` → down + delay + up (duration derived from driver LongPressOptions)
   - `typeText(text)` → return NOT_SUPPORTED (requires keyboard focus)
 - [ ] **Return NativeResult<void>** for all functions
 - [ ] **Handle coordinate conversion** (logical points, not pixels)

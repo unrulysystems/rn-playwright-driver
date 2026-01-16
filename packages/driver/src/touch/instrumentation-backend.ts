@@ -1,4 +1,4 @@
-import type { Point } from "../types";
+import type { LongPressOptions, Point, PointerEventOptions, TapOptions } from "../types";
 import type { TouchBackend } from "./backend";
 import { TouchBackendCommandError, TouchBackendUnavailableError } from "./backend";
 
@@ -37,19 +37,19 @@ export class InstrumentationTouchBackend implements TouchBackend {
     return;
   }
 
-  async tap(x: number, y: number): Promise<void> {
+  async tap(x: number, y: number, _options?: TapOptions): Promise<void> {
     await this.sendCommand({ type: "tap", x, y });
   }
 
-  async down(x: number, y: number): Promise<void> {
+  async down(x: number, y: number, _options?: PointerEventOptions): Promise<void> {
     await this.sendCommand({ type: "down", x, y });
   }
 
-  async move(x: number, y: number): Promise<void> {
+  async move(x: number, y: number, _options?: PointerEventOptions): Promise<void> {
     await this.sendCommand({ type: "move", x, y });
   }
 
-  async up(): Promise<void> {
+  async up(_options?: PointerEventOptions): Promise<void> {
     await this.sendCommand({ type: "up" });
   }
 
@@ -57,7 +57,8 @@ export class InstrumentationTouchBackend implements TouchBackend {
     await this.sendCommand({ type: "swipe", from, to, durationMs });
   }
 
-  async longPress(x: number, y: number, durationMs: number): Promise<void> {
+  async longPress(x: number, y: number, options: LongPressOptions): Promise<void> {
+    const durationMs = options?.duration ?? 500;
     await this.sendCommand({ type: "longPress", x, y, durationMs });
   }
 

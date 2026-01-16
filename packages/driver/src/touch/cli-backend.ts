@@ -1,4 +1,4 @@
-import type { Point } from "../types";
+import type { LongPressOptions, Point, PointerEventOptions, TapOptions } from "../types";
 import type { TouchBackend } from "./backend";
 import { TouchBackendUnavailableError } from "./backend";
 
@@ -16,19 +16,19 @@ export class CliTouchBackend implements TouchBackend {
     return;
   }
 
-  async tap(_x: number, _y: number): Promise<void> {
+  async tap(_x: number, _y: number, _options?: TapOptions): Promise<void> {
     throw new TouchBackendUnavailableError(this.name, "CLI touch backend not available.");
   }
 
-  async down(_x: number, _y: number): Promise<void> {
+  async down(_x: number, _y: number, _options?: PointerEventOptions): Promise<void> {
     throw new TouchBackendUnavailableError(this.name, "CLI touch backend not available.");
   }
 
-  async move(_x: number, _y: number): Promise<void> {
+  async move(_x: number, _y: number, _options?: PointerEventOptions): Promise<void> {
     throw new TouchBackendUnavailableError(this.name, "CLI touch backend not available.");
   }
 
-  async up(): Promise<void> {
+  async up(_options?: PointerEventOptions): Promise<void> {
     throw new TouchBackendUnavailableError(this.name, "CLI touch backend not available.");
   }
 
@@ -36,7 +36,7 @@ export class CliTouchBackend implements TouchBackend {
     throw new TouchBackendUnavailableError(this.name, "CLI touch backend not available.");
   }
 
-  async longPress(_x: number, _y: number, _durationMs: number): Promise<void> {
+  async longPress(_x: number, _y: number, _options: LongPressOptions): Promise<void> {
     throw new TouchBackendUnavailableError(this.name, "CLI touch backend not available.");
   }
 

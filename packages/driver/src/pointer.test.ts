@@ -1,5 +1,5 @@
 /**
- * Tests for Pointer class path methods (dragPath, movePath).
+ * Tests for Pointer class timing and path methods.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,6 +37,87 @@ describe("Pointer Path Methods", () => {
     };
 
     pointer = new Pointer(mockBackend, mockTimeoutProvider);
+  });
+
+  describe("move", () => {
+    it("should interpolate moves when steps > 1", async () => {
+      await pointer.down(0, 0);
+      await pointer.move(10, 0, { steps: 2 });
+
+      expect(mockBackend.move).toHaveBeenCalledTimes(2);
+      expect(mockBackend.move).toHaveBeenNthCalledWith(1, 5, 0);
+      expect(mockBackend.move).toHaveBeenNthCalledWith(2, 10, 0);
+    });
+  });
+
+  describe("drag", () => {
+    it("should apply default holdStart/holdEnd delays", async () => {
+      await pointer.drag({ x: 0, y: 0 }, { x: 10, y: 10 });
+
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, FRAME_DELAY_MS);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, FRAME_DELAY_MS);
+    });
+
+    it("should apply custom holdStart/holdEnd delays", async () => {
+      await pointer.drag(
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+        { holdStart: 50, holdEnd: 25, steps: 1 },
+      );
+
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, 50);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, 25);
+    });
+
+    it("should skip hold delays when set to 0", async () => {
+      await pointer.drag(
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+        { holdStart: 0, holdEnd: 0, steps: 1 },
+      );
+
+      expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled();
+    });
+
+    it("should wait between moves when duration is set", async () => {
+      await pointer.drag(
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { duration: 32, holdStart: 0, holdEnd: 0 },
+      );
+
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, 16);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, 16);
+    });
+
+    it("should apply easing when provided", async () => {
+      await pointer.drag(
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { steps: 2, holdStart: 0, holdEnd: 0, easing: "ease-in" },
+      );
+
+      const calls = mockBackend.move.mock.calls;
+      expect(calls).toHaveLength(2);
+      expect(calls[0][0]).toBeCloseTo(2.5, 5);
+      expect(calls[1][0]).toBeCloseTo(10, 5);
+    });
+  });
+
+  describe("tap", () => {
+    it("should support multi-tap with custom delays", async () => {
+      await pointer.tap(5, 5, { count: 2, holdStart: 10, tapDelay: 20 });
+
+      expect(mockBackend.down).toHaveBeenCalledTimes(2);
+      expect(mockBackend.up).toHaveBeenCalledTimes(2);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(3);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, 10);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, 20);
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(3, 10);
+    });
   });
 
   describe("dragPath", () => {
@@ -105,6 +186,17 @@ describe("Pointer Path Methods", () => {
       expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2);
       expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, FRAME_DELAY_MS);
       expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, FRAME_DELAY_MS);
+    });
+
+    it("should skip hold delays when set to 0", async () => {
+      const points = [
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+      ];
+
+      await pointer.dragPath(points, { holdStart: 0, holdEnd: 0 });
+
+      expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled();
     });
 
     it("should execute in correct order: down, moves, up", async () => {

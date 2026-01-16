@@ -1224,22 +1224,22 @@ interface TouchBackend {
   dispose(): Promise<void>;
 
   /** Single tap at coordinates */
-  tap(x: number, y: number): Promise<void>;
+  tap(x: number, y: number, options?: TapOptions): Promise<void>;
 
   /** Press down at coordinates */
-  down(x: number, y: number): Promise<void>;
+  down(x: number, y: number, options?: PointerEventOptions): Promise<void>;
 
   /** Move while pressed */
-  move(x: number, y: number): Promise<void>;
+  move(x: number, y: number, options?: PointerEventOptions): Promise<void>;
 
   /** Release press */
-  up(): Promise<void>;
+  up(options?: PointerEventOptions): Promise<void>;
 
   /** Swipe from one point to another */
   swipe(from: Point, to: Point, durationMs: number): Promise<void>;
 
   /** Long press at coordinates */
-  longPress(x: number, y: number, durationMs: number): Promise<void>;
+  longPress(x: number, y: number, options: LongPressOptions): Promise<void>;
 
   /** Type text */
   typeText(text: string): Promise<void>;

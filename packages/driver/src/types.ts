@@ -59,21 +59,64 @@ export type Point = {
   y: number;
 };
 
-export type PointerOptions = {
-  /** Number of interpolation steps for drag (default: 10) */
+export type Easing =
+  | "linear"
+  | "ease-in"
+  | "ease-out"
+  | "ease-in-out"
+  | ((t: number) => number);
+
+export type PointerEventOptions = {
+  /** Pointer ID for multi-touch (default: 0) */
+  pointerId?: number;
+  /** Pressure 0-1 for pressure-sensitive input (default: 1) */
+  pressure?: number;
+};
+
+export type MoveOptions = PointerEventOptions & {
+  /** Number of intermediate move events (default: 1 = direct) */
   steps?: number;
-  /** Delay between steps in ms (default: 0) */
-  delay?: number;
+};
+
+export type TimingOptions = {
+  /** Pause after pointer down, before movement (default: 16ms) */
+  holdStart?: number;
+  /** Pause after movement, before pointer up (default: 16ms) */
+  holdEnd?: number;
+};
+
+export type InterpolationOptions = {
+  /** Duration-based: total gesture time in ms (takes precedence over steps) */
+  duration?: number;
+  /** Step-based: number of move events (ignored if duration is set) */
+  steps?: number;
+  /** Easing function (default: 'linear' for drag, 'ease-out' for swipe) */
+  easing?: Easing;
+};
+
+export type TapOptions = {
+  /** Pause between down and up (default: 16ms) */
+  holdStart?: number;
+  /** Number of taps (default: 1) */
+  count?: number;
+  /** Delay between taps for multi-tap (default: 100ms) */
+  tapDelay?: number;
+};
+
+export type DragOptions = TimingOptions & InterpolationOptions;
+
+export type LongPressOptions = TimingOptions & {
+  /** Hold duration in ms (default: 500ms) */
+  duration?: number;
 };
 
 /** Options for swipe gesture */
-export type SwipeOptions = {
+export type SwipeOptions = TimingOptions &
+  InterpolationOptions & {
   /** Starting point */
   from: Point;
   /** Ending point */
   to: Point;
-  /** Duration in milliseconds (default: 300) */
-  duration?: number;
 };
 
 export type TouchBackendType = "xctest" | "instrumentation" | "native-module" | "cli" | "harness";
@@ -152,12 +195,94 @@ export type TracingOptions = {
 // --- Pointer Path Options ---
 
 /**
- * Options for pointer path operations (dragPath, movePath).
+ * Options for drag path operations (dragPath).
  */
-export type PointerPathOptions = {
+export type DragPathOptions = TimingOptions & {
   /** Delay between each point in ms (default: 0) */
   delay?: number;
 };
+
+/**
+ * Options for move path operations (movePath).
+ */
+export type MovePathOptions = {
+  /** Delay between each point in ms (default: 0) */
+  delay?: number;
+};
+
+export type PlannedPointerEvent = {
+  type: "down" | "move" | "up" | "wait";
+  x?: number;
+  y?: number;
+  ms?: number;
+  pointerId?: number;
+  pressure?: number;
+};
+
+export interface GestureBuilder {
+  // Pointer state
+  down(x: number, y: number, options?: PointerEventOptions): this;
+  up(options?: PointerEventOptions): this;
+
+  // Movement
+  moveTo(x: number, y: number, options?: InterpolationOptions): this;
+  moveBy(dx: number, dy: number, options?: InterpolationOptions): this;
+
+  // Timing
+  wait(ms: number): this;
+  /** Wait for N animation frames (~16ms per frame at 60fps) */
+  waitFrames(count: number): this;
+
+  // Path helpers
+  arc(
+    center: Point,
+    radius: number,
+    startAngle: number,
+    endAngle: number,
+    options?: InterpolationOptions,
+  ): this;
+
+  bezier(
+    control1: Point,
+    control2: Point,
+    end: Point,
+    options?: InterpolationOptions,
+  ): this;
+
+  // Execution
+  execute(): Promise<void>;
+
+  // Debug: inspect planned events without executing
+  toEvents(): PlannedPointerEvent[];
+}
+
+export type PinchOptions = TimingOptions &
+  InterpolationOptions & {
+    center: Point;
+    startDistance: number;
+    endDistance: number;
+  };
+
+export type RotateOptions = TimingOptions &
+  InterpolationOptions & {
+    center: Point;
+    distance: number;
+    startAngle: number;
+    endAngle: number;
+  };
+
+export interface MultiGestureBuilder {
+  /**
+   * Get or create a gesture builder for a specific pointer ID.
+   * All events added to the returned builder are tagged with this pointer ID.
+   */
+  pointer(id: number): GestureBuilder;
+
+  /**
+   * Execute all pointer sequences in parallel.
+   */
+  execute(): Promise<void>;
+}
 
 export type TouchBackendMode = "auto" | "force";
 
@@ -296,31 +421,39 @@ export interface Device {
    */
   pointer: {
     /** Tap at coordinates (down + up) */
-    tap(x: number, y: number): Promise<void>;
+    tap(x: number, y: number, options?: TapOptions): Promise<void>;
+    /** Double-tap at coordinates */
+    doubleTap(x: number, y: number, options?: TapOptions): Promise<void>;
+    /** Long press at coordinates */
+    longPress(x: number, y: number, options?: LongPressOptions): Promise<void>;
     /** Press down at coordinates */
-    down(x: number, y: number): Promise<void>;
+    down(x: number, y: number, options?: PointerEventOptions): Promise<void>;
     /** Move to coordinates (while pressed) */
-    move(x: number, y: number): Promise<void>;
+    move(x: number, y: number, options?: MoveOptions): Promise<void>;
     /** Release press */
-    up(): Promise<void>;
+    up(options?: PointerEventOptions): Promise<void>;
     /** Drag from one point to another with interpolation */
-    drag(
-      from: { x: number; y: number },
-      to: { x: number; y: number },
-      options?: PointerOptions,
-    ): Promise<void>;
+    drag(from: { x: number; y: number }, to: { x: number; y: number }, options?: DragOptions): Promise<void>;
     /** Swipe from one point to another with duration-based animation */
     swipe(options: SwipeOptions): Promise<void>;
     /**
      * Execute a drag gesture along a path of points.
      * Performs down at first point, moves through all points, up at last point.
      */
-    dragPath(points: { x: number; y: number }[], options?: PointerPathOptions): Promise<void>;
+    dragPath(points: { x: number; y: number }[], options?: DragPathOptions): Promise<void>;
     /**
      * Move through a path of points without down/up.
      * Useful for hover effects or tracking gestures.
      */
-    movePath(points: { x: number; y: number }[], options?: PointerPathOptions): Promise<void>;
+    movePath(points: { x: number; y: number }[], options?: MovePathOptions): Promise<void>;
+    /** Create a gesture builder for complex sequences */
+    gesture(): GestureBuilder;
+    /** Pinch gesture with two fingers */
+    pinch(options: PinchOptions): Promise<void>;
+    /** Two-finger rotation gesture */
+    rotate(options: RotateOptions): Promise<void>;
+    /** Multi-touch gesture builder */
+    multiGesture(): MultiGestureBuilder;
   };
 
   // --- Screenshots (Phase 3 - require native module) ---

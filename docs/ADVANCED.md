@@ -231,7 +231,7 @@ await device.pointer.up();
 await device.pointer.drag(
   { x: 100, y: 200 },
   { x: 300, y: 200 },
-  { steps: 10, delay: 10 }
+  { steps: 10, holdStart: 16, holdEnd: 16 }
 );
 ```
 
@@ -239,18 +239,20 @@ await device.pointer.drag(
 
 ```typescript
 // Swipe left
-await device.pointer.drag(
-  { x: 300, y: 400 },
-  { x: 50, y: 400 },
-  { steps: 20 }
-);
+await device.pointer.swipe({
+  from: { x: 300, y: 400 },
+  to: { x: 50, y: 400 },
+  duration: 300,
+  easing: "ease-out",
+});
 
 // Swipe up (scroll down)
-await device.pointer.drag(
-  { x: 200, y: 600 },
-  { x: 200, y: 200 },
-  { steps: 30 }
-);
+await device.pointer.swipe({
+  from: { x: 200, y: 600 },
+  to: { x: 200, y: 200 },
+  duration: 300,
+  easing: "ease-out",
+});
 ```
 
 ## Screenshots

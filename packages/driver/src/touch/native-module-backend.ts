@@ -1,4 +1,4 @@
-import type { Point } from "../types";
+import type { LongPressOptions, Point, PointerEventOptions, TapOptions } from "../types";
 import type { TouchBackend, TouchBackendContext } from "./backend";
 import { TouchBackendCommandError, TouchBackendUnavailableError } from "./backend";
 
@@ -20,19 +20,19 @@ export class NativeModuleTouchBackend implements TouchBackend {
     return;
   }
 
-  async tap(x: number, y: number): Promise<void> {
+  async tap(x: number, y: number, _options?: TapOptions): Promise<void> {
     await this.call<void>(`globalThis.__RN_DRIVER__.touchNative.tap(${x}, ${y})`);
   }
 
-  async down(x: number, y: number): Promise<void> {
+  async down(x: number, y: number, _options?: PointerEventOptions): Promise<void> {
     await this.call<void>(`globalThis.__RN_DRIVER__.touchNative.down(${x}, ${y})`);
   }
 
-  async move(x: number, y: number): Promise<void> {
+  async move(x: number, y: number, _options?: PointerEventOptions): Promise<void> {
     await this.call<void>(`globalThis.__RN_DRIVER__.touchNative.move(${x}, ${y})`);
   }
 
-  async up(): Promise<void> {
+  async up(_options?: PointerEventOptions): Promise<void> {
     await this.call<void>(`globalThis.__RN_DRIVER__.touchNative.up()`);
   }
 
@@ -42,7 +42,8 @@ export class NativeModuleTouchBackend implements TouchBackend {
     );
   }
 
-  async longPress(x: number, y: number, durationMs: number): Promise<void> {
+  async longPress(x: number, y: number, options: LongPressOptions): Promise<void> {
+    const durationMs = options?.duration ?? 500;
     await this.call<void>(
       `globalThis.__RN_DRIVER__.touchNative.longPress(${x}, ${y}, ${durationMs})`,
     );

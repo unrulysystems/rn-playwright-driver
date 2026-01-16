@@ -1,4 +1,4 @@
-import type { ElementBounds, Locator, WaitForOptions, WaitForState } from "./types";
+import type { ElementBounds, Locator, TapOptions, WaitForOptions, WaitForState } from "./types";
 
 /**
  * Parent context for scoped queries.
@@ -24,7 +24,7 @@ export type LocatorSelector =
 interface Evaluator {
   evaluate<T>(expression: string): Promise<T>;
   pointer: {
-    tap(x: number, y: number): Promise<void>;
+    tap(x: number, y: number, options?: TapOptions): Promise<void>;
   };
   waitForTimeout(ms: number): Promise<void>;
   /** Platform for conditional behavior */

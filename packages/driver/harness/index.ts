@@ -20,6 +20,18 @@ export type TouchEvent = {
   type: "down" | "move" | "up";
   /** Timestamp when event was created */
   timestamp: number;
+  /** Pointer ID for multi-touch (default: 0) */
+  pointerId?: number;
+  /** Pressure 0-1 for pressure-sensitive input (default: 1) */
+  pressure?: number;
+};
+
+/**
+ * Pointer event options.
+ */
+export type PointerEventOptions = {
+  pointerId?: number;
+  pressure?: number;
 };
 
 /**
@@ -206,10 +218,10 @@ export type RNDriverGlobal = {
 
   /** Pointer/touch simulation */
   pointer: {
-    tap: (x: number, y: number) => void;
-    down: (x: number, y: number) => void;
-    move: (x: number, y: number) => void;
-    up: () => void;
+    tap: (x: number, y: number, options?: PointerEventOptions) => void;
+    down: (x: number, y: number, options?: PointerEventOptions) => void;
+    move: (x: number, y: number, options?: PointerEventOptions) => void;
+    up: (options?: PointerEventOptions) => void;
   };
 
   /**
@@ -353,8 +365,17 @@ function installHarness(): void {
   }
 
   const handlers = new Map<string, TouchHandler>();
-  let lastPosition: { x: number; y: number } | null = null;
-  let isDown = false;
+  const pointerStates = new Map<number, { lastPosition: { x: number; y: number } | null; isDown: boolean }>();
+
+  function getPointerState(pointerId: number): { lastPosition: { x: number; y: number } | null; isDown: boolean } {
+    const existing = pointerStates.get(pointerId);
+    if (existing) {
+      return existing;
+    }
+    const state = { lastPosition: null, isDown: false };
+    pointerStates.set(pointerId, state);
+    return state;
+  }
 
   // RAF frame counter - monotonically increasing
   let frameCount = 0;
@@ -398,6 +419,22 @@ function installHarness(): void {
     while (tracingState.events.length > tracingState.maxEvents) {
       tracingState.events.shift();
     }
+  }
+
+  function buildPointerTraceData(
+    x: number,
+    y: number,
+    pointerId: number,
+    pressure?: number,
+  ): Record<string, unknown> {
+    const data: Record<string, unknown> = { x, y };
+    if (pointerId !== 0) {
+      data.pointerId = pointerId;
+    }
+    if (pressure !== undefined) {
+      data.pressure = pressure;
+    }
+    return data;
   }
 
   /**
@@ -643,47 +680,64 @@ function installHarness(): void {
     version: "0.1.0",
 
     pointer: {
-      tap(x: number, y: number): void {
-        traceEvent("pointer:tap", { x, y });
-        harness.pointer.down(x, y);
-        harness.pointer.up();
+      tap(x: number, y: number, options?: PointerEventOptions): void {
+        const pointerId = options?.pointerId ?? 0;
+        const data = buildPointerTraceData(x, y, pointerId, options?.pressure);
+        traceEvent("pointer:tap", data);
+        harness.pointer.down(x, y, options);
+        harness.pointer.up(options);
       },
 
-      down(x: number, y: number): void {
-        traceEvent("pointer:down", { x, y });
-        lastPosition = { x, y };
-        isDown = true;
+      down(x: number, y: number, options?: PointerEventOptions): void {
+        const pointerId = options?.pointerId ?? 0;
+        const state = getPointerState(pointerId);
+        state.lastPosition = { x, y };
+        state.isDown = true;
+        traceEvent("pointer:down", buildPointerTraceData(x, y, pointerId, options?.pressure));
 
         dispatchTouch({
           x,
           y,
           type: "down",
           timestamp: Date.now(),
+          ...(pointerId !== 0 ? { pointerId } : {}),
+          ...(options?.pressure !== undefined ? { pressure: options.pressure } : {}),
         });
       },
 
-      move(x: number, y: number): void {
-        traceEvent("pointer:move", { x, y });
-        lastPosition = { x, y };
+      move(x: number, y: number, options?: PointerEventOptions): void {
+        const pointerId = options?.pointerId ?? 0;
+        const state = getPointerState(pointerId);
+        state.lastPosition = { x, y };
+        traceEvent("pointer:move", buildPointerTraceData(x, y, pointerId, options?.pressure));
 
         dispatchTouch({
           x,
           y,
           type: "move",
           timestamp: Date.now(),
+          ...(pointerId !== 0 ? { pointerId } : {}),
+          ...(options?.pressure !== undefined ? { pressure: options.pressure } : {}),
         });
       },
 
-      up(): void {
-        const position = lastPosition ?? { x: 0, y: 0 };
-        traceEvent("pointer:up", { x: position.x, y: position.y });
-        isDown = false;
+      up(options?: PointerEventOptions): void {
+        const pointerId = options?.pointerId ?? 0;
+        const state = getPointerState(pointerId);
+        const position = state.lastPosition ?? { x: 0, y: 0 };
+        traceEvent(
+          "pointer:up",
+          buildPointerTraceData(position.x, position.y, pointerId, options?.pressure),
+        );
+        state.isDown = false;
 
         dispatchTouch({
           x: position.x,
           y: position.y,
           type: "up",
           timestamp: Date.now(),
+          ...(pointerId !== 0 ? { pointerId } : {}),
+          ...(options?.pressure !== undefined ? { pressure: options.pressure } : {}),
         });
       },
     },
@@ -788,10 +842,10 @@ function installHarness(): void {
     _internal: {
       handlers,
       get lastPosition() {
-        return lastPosition;
+        return getPointerState(0).lastPosition;
       },
       get isDown() {
-        return isDown;
+        return getPointerState(0).isDown;
       },
       get frameCount() {
         return frameCount;

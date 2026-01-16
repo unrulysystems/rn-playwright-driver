@@ -1,4 +1,4 @@
-import type { Point } from "../types";
+import type { LongPressOptions, Point, PointerEventOptions, TapOptions } from "../types";
 
 export type TouchBackendName = "xctest" | "instrumentation" | "native-module" | "cli" | "harness";
 
@@ -12,12 +12,12 @@ export interface TouchBackend {
   readonly name: TouchBackendName;
   init(): Promise<void>;
   dispose(): Promise<void>;
-  tap(x: number, y: number): Promise<void>;
-  down(x: number, y: number): Promise<void>;
-  move(x: number, y: number): Promise<void>;
-  up(): Promise<void>;
+  tap(x: number, y: number, options?: TapOptions): Promise<void>;
+  down(x: number, y: number, options?: PointerEventOptions): Promise<void>;
+  move(x: number, y: number, options?: PointerEventOptions): Promise<void>;
+  up(options?: PointerEventOptions): Promise<void>;
   swipe(from: Point, to: Point, durationMs: number): Promise<void>;
-  longPress(x: number, y: number, durationMs: number): Promise<void>;
+  longPress(x: number, y: number, options: LongPressOptions): Promise<void>;
   typeText(text: string): Promise<void>;
 }
 

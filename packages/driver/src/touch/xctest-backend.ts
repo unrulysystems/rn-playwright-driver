@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 
-import type { Point } from "../types";
+import type { LongPressOptions, Point, PointerEventOptions, TapOptions } from "../types";
 import type { TouchBackend } from "./backend";
 import {
   TouchBackendCommandError,
@@ -201,19 +201,19 @@ export class XCTestTouchBackend implements TouchBackend {
     await this.client.close();
   }
 
-  async tap(x: number, y: number): Promise<void> {
+  async tap(x: number, y: number, _options?: TapOptions): Promise<void> {
     await this.client.request({ type: "tap", x, y });
   }
 
-  async down(x: number, y: number): Promise<void> {
+  async down(x: number, y: number, _options?: PointerEventOptions): Promise<void> {
     await this.client.request({ type: "down", x, y });
   }
 
-  async move(x: number, y: number): Promise<void> {
+  async move(x: number, y: number, _options?: PointerEventOptions): Promise<void> {
     await this.client.request({ type: "move", x, y });
   }
 
-  async up(): Promise<void> {
+  async up(_options?: PointerEventOptions): Promise<void> {
     await this.client.request({ type: "up" });
   }
 
@@ -221,7 +221,8 @@ export class XCTestTouchBackend implements TouchBackend {
     await this.client.request({ type: "swipe", from, to, durationMs });
   }
 
-  async longPress(x: number, y: number, durationMs: number): Promise<void> {
+  async longPress(x: number, y: number, options: LongPressOptions): Promise<void> {
+    const durationMs = options?.duration ?? 500;
     await this.client.request({ type: "longPress", x, y, durationMs });
   }
 

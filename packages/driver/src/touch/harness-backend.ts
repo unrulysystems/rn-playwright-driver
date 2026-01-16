@@ -1,8 +1,9 @@
-import type { Point } from "../types";
+import type { LongPressOptions, Point, PointerEventOptions, TapOptions } from "../types";
 import type { TouchBackend, TouchBackendContext } from "./backend";
 import { TouchBackendCommandError, TouchBackendUnavailableError } from "./backend";
 
 const DEFAULT_SWIPE_DURATION = 300;
+const DEFAULT_LONG_PRESS_DURATION = 500;
 const FRAME_INTERVAL = 16; // ~60fps
 
 /**
@@ -35,25 +36,39 @@ export class HarnessTouchBackend implements TouchBackend {
     return;
   }
 
-  async tap(x: number, y: number): Promise<void> {
+  async tap(x: number, y: number, options?: TapOptions): Promise<void> {
     await this.ensureHarness();
     await this.down(x, y);
-    await this.context.waitForTimeout(FRAME_INTERVAL);
+    const holdStart = Math.max(0, options?.holdStart ?? FRAME_INTERVAL);
+    if (holdStart > 0) {
+      await this.context.waitForTimeout(holdStart);
+    }
     await this.up();
   }
 
-  async down(x: number, y: number): Promise<void> {
+  async down(x: number, y: number, options?: PointerEventOptions): Promise<void> {
     await this.ensureHarness();
-    await this.context.evaluate<void>(`globalThis.__RN_DRIVER__.pointer.down(${x}, ${y})`);
+    const optionsExpression = serializePointerOptions(options);
+    await this.context.evaluate<void>(
+      `globalThis.__RN_DRIVER__.pointer.down(${x}, ${y}${optionsExpression ? `, ${optionsExpression}` : ""})`,
+    );
   }
 
-  async move(x: number, y: number): Promise<void> {
+  async move(x: number, y: number, options?: PointerEventOptions): Promise<void> {
     await this.ensureHarness();
-    await this.context.evaluate<void>(`globalThis.__RN_DRIVER__.pointer.move(${x}, ${y})`);
+    const optionsExpression = serializePointerOptions(options);
+    await this.context.evaluate<void>(
+      `globalThis.__RN_DRIVER__.pointer.move(${x}, ${y}${optionsExpression ? `, ${optionsExpression}` : ""})`,
+    );
   }
 
-  async up(): Promise<void> {
+  async up(options?: PointerEventOptions): Promise<void> {
     await this.ensureHarness();
+    const optionsExpression = serializePointerOptions(options);
+    if (optionsExpression) {
+      await this.context.evaluate<void>(`globalThis.__RN_DRIVER__.pointer.up(${optionsExpression})`);
+      return;
+    }
     await this.context.evaluate<void>(`globalThis.__RN_DRIVER__.pointer.up()`);
   }
 
@@ -77,11 +92,10 @@ export class HarnessTouchBackend implements TouchBackend {
     await this.up();
   }
 
-  async longPress(x: number, y: number, durationMs: number): Promise<void> {
+  async longPress(x: number, y: number, options: LongPressOptions): Promise<void> {
     await this.ensureHarness();
-    const duration = Math.max(0, durationMs);
+    const duration = Math.max(0, options?.duration ?? DEFAULT_LONG_PRESS_DURATION);
     await this.down(x, y);
-    await this.context.waitForTimeout(FRAME_INTERVAL);
     if (duration > 0) {
       await this.context.waitForTimeout(duration);
     }
@@ -105,4 +119,18 @@ export class HarnessTouchBackend implements TouchBackend {
       throw new HarnessNotInstalledError();
     }
   }
+}
+
+function serializePointerOptions(options?: PointerEventOptions): string | null {
+  if (!options) {
+    return null;
+  }
+  const payload: PointerEventOptions = {};
+  if (options.pointerId !== undefined) {
+    payload.pointerId = options.pointerId;
+  }
+  if (options.pressure !== undefined) {
+    payload.pressure = options.pressure;
+  }
+  return Object.keys(payload).length > 0 ? JSON.stringify(payload) : null;
 }

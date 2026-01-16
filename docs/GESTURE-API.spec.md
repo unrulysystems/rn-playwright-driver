@@ -1,6 +1,6 @@
 # Unified Gesture API Specification
 
-## Status: Draft
+## Status: Implemented
 
 ## Stability Policy
 
@@ -489,9 +489,9 @@ Add `holdStart`/`holdEnd` to existing methods without removing current behavior.
 - `packages/driver/src/touch/harness-backend.ts` — Add options to `tap`, `longPress`
 
 **Acceptance:**
-- [ ] `tap(x, y, { holdStart: 0 })` disables frame delay
-- [ ] `drag(from, to, { holdStart: 50, holdEnd: 50 })` uses custom timing
-- [ ] Defaults match current 16ms behavior
+- [x] `tap(x, y, { holdStart: 0 })` disables frame delay
+- [x] `drag(from, to, { holdStart: 50, holdEnd: 50 })` uses custom timing
+- [x] Defaults match current 16ms behavior
 
 ### Phase 2: Duration-Based Interpolation
 
@@ -502,9 +502,9 @@ Add `duration` as alternative to `steps` for time-based gestures.
 - `packages/driver/src/easing.ts` — New file with easing functions
 
 **Acceptance:**
-- [ ] `drag(from, to, { duration: 300 })` completes in ~300ms
-- [ ] `drag(from, to, { duration: 300, easing: 'ease-out' })` applies easing
-- [ ] `steps` still works when `duration` not specified
+- [x] `drag(from, to, { duration: 300 })` completes in ~300ms
+- [x] `drag(from, to, { duration: 300, easing: 'ease-out' })` applies easing
+- [x] `steps` still works when `duration` not specified
 
 ### Phase 3: Gesture Builder
 
@@ -515,19 +515,19 @@ Add `pointer.gesture()` builder for complex sequences.
 - `packages/driver/src/pointer.ts` — Add `gesture()` method
 
 **Acceptance:**
-- [ ] Builder chains correctly
-- [ ] `execute()` runs all planned events
-- [ ] `toEvents()` returns planned events for debugging
-- [ ] `arc()` and `bezier()` generate correct paths
+- [x] Builder chains correctly
+- [x] `execute()` runs all planned events
+- [x] `toEvents()` returns planned events for debugging
+- [x] `arc()` and `bezier()` generate correct paths
 
 ### Phase 4: API Cleanup (Breaking)
 
 Remove deprecated patterns and finalize the unified API.
 
 **Changes:**
-- [ ] `longPress(x, y, durationMs)` → `longPress(x, y, { duration })`
-- [ ] Remove internal `FRAME_DELAY_MS` constant
-- [ ] Update all documentation
+- [x] `longPress(x, y, durationMs)` → `longPress(x, y, { duration })`
+- [x] Remove internal `FRAME_DELAY_MS` constant
+- [x] Update all documentation
 
 ### Phase 5: Multi-Touch (Future)
 
@@ -539,9 +539,9 @@ Add multi-pointer support for pinch/rotate gestures.
 - `packages/driver/harness/index.ts` — Multi-pointer event dispatch
 
 **Acceptance:**
-- [ ] `pinch()` works for zoom gestures
-- [ ] `multiGesture()` coordinates multiple pointers
-- [ ] Harness supports multiple simultaneous touch points
+- [x] `pinch()` works for zoom gestures
+- [x] `multiGesture()` coordinates multiple pointers
+- [x] Harness supports multiple simultaneous touch points
 
 ---
 

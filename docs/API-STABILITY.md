@@ -35,11 +35,20 @@ interface Device {
 
   // Pointer
   pointer: {
-    tap(x: number, y: number): Promise<void>;
-    down(x: number, y: number): Promise<void>;
-    move(x: number, y: number): Promise<void>;
-    up(): Promise<void>;
-    drag(from, to, options?): Promise<void>;
+    tap(x: number, y: number, options?: TapOptions): Promise<void>;
+    doubleTap(x: number, y: number, options?: TapOptions): Promise<void>;
+    longPress(x: number, y: number, options?: LongPressOptions): Promise<void>;
+    down(x: number, y: number, options?: PointerEventOptions): Promise<void>;
+    move(x: number, y: number, options?: MoveOptions): Promise<void>;
+    up(options?: PointerEventOptions): Promise<void>;
+    drag(from: Point, to: Point, options?: DragOptions): Promise<void>;
+    swipe(options: SwipeOptions): Promise<void>;
+    dragPath(points: Point[], options?: DragPathOptions): Promise<void>;
+    movePath(points: Point[], options?: MovePathOptions): Promise<void>;
+    gesture(): GestureBuilder;
+    pinch(options: PinchOptions): Promise<void>;
+    rotate(options: RotateOptions): Promise<void>;
+    multiGesture(): MultiGestureBuilder;
   };
 
   // Screenshots
@@ -79,7 +88,7 @@ interface Locator {
 These types are stable:
 
 - `Device`, `Locator`
-- `DeviceOptions`, `ElementBounds`, `PointerOptions`
+- `DeviceOptions`, `ElementBounds`, `DragOptions`, `DragPathOptions`, `MovePathOptions`
 - `WaitForOptions`, `WaitForState`
 - `Capabilities`, `HarnessLoadMode`
 
