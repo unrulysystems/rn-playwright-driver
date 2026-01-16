@@ -70,6 +70,10 @@ export function R3FTouchAdapter({ id }: R3FTouchAdapterProps): null {
 					point: hit.point,
 					distance: hit.distance,
 					object: hit.object,
+					clientX: event.x,
+					clientY: event.y,
+					pageX: event.x,
+					pageY: event.y,
 				} as unknown as Parameters<typeof hit.object.dispatchEvent>[0]);
 			}
 		};
