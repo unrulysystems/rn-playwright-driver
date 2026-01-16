@@ -184,6 +184,21 @@ describe("R3FTouchAdapter", () => {
 		expect(r3fHandlerCalls[2].event.buttons).toBe(0);
 	});
 
+	it("includes target with pointer capture methods for drag operations", () => {
+		R3FTouchAdapter({});
+
+		capturedHandler!({ x: 100, y: 100, type: "down", timestamp: Date.now() });
+
+		const event = r3fHandlerCalls[0].event;
+		expect(event.target).toBeDefined();
+		expect(typeof (event.target as HTMLElement).setPointerCapture).toBe("function");
+		expect(typeof (event.target as HTMLElement).releasePointerCapture).toBe("function");
+
+		// Should not throw when called
+		expect(() => (event.target as HTMLElement).setPointerCapture(1)).not.toThrow();
+		expect(() => (event.target as HTMLElement).releasePointerCapture(1)).not.toThrow();
+	});
+
 	it("increments pointer ID after up event for gesture tracking", () => {
 		R3FTouchAdapter({});
 

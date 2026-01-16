@@ -47,6 +47,19 @@ const TOUCH_TYPE_TO_HANDLER = {
  * R3F's event handlers read offsetX/offsetY to compute NDC coordinates,
  * then do raycasting and call the appropriate React handlers on hit objects.
  */
+/**
+ * Mock target element for pointer capture.
+ * R3F calls setPointerCapture/releasePointerCapture during drag operations.
+ */
+const mockTarget = {
+	setPointerCapture: (_pointerId: number) => {
+		// No-op: pointer capture is handled by R3F's internal state
+	},
+	releasePointerCapture: (_pointerId: number) => {
+		// No-op: pointer release is handled by R3F's internal state
+	},
+};
+
 function createSyntheticPointerEvent(touchEvent: TouchEvent, pointerId: number): PointerEvent {
 	let defaultPrevented = false;
 
@@ -69,6 +82,10 @@ function createSyntheticPointerEvent(touchEvent: TouchEvent, pointerId: number):
 		// Button state (0 = left/primary button)
 		button: 0,
 		buttons: touchEvent.type === "up" ? 0 : 1,
+
+		// Target element with pointer capture methods (required for drag operations)
+		target: mockTarget,
+		currentTarget: mockTarget,
 
 		// Event control methods
 		stopPropagation: () => {
