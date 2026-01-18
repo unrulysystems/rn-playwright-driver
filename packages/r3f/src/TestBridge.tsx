@@ -50,10 +50,29 @@ export type TestBridgeProps = {
 /**
  * TestBridge component - renders nothing, registers R3F scene bridge on global.
  */
+// Synthetic target interface for pointer capture API
+interface SyntheticTarget {
+	setPointerCapture: (pointerId: number) => void;
+	releasePointerCapture: (pointerId: number) => void;
+	hasPointerCapture: (pointerId: number) => boolean;
+}
+
 export function TestBridge({ id, rapier = false }: TestBridgeProps): null {
 	const { scene, camera, raycaster, size } = useThree();
 	const store = useStore();
 	const cacheRef = useRef<Map<string, Object3D>>(new Map());
+
+	// Stable refs for pointer capture state across dispatchPointer calls
+	const capturedPointersRef = useRef<Set<number>>(new Set());
+	const syntheticTargetRef = useRef<SyntheticTarget>({
+		setPointerCapture: (pointerId: number) => {
+			capturedPointersRef.current.add(pointerId);
+		},
+		releasePointerCapture: (pointerId: number) => {
+			capturedPointersRef.current.delete(pointerId);
+		},
+		hasPointerCapture: (pointerId: number) => capturedPointersRef.current.has(pointerId),
+	});
 
 	useEffect(() => {
 		// Use R3F state.size for accurate canvas dimensions (logical points)
@@ -326,20 +345,8 @@ export function TestBridge({ id, rapier = false }: TestBridgeProps): null {
 				};
 				const eventName = eventNameMap[type];
 
-				// Track captured pointers for hasPointerCapture
-				const capturedPointers = new Set<number>();
-
-				// Minimal target/currentTarget with pointer capture API
-				// R3F handlers may call event.target.setPointerCapture for drag gestures
-				const syntheticTarget = {
-					setPointerCapture: (pointerId: number) => {
-						capturedPointers.add(pointerId);
-					},
-					releasePointerCapture: (pointerId: number) => {
-						capturedPointers.delete(pointerId);
-					},
-					hasPointerCapture: (pointerId: number) => capturedPointers.has(pointerId),
-				};
+				// Use stable refs for pointer capture state across down/move/up sequences
+				const syntheticTarget = syntheticTargetRef.current;
 
 				// Create synthetic event matching R3F's expected format
 				// R3F's handleTouch transforms: offsetX = locationX, offsetY = locationY
