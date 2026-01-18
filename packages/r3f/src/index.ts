@@ -20,6 +20,7 @@ export type {
 	R3FDriverBridge,
 	R3FHitResult,
 	R3FObjectInfo,
+	R3FPointerEventType,
 	R3FScreenBounds,
 	R3FScreenPosition,
 } from "./types";

@@ -16,7 +16,7 @@
  * }
  * ```
  */
-import { useThree } from "@react-three/fiber";
+import { createEvents, useStore, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import type { Camera, Object3D, PerspectiveCamera } from "three";
 import { Box3, Quaternion, Vector2, Vector3 } from "three";
@@ -25,6 +25,7 @@ import type {
 	R3FDriverBridge,
 	R3FHitResult,
 	R3FObjectInfo,
+	R3FPointerEventType,
 	R3FScreenBounds,
 	R3FScreenPosition,
 } from "./types";
@@ -51,6 +52,7 @@ export type TestBridgeProps = {
  */
 export function TestBridge({ id, rapier = false }: TestBridgeProps): null {
 	const { scene, camera, raycaster, size } = useThree();
+	const store = useStore();
 	const cacheRef = useRef<Map<string, Object3D>>(new Map());
 
 	useEffect(() => {
@@ -193,9 +195,14 @@ export function TestBridge({ id, rapier = false }: TestBridgeProps): null {
 		const screenToNdc = (x: number, y: number): Vector2 =>
 			new Vector2((x / width) * 2 - 1, -(y / height) * 2 + 1);
 
+		// Create R3F event handlers for direct pointer dispatch
+		// This bypasses PanResponder and injects events directly into R3F's event system
+		const { handlePointer } = createEvents(store);
+
 		const capabilities: R3FBridgeCapabilities = {
 			core: true,
 			rapier,
+			pointerDispatch: true,
 		};
 
 		const bridge: R3FDriverBridge = {
@@ -310,6 +317,40 @@ export function TestBridge({ id, rapier = false }: TestBridgeProps): null {
 					}),
 				);
 			},
+
+			dispatchPointer: (type: R3FPointerEventType, x: number, y: number): boolean => {
+				const eventNameMap: Record<R3FPointerEventType, string> = {
+					down: "onPointerDown",
+					move: "onPointerMove",
+					up: "onPointerUp",
+				};
+				const eventName = eventNameMap[type];
+
+				// Create synthetic event matching R3F's expected format
+				// R3F's handleTouch transforms: offsetX = locationX, offsetY = locationY
+				// Cast as unknown since R3F only uses a subset of PointerEvent properties
+				const syntheticEvent = {
+					offsetX: x,
+					offsetY: y,
+					pointerId: 1,
+					pointerType: "touch",
+					button: 0,
+					buttons: type === "up" ? 0 : 1,
+					clientX: x,
+					clientY: y,
+					pageX: x,
+					pageY: y,
+					preventDefault: () => {},
+					stopPropagation: () => {},
+				} as unknown as PointerEvent;
+
+				try {
+					handlePointer(eventName)(syntheticEvent);
+					return true;
+				} catch {
+					return false;
+				}
+			},
 		};
 
 		// Add Rapier methods if enabled
@@ -377,7 +418,7 @@ export function TestBridge({ id, rapier = false }: TestBridgeProps): null {
 				global.__RN_DRIVER_R3F__ = undefined;
 			}
 		};
-	}, [scene, camera, raycaster, size, id, rapier]);
+	}, [scene, camera, raycaster, size, store, id, rapier]);
 
 	return null;
 }

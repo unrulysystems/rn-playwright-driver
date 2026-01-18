@@ -79,7 +79,14 @@ export type R3FBridgeCapabilities = {
 	core: true;
 	/** Rapier physics queries available */
 	rapier: boolean;
+	/** Direct pointer dispatch available (bypasses PanResponder) */
+	pointerDispatch: boolean;
 };
+
+/**
+ * Pointer event type for dispatch.
+ */
+export type R3FPointerEventType = "down" | "move" | "up";
 
 /**
  * Bridge global type - always includes capability detection.
@@ -161,6 +168,19 @@ export type R3FDriverBridge = {
 	 * Perform hit test and return all intersected objects.
 	 */
 	hitTestAll: (x: number, y: number) => R3FHitResult[];
+
+	// ── Pointer Dispatch (bypasses PanResponder) ─────────────────────
+
+	/**
+	 * Dispatch pointer event directly to R3F event system.
+	 * Bypasses React Native's PanResponder for native touch injection.
+	 *
+	 * @param type - Event type: "down", "move", or "up"
+	 * @param x - Screen X in logical points (canvas coordinates)
+	 * @param y - Screen Y in logical points (canvas coordinates)
+	 * @returns true if event was dispatched, false if not available
+	 */
+	dispatchPointer?: (type: R3FPointerEventType, x: number, y: number) => boolean;
 
 	// ── Rapier Physics (when capabilities.rapier === true) ─────────
 
