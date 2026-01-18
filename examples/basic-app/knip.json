@@ -4,6 +4,7 @@
   "ignore": ["node_modules/**", ".expo/**"],
   "ignoreDependencies": [
     "@0xbigboss/rn-playwright-driver",
+    "@0xbigboss/rn-driver-touch",
     "@0xbigboss/rn-driver-view-tree",
     "@0xbigboss/rn-driver-screenshot",
     "@0xbigboss/rn-driver-lifecycle",

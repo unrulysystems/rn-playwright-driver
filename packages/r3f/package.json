@@ -1,6 +1,6 @@
 {
 	"name": "@0xbigboss/rn-driver-r3f",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"description": "R3F (React Three Fiber) integration for rn-playwright-driver",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -31,7 +31,7 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
-		"test": "vitest run",
+		"test": "vitest run --passWithNoTests",
 		"test:watch": "vitest",
 		"typecheck": "tsgo --noEmit",
 		"check": "bun run typecheck && bun run lint"
@@ -56,7 +56,7 @@
 		"node": ">=18.0.0"
 	},
 	"peerDependencies": {
-		"@0xbigboss/rn-playwright-driver": ">=0.1.0",
+		"@0xbigboss/rn-playwright-driver": ">=0.3.0",
 		"@playwright/test": ">=1.40.0",
 		"@react-three/fiber": ">=8.0.0",
 		"react": ">=18.0.0",

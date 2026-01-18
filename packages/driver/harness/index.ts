@@ -61,7 +61,6 @@ export type TracingOptions = {
   includeConsole?: boolean;
 };
 
-
 /**
  * Bounding rectangle in logical points.
  */

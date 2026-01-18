@@ -14,7 +14,6 @@ function parseTimeout(value: string | undefined): number | undefined {
   return Number.isNaN(parsed) || parsed <= 0 ? undefined : parsed;
 }
 
-
 /**
  * Extended test fixtures for React Native testing.
  */
