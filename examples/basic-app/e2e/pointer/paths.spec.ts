@@ -6,18 +6,24 @@
  * NOTE: These tests require RNDriverTouchInjector to be installed.
  */
 
-import type { DriverEvent } from "@0xbigboss/rn-playwright-driver";
 import { expect, test } from "@0xbigboss/rn-playwright-driver/test";
+import { expectEventsAtLeast, withTracing } from "../utils/tracing";
+
+const ZIGZAG_PATH = [
+  { x: 100, y: 100 },
+  { x: 150, y: 150 },
+  { x: 200, y: 100 },
+];
+
+const DIAGONAL_PATH = [
+  { x: 100, y: 100 },
+  { x: 150, y: 150 },
+  { x: 200, y: 200 },
+];
 
 test.describe("Pointer Paths", () => {
   test("dragPath() executes without error with valid path", async ({ device }) => {
-    const path = [
-      { x: 100, y: 100 },
-      { x: 150, y: 150 },
-      { x: 200, y: 100 },
-    ];
-
-    await device.pointer.dragPath(path);
+    await device.pointer.dragPath(ZIGZAG_PATH);
   });
 
   test("dragPath() with single point", async ({ device }) => {
@@ -30,37 +36,19 @@ test.describe("Pointer Paths", () => {
   });
 
   test("dragPath() generates pointer events", async ({ device }) => {
-    await device.startTracing();
-
-    const path = [
-      { x: 100, y: 100 },
-      { x: 150, y: 150 },
-      { x: 200, y: 200 },
-    ];
-
-    await device.pointer.dragPath(path);
-
-    const result = await device.stopTracing();
+    const events = await withTracing(device, async () => {
+      await device.pointer.dragPath(DIAGONAL_PATH);
+    });
 
     // Should have down, move, and up events
-    const downEvents = result.events.filter((e: DriverEvent) => e.type === "pointer:down");
-    const moveEvents = result.events.filter((e: DriverEvent) => e.type === "pointer:move");
-    const upEvents = result.events.filter((e: DriverEvent) => e.type === "pointer:up");
-
-    expect(downEvents.length).toBeGreaterThanOrEqual(1);
-    expect(moveEvents.length).toBeGreaterThanOrEqual(1);
-    expect(upEvents.length).toBeGreaterThanOrEqual(1);
+    expectEventsAtLeast(events, "pointer:down");
+    expectEventsAtLeast(events, "pointer:move");
+    expectEventsAtLeast(events, "pointer:up");
   });
 
   test("dragPath() with delay option", async ({ device }) => {
-    const path = [
-      { x: 100, y: 100 },
-      { x: 150, y: 150 },
-      { x: 200, y: 200 },
-    ];
-
     const startTime = Date.now();
-    await device.pointer.dragPath(path, { delay: 50 });
+    await device.pointer.dragPath(DIAGONAL_PATH, { delay: 50 });
     const endTime = Date.now();
 
     // With 3 points and 50ms delay between each, should take at least 100ms
@@ -68,13 +56,7 @@ test.describe("Pointer Paths", () => {
   });
 
   test("movePath() executes without error with valid path", async ({ device }) => {
-    const path = [
-      { x: 100, y: 100 },
-      { x: 150, y: 150 },
-      { x: 200, y: 100 },
-    ];
-
-    await device.pointer.movePath(path);
+    await device.pointer.movePath(ZIGZAG_PATH);
   });
 
   test("movePath() with single point", async ({ device }) => {
@@ -87,32 +69,17 @@ test.describe("Pointer Paths", () => {
   });
 
   test("movePath() generates only move events (no down/up)", async ({ device }) => {
-    await device.startTracing();
-
-    const path = [
-      { x: 100, y: 100 },
-      { x: 150, y: 150 },
-      { x: 200, y: 200 },
-    ];
-
-    await device.pointer.movePath(path);
-
-    const result = await device.stopTracing();
+    const events = await withTracing(device, async () => {
+      await device.pointer.movePath(DIAGONAL_PATH);
+    });
 
     // Should only have move events from this operation
-    const moveEvents = result.events.filter((e: DriverEvent) => e.type === "pointer:move");
-    expect(moveEvents.length).toBeGreaterThan(0);
+    expectEventsAtLeast(events, "pointer:move");
   });
 
   test("movePath() with delay option", async ({ device }) => {
-    const path = [
-      { x: 100, y: 100 },
-      { x: 150, y: 150 },
-      { x: 200, y: 200 },
-    ];
-
     const startTime = Date.now();
-    await device.pointer.movePath(path, { delay: 30 });
+    await device.pointer.movePath(DIAGONAL_PATH, { delay: 30 });
     const endTime = Date.now();
 
     // Should take at least (points-1) * delay ms

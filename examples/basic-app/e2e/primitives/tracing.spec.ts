@@ -6,16 +6,21 @@
  * NOTE: Pointer tracing requires RNDriverTouchInjector to be installed.
  */
 
-import type { DriverEvent } from "@0xbigboss/rn-playwright-driver";
 import { expect, test } from "@0xbigboss/rn-playwright-driver/test";
+import {
+  countEvents,
+  expectEventsAtLeast,
+  expectTraceEvents,
+  tracePointerDrag,
+  withTracing,
+} from "../utils/tracing";
 
 test.describe("Tracing", () => {
   test("startTracing() and stopTracing() complete without error", async ({ device }) => {
     await device.startTracing();
     const result = await device.stopTracing();
 
-    expect(result).toHaveProperty("events");
-    expect(Array.isArray(result.events)).toBe(true);
+    expectTraceEvents(result);
   });
 
   test("stopTracing() returns events array", async ({ device }) => {
@@ -26,8 +31,7 @@ test.describe("Tracing", () => {
 
     const result = await device.stopTracing();
 
-    expect(result.events).toBeDefined();
-    expect(Array.isArray(result.events)).toBe(true);
+    expectTraceEvents(result);
   });
 
   test("traced events have required properties", async ({ device }) => {
@@ -56,8 +60,7 @@ test.describe("Tracing", () => {
     const result = await device.stopTracing();
 
     // Should have evaluate events
-    const evalEvents = result.events.filter((e: DriverEvent) => e.type === "evaluate");
-    expect(evalEvents.length).toBeGreaterThan(0);
+    expectEventsAtLeast(result.events, "evaluate");
   });
 
   test("stopTracing() clears the trace buffer", async ({ device }) => {
@@ -91,8 +94,7 @@ test.describe("Tracing", () => {
 
     const result = await device.stopTracing();
 
-    expect(result).toHaveProperty("events");
-    expect(Array.isArray(result.events)).toBe(true);
+    expectTraceEvents(result);
   });
 
   test("timestamps are monotonically increasing", async ({ device }) => {
@@ -108,7 +110,7 @@ test.describe("Tracing", () => {
     const result = await device.stopTracing();
 
     // Verify timestamps are in order (if there are multiple events)
-    const timestamps = result.events.map((e: DriverEvent) => e.timestamp);
+    const timestamps = result.events.map((event) => event.timestamp);
     for (let i = 1; i < timestamps.length; i++) {
       expect(timestamps[i]).toBeGreaterThanOrEqual(timestamps[i - 1]);
     }
@@ -117,26 +119,25 @@ test.describe("Tracing", () => {
   // Pointer-specific tracing tests
   test.describe("Pointer Tracing", () => {
     test("pointer events are traced", async ({ device }) => {
-      await device.startTracing();
-      await device.pointer.tap(100, 100);
-
-      const result = await device.stopTracing();
+      const events = await withTracing(device, async () => {
+        await device.pointer.tap(100, 100);
+      });
 
       // Should have pointer:down and pointer:up events from tap
-      const pointerEvents = result.events.filter(
-        (e: DriverEvent) => e.type === "pointer:down" || e.type === "pointer:up",
-      );
-      expect(pointerEvents.length).toBeGreaterThan(0);
+      const downCount = countEvents(events, "pointer:down");
+      const upCount = countEvents(events, "pointer:up");
+      expect(downCount + upCount).toBeGreaterThan(0);
     });
 
     test("pointer:move events are traced during drag", async ({ device }) => {
-      await device.startTracing();
-      await device.pointer.drag({ x: 0, y: 0 }, { x: 100, y: 100 }, { steps: 5 });
+      const events = await tracePointerDrag(
+        device,
+        { x: 0, y: 0 },
+        { x: 100, y: 100 },
+        { steps: 5 },
+      );
 
-      const result = await device.stopTracing();
-
-      const moveEvents = result.events.filter((e: DriverEvent) => e.type === "pointer:move");
-      expect(moveEvents.length).toBeGreaterThan(0);
+      expectEventsAtLeast(events, "pointer:move");
     });
   });
 });

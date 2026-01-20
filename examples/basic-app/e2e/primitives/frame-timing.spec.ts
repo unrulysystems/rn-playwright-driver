@@ -111,15 +111,10 @@ test.describe("Frame Timing", () => {
     const counts: number[] = [];
 
     counts.push(await device.getFrameCount());
-
-    await device.waitForRaf();
-    counts.push(await device.getFrameCount());
-
-    await device.waitForRaf();
-    counts.push(await device.getFrameCount());
-
-    await device.waitForRaf();
-    counts.push(await device.getFrameCount());
+    for (let i = 0; i < 3; i++) {
+      await device.waitForRaf();
+      counts.push(await device.getFrameCount());
+    }
 
     // Each count should be >= the previous
     for (let i = 1; i < counts.length; i++) {
