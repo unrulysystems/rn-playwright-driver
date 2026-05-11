@@ -41,23 +41,26 @@ await device.pointer.swipe({ from: {x, y}, to: {x, y2}, duration: 300 });
 
 OS-level touch injection matching idb/adb capabilities. See `docs/NATIVE-MODULES-ARCHITECTURE.md` for full architecture.
 
-### Tier 1: XCTest/Instrumentation Companion (OS-level)
-Kernel-level touch injection via companion process. Enables system UI interaction, keyboard input, and cross-app testing.
+### Tier 1: Native Module Touch Injector (default)
+In-app touch synthesis for the tested app. This is the current `auto` default on iOS and Android.
+
+- [x] **RNDriverTouchInjector iOS**: DEBUG-only UIKit touch synthesis
+- [x] **RNDriverTouchInjector Android**: Instrumentation-backed input injection
+- [x] Driver backend (NativeModuleTouchBackend)
+- [x] Harness integration (`touchNative` bridge and capability)
+- [ ] Document Android instrumentation launch path for plain app runs
+- [ ] Add device-backed integration tests for native-module touch
+
+### Tier 2: XCTest/Instrumentation Companion (opt-in OS-level)
+Kernel-level touch injection via companion process. Enables system UI interaction, keyboard input, and cross-app testing when the companion is manually integrated and started.
 
 - [x] **XCTest Companion (iOS)**: WebSocket server using XCUICoordinate for IOHIDEvent injection
 - [x] **Instrumentation Companion (Android)**: HTTP server using UiAutomation.injectInputEvent()
 - [x] Driver backend clients (XCTestTouchBackend, InstrumentationTouchBackend)
-
-### Tier 2: Native Module Touch Injector (App-level)
-In-app touch synthesis for network-capable testing without companion process.
-
-- [ ] **RNDriverTouchInjector iOS**: UIApplication.sendEvent() with synthesized UITouch/UIEvent
-- [ ] **RNDriverTouchInjector Android**: view.dispatchTouchEvent() with MotionEvent
-- [x] Driver backend (NativeModuleTouchBackend)
-- [x] Harness integration (touchNative bridge types)
+- [ ] Add package-level companion launch/build scripts before advertising as turnkey
 
 ### Tier 3: CLI Backend (idb/adb)
-Fallback to spawning idb/adb CLI commands for touch injection.
+Future fallback to spawning idb/adb CLI commands for touch injection.
 
 - [ ] CliTouchBackend with idb support
 - [ ] CliTouchBackend with adb support
@@ -69,6 +72,7 @@ Fallback to spawning idb/adb CLI commands for touch injection.
 - [x] Pointer class refactored to use TouchBackend
 - [x] Harness touchNative bridge types
 - [ ] Integration tests for each backend tier
+- [ ] Optional env parser for `RN_TOUCH_BACKEND` / ordered backend preferences in the Playwright fixture
 
 ## Medium Effort
 

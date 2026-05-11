@@ -92,6 +92,10 @@ These types are stable:
 - `WaitForOptions`, `WaitForState`
 - `Capabilities`, `HarnessLoadMode`
 
+### Touch Backend Configuration
+
+Touch backend names and the `TouchBackendConfig` shape are currently stable enough for app/test configuration, with one important behavior note: `auto` mode defaults to `native-module` only on both iOS and Android. XCTest and Instrumentation companions are available only when explicitly selected with `touch.order` or `mode: "force"`.
+
 ### Errors
 
 These error classes are stable:
@@ -124,6 +128,14 @@ The `/harness/dev` entry point is experimental:
 // Experimental - guard conditions may change
 import "@0xbigboss/rn-playwright-driver/harness/dev";
 ```
+
+### Companion Backends
+
+The `xctest` and `instrumentation` touch backends are experimental. Their driver-side clients are implemented, but companion packaging and automatic lifecycle management are not part of the stable release surface yet.
+
+### CLI Touch Backend
+
+The `cli` backend type is experimental and currently a stub. It should not be used as a production fallback until idb/adb command execution is implemented and covered by device-backed tests.
 
 ## Internal API
 

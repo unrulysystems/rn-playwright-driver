@@ -12,6 +12,8 @@ Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs
   - View tree queries
   - Screenshots
   - Lifecycle controls
+  - App-level native touch injection
+- **Companion Touch Backends (optional)**: XCTest and Android Instrumentation clients for OS-level touch injection.
 
 ## Packages
 
@@ -21,6 +23,10 @@ Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs
 | `@0xbigboss/rn-driver-view-tree` | View tree queries (locators, bounds, visibility) |
 | `@0xbigboss/rn-driver-screenshot` | Screen/region capture |
 | `@0xbigboss/rn-driver-lifecycle` | App lifecycle helpers |
+| `@0xbigboss/rn-driver-touch` | App-level native touch injection |
+| `@0xbigboss/rn-driver-r3f` | Optional React Three Fiber scene bridge and test helpers |
+| `@0xbigboss/rn-playwright-driver-xctest-companion` | iOS XCTest touch companion reference implementation |
+| `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion reference implementation |
 
 ## Requirements
 
@@ -36,7 +42,8 @@ Install driver and native modules in your app:
 bun add @0xbigboss/rn-playwright-driver \
   @0xbigboss/rn-driver-view-tree \
   @0xbigboss/rn-driver-screenshot \
-  @0xbigboss/rn-driver-lifecycle
+  @0xbigboss/rn-driver-lifecycle \
+  @0xbigboss/rn-driver-touch
 ```
 
 Install Playwright in your test workspace:
@@ -148,6 +155,29 @@ Environment variables for target selection and timeouts:
 | `RN_DEVICE_NAME` | Device name substring match | _unset_ |
 | `RN_TIMEOUT` | Request timeout (ms) | `30000` |
 
+## Touch Backend Status
+
+The current source default is intentionally conservative:
+
+- `auto` mode tries `native-module` only on iOS and Android.
+- `native-module` requires `@0xbigboss/rn-driver-touch` in the tested app and `globalThis.__RN_DRIVER__.capabilities.touchNative === true`.
+- `xctest` and `instrumentation` clients are implemented but opt-in through `DeviceOptions.touch.order` or `DeviceOptions.touch.backend`; their companion packages are reference integrations, not automatic launchers.
+- `cli` exists as a typed backend stub and currently throws `NOT_SUPPORTED`.
+- There is no JS harness touch fallback backend in the current release surface.
+
+Example companion preference:
+
+```ts
+import { createDevice } from "@0xbigboss/rn-playwright-driver";
+
+const device = createDevice({
+  touch: {
+    order: ["xctest", "native-module"],
+    xctest: { port: 9999 },
+  },
+});
+```
+
 ## Running E2E Tests
 
 1. Start Metro for the app (e.g., `expo start`).
@@ -183,7 +213,7 @@ Playwright test (Node)
   └─ @0xbigboss/rn-playwright-driver (CDP client)
        └─ Hermes Runtime via Metro /json
             └─ global.__RN_DRIVER__ harness
-                 └─ Expo native modules (view-tree, screenshot, lifecycle)
+                 └─ Expo native modules (view-tree, screenshot, lifecycle, touch)
 ```
 
 See `docs/NATIVE-MODULES-ARCHITECTURE.md` for full details.

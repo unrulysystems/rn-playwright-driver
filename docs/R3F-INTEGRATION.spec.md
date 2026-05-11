@@ -7,7 +7,7 @@
 
 Three.js/React Three Fiber (R3F) content renders to a GL canvas, bypassing the native view hierarchy. This spec defines how R3F apps integrate with `rn-playwright-driver` for E2E testing.
 
-> **Note**: JS touch handler routing (`registerTouchHandler`) and the R3FTouchAdapter have been removed in favor of native touch injection. Sections describing handler routing are obsolete.
+> **Note**: JS touch handler routing (`registerTouchHandler`) and the R3FTouchAdapter have been removed. Use `TestBridge.dispatchPointer()` for direct R3F event tests, and keep native touch backend tests separate.
 
 ## Problem Statement
 
@@ -719,83 +719,20 @@ test('interact with specific canvas', async ({ device }) => {
 
 ---
 
-### Pattern 2: Touch Handler Registration
+### Pattern 2: Direct R3F Pointer Dispatch
 
-For deeper R3F event integration, use `registerTouchHandler` to route touches through R3F's event system.
-
-**Important**: The harness touch handler contract is `(event: TouchEvent) => void` where:
-```typescript
-type TouchEvent = {
-  x: number;      // Screen X in logical points
-  y: number;      // Screen Y in logical points
-  type: "down" | "move" | "up";
-  timestamp: number;
-};
-```
-
-The R3F adapter must convert screen coordinates to NDC internally:
+For deeper R3F event integration, use `TestBridge.dispatchPointer(type, x, y)` from `@0xbigboss/rn-driver-r3f`. This replaced the removed harness `registerTouchHandler` / `R3FTouchAdapter` path.
 
 ```typescript
-// @0xbigboss/rn-driver-r3f/src/R3FTouchAdapter.tsx
-import { useThree } from '@react-three/fiber';
-import { useEffect } from 'react';
-import type { TouchEvent } from '@0xbigboss/rn-playwright-driver/harness';
-
-type R3FTouchAdapterProps = {
-  /**
-   * Adapter ID for multi-canvas support.
-   * Registers as 'r3f' (single canvas) or 'r3f:${id}' (multi-canvas).
-   */
-  id?: string;
-};
-
-export function R3FTouchAdapter({ id }: R3FTouchAdapterProps) {
-  const { camera, raycaster, scene, size } = useThree();
-
-  useEffect(() => {
-    if (!global.__RN_DRIVER__) return;
-
-    // Convert screen coords to NDC using R3F state.size
-    const screenToNdc = (x: number, y: number) => ({
-      x: (x / size.width) * 2 - 1,
-      y: -(y / size.height) * 2 + 1,
-    });
-
-    const handler = (event: TouchEvent) => {
-      const ndc = screenToNdc(event.x, event.y);
-
-      scene.updateMatrixWorld(true);
-      camera.updateMatrixWorld();
-
-      raycaster.setFromCamera(ndc, camera);
-      const intersects = raycaster.intersectObjects(scene.children, true);
-
-      if (intersects.length > 0) {
-        const hit = intersects[0];
-        const eventType = event.type === 'down' ? 'pointerdown'
-                        : event.type === 'up' ? 'pointerup'
-                        : 'pointermove';
-
-        hit.object.dispatchEvent({
-          type: eventType,
-          point: hit.point,
-          distance: hit.distance,
-          object: hit.object,
-        });
-      }
-    };
-
-    // Register with unique key for multi-canvas support
-    const handlerKey = id ? `r3f:${id}` : 'r3f';
-    global.__RN_DRIVER__.registerTouchHandler(handlerKey, handler);
-
-    return () => {
-      global.__RN_DRIVER__.unregisterTouchHandler(handlerKey);
-    };
-  }, [camera, raycaster, scene, size, id]);
-
-  return null;
-}
+await device.evaluate(
+  `globalThis.__RN_DRIVER_R3F__?.dispatchPointer?.("down", 120, 240)`
+);
+await device.evaluate(
+  `globalThis.__RN_DRIVER_R3F__?.dispatchPointer?.("move", 140, 220)`
+);
+await device.evaluate(
+  `globalThis.__RN_DRIVER_R3F__?.dispatchPointer?.("up", 140, 220)`
+);
 ```
 
 **When to use**:
@@ -807,6 +744,7 @@ export function R3FTouchAdapter({ id }: R3FTouchAdapterProps) {
 - Requires R3F event system setup in the scene
 - More complex than coordinate-based testing
 - May interfere with native gesture handlers
+- Bypasses platform-native touch delivery by design; keep native touch backend tests separate from R3F event-dispatch tests
 
 ---
 
@@ -1156,9 +1094,10 @@ packages/
 └── r3f/                           # @0xbigboss/rn-driver-r3f
     ├── src/
     │   ├── TestBridge.tsx         # Scene bridge component
-    │   ├── R3FTouchAdapter.tsx    # Touch handler adapter
     │   ├── types.ts               # Shared type definitions
     │   ├── helpers.ts             # Test helper functions
+    │   ├── locator.ts             # R3F locator namespace
+    │   ├── test.ts                # Playwright fixture wrapper
     │   └── index.ts
     ├── package.json
     └── README.md

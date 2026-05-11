@@ -4,7 +4,7 @@ React Three Fiber (R3F) integration for rn-playwright-driver. Test 3D scenes in 
 
 ## Requirements
 
-- `@0xbigboss/rn-playwright-driver` >= 0.1.0
+- `@0xbigboss/rn-playwright-driver` >= 0.3.0
 - `@react-three/fiber` >= 8.0.0
 - `three` >= 0.150.0
 - `@playwright/test` >= 1.40.0 (for test fixtures)
@@ -154,27 +154,17 @@ type R3FLookupOptions = {
 };
 ```
 
-## Optional: Touch Event Routing
+## Native Pointer Dispatch
 
-For advanced use cases where you need R3F to receive touch events through the harness:
+`TestBridge` exposes `dispatchPointer(type, x, y)` for native E2E tests that need to send events directly into R3F's event system. This replaces the removed `R3FTouchAdapter` and keeps R3F-specific routing in `@0xbigboss/rn-driver-r3f`, not the framework-agnostic driver package.
 
-```tsx
-import { Canvas } from "@react-three/fiber";
-import { TestBridge, R3FTouchAdapter } from "@0xbigboss/rn-driver-r3f";
-
-function App() {
-  return (
-    <Canvas>
-      {__DEV__ && (
-        <>
-          <TestBridge />
-          <R3FTouchAdapter />
-        </>
-      )}
-      <InteractiveScene />
-    </Canvas>
-  );
-}
+```ts
+await device.evaluate(
+  `globalThis.__RN_DRIVER_R3F__?.dispatchPointer?.("down", 120, 240)`,
+);
+await device.evaluate(
+  `globalThis.__RN_DRIVER_R3F__?.dispatchPointer?.("up", 120, 240)`,
+);
 ```
 
 ## Alternative: Standalone Helpers

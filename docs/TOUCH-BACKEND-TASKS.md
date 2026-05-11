@@ -8,20 +8,56 @@ Detailed implementation tasks for touch injection backends. See `NATIVE-MODULES-
 |-----------|--------|-------|
 | TouchBackend interface | ✅ Complete | `packages/driver/src/touch/backend.ts` |
 | Backend factory + types | ✅ Complete | `packages/driver/src/touch/index.ts` |
-| HarnessTouchBackend | ✅ Complete | JS harness pointer calls |
 | NativeModuleTouchBackend | ✅ Complete | Driver-side client via CDP |
 | XCTestTouchBackend | ✅ Complete | WebSocket client to companion |
 | InstrumentationTouchBackend | ✅ Complete | HTTP client to companion |
 | CliTouchBackend | 🔶 Stub | Needs idb/adb implementation |
 | XCTest Companion (iOS) | ✅ Reference impl (manual integration) | `packages/xctest-companion/` |
 | Instrumentation Companion (Android) | ✅ Reference impl (manual integration) | `packages/instrumentation-companion/` |
-| RNDriverTouchInjector (iOS) | ❌ Not started | Native module for Tier 2 |
-| RNDriverTouchInjector (Android) | ❌ Not started | Native module for Tier 2 |
-| Harness touchNative bridge | ✅ Complete | Types in harness, wiring ready |
+| RNDriverTouchInjector (iOS) | ✅ Implemented | DEBUG builds only; uses UIKit private touch synthesis |
+| RNDriverTouchInjector (Android) | ✅ Implemented | Requires Android instrumentation to provide `Instrumentation` |
+| Harness touchNative bridge | ✅ Complete | Loads `RNDriverTouchInjector` and exposes `capabilities.touchNative` |
+
+## Current Defaults
+
+`createTouchBackend()` currently defaults to `["native-module"]` on both iOS and Android. This means `device.connect()` fails fast when `@0xbigboss/rn-driver-touch` is absent from the tested app instead of silently falling back to a less capable path.
+
+Use explicit configuration for companion runs:
+
+```ts
+createDevice({
+  touch: {
+    order: ["instrumentation", "native-module"],
+    instrumentation: { port: 9999 },
+  },
+});
+```
+
+`cli` remains a typed placeholder and should not appear in default orders until idb/adb execution, device selection, timeout handling, and shell escaping are implemented. The previous JS harness fallback has been removed from the current source surface.
 
 ---
 
-## Tier 1: Companion Processes (OS-level) ✅
+## Tier 1: Native Module Touch Injector ✅
+
+In-app touch synthesis is the current default because it is packaged with the tested app and can be detected through the harness capability flag.
+
+### iOS implementation
+
+- **Location**: `packages/rn-driver-touch/ios/RNDriverTouchInjectorModule.swift`
+- **Status**: Implemented for DEBUG builds
+- **Features**: tap, down/move/up, swipe, longPress, typeText
+- **Caveat**: Uses private UIKit touch APIs and intentionally returns `NOT_SUPPORTED` in release builds.
+
+### Android implementation
+
+- **Location**: `packages/rn-driver-touch/android/src/main/java/expo/modules/rndrivertouch/RNDriverTouchInjectorModule.kt`
+- **Status**: Implemented
+- **Features**: tap, down/move/up, swipe, longPress, typeText
+- **Caveat**: Resolves `Instrumentation` from AndroidX test registries. Plain app launches without instrumentation should use the companion backend or expect `NOT_SUPPORTED`.
+
+---
+
+## Tier 2: Companion Processes (OS-level) ✅
 
 Both companion processes are implemented as reference code. Integrate into your app's test target to use.
 
@@ -53,96 +89,6 @@ Integrate `RNDriverTouchCompanion.swift` into your app's UI test target, then ru
 adb shell am instrument -w \
   com.your.test/com.rndriver.touchcompanion.RNDriverTouchCompanion
 ```
-
----
-
-## Tier 2: Native Module Touch Injector
-
-In-app touch synthesis for network-capable testing. Lower priority than companions since they provide OS-level injection already.
-
-### Task: Create RNDriverTouchInjector package
-
-```
-packages/rn-driver-touch/
-├── ios/
-│   ├── RNDriverTouchInjector.podspec
-│   └── RNDriverTouchInjectorModule.swift
-├── android/
-│   ├── build.gradle
-│   └── src/main/java/expo/modules/rndrivertouchinjector/
-│       └── RNDriverTouchInjectorModule.kt
-├── src/
-│   ├── index.ts
-│   └── RNDriverTouchInjectorModule.ts
-├── expo-module.config.json
-└── package.json
-```
-
-### iOS Implementation Tasks
-
-- [ ] **Create Expo module scaffold** (`expo-module.config.json`, podspec)
-- [ ] **Implement TouchSynthesizer class**
-  - Use `UIApplication.sendEvent()` with synthesized UITouch/UIEvent
-  - Track active touch state for down/move/up sequences
-  - Use KVC to set private UITouch properties (same as KIF/EarlGrey)
-- [ ] **Implement module functions**
-  - `tap(x, y)` → synthesize down + up
-  - `down(x, y)` → begin touch
-  - `move(x, y)` → update touch location
-  - `up()` → end touch
-  - `swipe(fromX, fromY, toX, toY, durationMs)` → interpolated move sequence
-  - `longPress(x, y, durationMs)` → down + delay + up (duration derived from driver LongPressOptions)
-  - `typeText(text)` → return NOT_SUPPORTED (requires keyboard focus)
-- [ ] **Return NativeResult<void>** for all functions
-- [ ] **Handle coordinate conversion** (logical points, not pixels)
-
-**Reference implementation** (from architecture doc):
-```swift
-func synthesizeTap(at point: CGPoint) {
-  guard let window = UIApplication.shared.windows.first,
-        let hitView = window.hitTest(point, with: nil) else { return }
-
-  let touch = createTouch(at: point, in: window, view: hitView, phase: .began)
-  let event = createTouchEvent(with: touch)
-  UIApplication.shared.sendEvent(event)
-  // ... dispatch .ended phase
-}
-```
-
-### Android Implementation Tasks
-
-- [ ] **Create Expo module scaffold**
-- [ ] **Implement touch synthesis**
-  - Use `view.dispatchTouchEvent()` with MotionEvent
-  - Find target view via `window.decorView` hit testing
-  - Track activeDownTime for down/move/up sequences
-- [ ] **Implement module functions** (same as iOS)
-- [ ] **Convert dp to pixels** using display density
-- [ ] **Return NativeResult<void>**
-
-**Reference implementation**:
-```kotlin
-fun synthesizeTap(x: Float, y: Float) {
-  val view = findViewAt(activity.window.decorView, x, y) ?: return
-  val downTime = SystemClock.uptimeMillis()
-
-  val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0)
-  view.dispatchTouchEvent(down)
-  down.recycle()
-
-  val up = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0)
-  view.dispatchTouchEvent(up)
-  up.recycle()
-}
-```
-
-### Harness Integration
-
-- [x] **TouchNativeBridge type** defined in harness
-- [x] **Capability flag** `touchNative` in capabilities
-- [ ] **Wire up module** when RNDriverTouchInjector is created
-
----
 
 ## Tier 3: CLI Backend (idb/adb)
 
@@ -177,14 +123,11 @@ Fallback for when companions aren't running but CLI tools are available.
 
 ### Task: Add backend integration tests
 
-**Location**: `example/e2e/touch-backends.spec.ts`
-
-- [ ] **Test HarnessTouchBackend**
-  - Verify tap triggers onPress
-  - Verify swipe triggers scroll
+**Location**: `examples/basic-app/e2e/primitives/touch-backend.spec.ts` plus device-backed backend specs as they are added.
 
 - [ ] **Test NativeModuleTouchBackend** (when module exists)
-  - Same scenarios as harness
+  - Verify tap triggers onPress
+  - Verify swipe triggers scroll
   - Verify capability detection
 
 - [ ] **Test XCTestTouchBackend** (requires companion running)

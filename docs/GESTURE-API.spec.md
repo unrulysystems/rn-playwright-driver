@@ -486,7 +486,7 @@ Add `holdStart`/`holdEnd` to existing methods without removing current behavior.
 **Files:**
 - `packages/driver/src/types.ts` — Add new option types
 - `packages/driver/src/pointer.ts` — Add options to `drag`, `dragPath`
-- `packages/driver/src/touch/harness-backend.ts` — Add options to `tap`, `longPress`
+- `packages/driver/src/touch/native-module-backend.ts` and companion backends — Respect timing options where the backend supports them
 
 **Acceptance:**
 - [x] `tap(x, y, { holdStart: 0 })` disables frame delay

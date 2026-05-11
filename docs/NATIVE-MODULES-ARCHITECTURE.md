@@ -14,7 +14,7 @@ This document describes the complete architecture for Phase 3 native modules in 
 | Decision | Choice |
 |----------|--------|
 | Repository structure | Monorepo (`packages/driver`, `packages/view-tree`, etc.) |
-| Touch injection | Tiered backends: companion (OS-level) → native module → CLI → harness |
+| Touch injection | Default backend: native module. Opt-in backends: companion (OS-level) and CLI stub. No harness fallback exists in current source. |
 | Element handles | Random IDs (`element_{16-char-hex}`) |
 | View tree queries | Fresh traversal (no caching) |
 | Native module API | Expo Modules API (Swift + Kotlin) |
@@ -32,7 +32,21 @@ This document describes the complete architecture for Phase 3 native modules in 
 | `@0xbigboss/rn-driver-lifecycle` | App state control | 🔶 Partial |
 | `@0xbigboss/rn-playwright-driver-xctest-companion` | iOS OS-level touch injection | ✅ Reference impl (manual integration) |
 | `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android OS-level touch injection | ✅ Reference impl (manual integration) |
-| `@0xbigboss/rn-driver-touch` | In-app touch synthesis | ❌ Not started |
+| `@0xbigboss/rn-driver-touch` | In-app touch synthesis | ✅ Implemented, DEBUG/E2E-oriented |
+| `@0xbigboss/rn-driver-r3f` | R3F scene bridge, hit testing, dispatchPointer, helpers | ✅ Separate optional package |
+
+### Current Touch Backend Priority
+
+The source default in `packages/driver/src/touch/index.ts` is:
+
+| Platform | Default `auto` order |
+|----------|----------------------|
+| iOS | `native-module` |
+| Android | `native-module` |
+
+Companion backends are implemented and useful when the test environment starts them explicitly, but they are not selected by default. To use them, pass `DeviceOptions.touch.order` such as `["xctest", "native-module"]` or force a backend with `mode: "force"`. The `cli` backend is a stub and should not be advertised as a working fallback until `idb`/`adb` spawning is implemented.
+
+The old JS harness touch fallback and R3F touch-handler routing are no longer part of the release surface. R3F testing belongs in `@0xbigboss/rn-driver-r3f`, which owns `TestBridge`, `hitTest`, `dispatchPointer`, locators, fixtures, and helpers.
 
 ## System Architecture
 
@@ -1271,8 +1285,7 @@ interface TouchBackend {
 | XCTest | `XCTestTouchBackend` | WebSocket to companion |
 | Instrumentation | `InstrumentationTouchBackend` | HTTP to companion |
 | Native Module | `NativeModuleTouchBackend` | CDP evaluate to harness |
-| CLI | `CliTouchBackend` | Spawn idb/adb |
-| Harness | `HarnessTouchBackend` | CDP evaluate to harness |
+| CLI | `CliTouchBackend` | Stub; idb/adb spawning not implemented |
 
 ### Package Structure
 
@@ -1282,7 +1295,6 @@ packages/
 │   └── src/
 │       └── touch/
 │           ├── backend.ts              # TouchBackend interface
-│           ├── harness-backend.ts      # JS harness implementation
 │           ├── native-module-backend.ts # RNDriverTouchInjector implementation
 │           ├── xctest-backend.ts       # XCTest companion client
 │           ├── instrumentation-backend.ts # Instrumentation companion client
