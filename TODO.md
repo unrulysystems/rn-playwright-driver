@@ -11,7 +11,7 @@ This checklist reflects the current source state and avoids older claims about a
 - [x] `@0xbigboss/rn-driver-touch` includes iOS and Android Expo modules. iOS is DEBUG-only; Android requires Instrumentation availability.
 - [x] XCTest and Android Instrumentation companion clients exist in the driver, with reference companion packages that require manual integration.
 - [x] `CliTouchBackend` is a stub and is not a working fallback.
-- [x] `@0xbigboss/rn-driver-r3f` owns `TestBridge`, `hitTest`, `dispatchPointer`, locators, helpers, and Playwright fixture wrappers.
+- [x] The R3F binding (`TestBridge`, `hitTest`, `dispatchPointer`, locators, helpers, fixture wrappers) was moved out of this repo into the Scenic monorepo (`@unrulysystems/scenic-three` + `@unrulysystems/scenic-native`); the driver stays renderer-agnostic.
 
 ## Release Blockers
 

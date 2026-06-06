@@ -12,7 +12,6 @@ Repository overview for automated agents and contributors.
 - `packages/view-tree` - Native view tree module (Expo Modules API)
 - `packages/screenshot` - Native screenshot module (Expo Modules API)
 - `packages/lifecycle` - Native lifecycle module (Expo Modules API)
-- `packages/r3f` - React Three Fiber integration (separate optional package)
 - `examples/basic-app` - Expo app and E2E tests
 - `docs/NATIVE-MODULES-ARCHITECTURE.md` - Architecture reference
 
@@ -23,12 +22,13 @@ Repository overview for automated agents and contributors.
 | Package | Purpose | Dependencies |
 |---------|---------|--------------|
 | `@0xbigboss/rn-playwright-driver` | Core driver + fixtures | None (R3F-free) |
-| `@0xbigboss/rn-driver-r3f` | R3F/Three.js integration | Peer: three, @react-three/fiber |
 
-Users who don't use Three.js never install or import r3f code. The r3f package:
-- Exports `TestBridge` component (app-side, inside Canvas)
-- Exports `test` fixture with `device.r3f` namespace (test-side)
-- Has its own README with setup instructions
+The driver stays renderer-agnostic: it has no Three.js / R3F code. The former
+`@0xbigboss/rn-driver-r3f` (`TestBridge`, hit-testing, `dispatchPointer`, locators)
+was absorbed into the Scenic monorepo as `@unrulysystems/scenic-three` (the
+`<ScenicBridge>` auto-traversal install) + `@unrulysystems/scenic-native` (the
+`device.scenic` assertion layer over this driver's `device.evaluate` transport).
+Scenic depends on this driver; this driver does not depend on Scenic.
 
 See `docs/NATIVE-MODULES-ARCHITECTURE.md` for full architecture details.
 

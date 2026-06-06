@@ -24,7 +24,6 @@ Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs
 | `@0xbigboss/rn-driver-screenshot` | Screen/region capture |
 | `@0xbigboss/rn-driver-lifecycle` | App lifecycle helpers |
 | `@0xbigboss/rn-driver-touch` | App-level native touch injection |
-| `@0xbigboss/rn-driver-r3f` | Optional React Three Fiber scene bridge and test helpers |
 | `@0xbigboss/rn-playwright-driver-xctest-companion` | iOS XCTest touch companion reference implementation |
 | `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion reference implementation |
 

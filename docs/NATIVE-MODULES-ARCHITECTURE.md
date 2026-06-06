@@ -33,7 +33,6 @@ This document describes the complete architecture for Phase 3 native modules in 
 | `@0xbigboss/rn-playwright-driver-xctest-companion` | iOS OS-level touch injection | ✅ Reference impl (manual integration) |
 | `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android OS-level touch injection | ✅ Reference impl (manual integration) |
 | `@0xbigboss/rn-driver-touch` | In-app touch synthesis | ✅ Implemented, DEBUG/E2E-oriented |
-| `@0xbigboss/rn-driver-r3f` | R3F scene bridge, hit testing, dispatchPointer, helpers | ✅ Separate optional package |
 
 ### Current Touch Backend Priority
 
@@ -46,7 +45,7 @@ The source default in `packages/driver/src/touch/index.ts` is:
 
 Companion backends are implemented and useful when the test environment starts them explicitly, but they are not selected by default. To use them, pass `DeviceOptions.touch.order` such as `["xctest", "native-module"]` or force a backend with `mode: "force"`. The `cli` backend is a stub and should not be advertised as a working fallback until `idb`/`adb` spawning is implemented.
 
-The old JS harness touch fallback and R3F touch-handler routing are no longer part of the release surface. R3F testing belongs in `@0xbigboss/rn-driver-r3f`, which owns `TestBridge`, `hitTest`, `dispatchPointer`, locators, fixtures, and helpers.
+The old JS harness touch fallback and R3F touch-handler routing are no longer part of the release surface. R3F testing was moved out of this repo into the Scenic monorepo — `@unrulysystems/scenic-three` owns the `<ScenicBridge>` install (`TestBridge` successor: hit-testing, `dispatchPointer`, locators) and `@unrulysystems/scenic-native` owns the test-side `device.scenic` assertion layer over this driver's `device.evaluate` transport.
 
 ## System Architecture
 
