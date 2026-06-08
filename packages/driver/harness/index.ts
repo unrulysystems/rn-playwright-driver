@@ -99,9 +99,6 @@ export type TouchNativeBridge = {
  * Global driver interface exposed on global.__RN_DRIVER__.
  */
 export type RNDriverGlobal = {
-  /** Version of the harness */
-  version: string;
-
   /** View tree native module bridge (Phase 3) */
   viewTree: ViewTreeBridge;
 
@@ -506,8 +503,6 @@ function installHarness(): void {
   };
 
   const harness: RNDriverGlobal = {
-    version: "0.1.0",
-
     viewTree,
     screenshot,
     lifecycle,

@@ -85,9 +85,13 @@ test.describe("Counter App - Core Features", () => {
     expect(hasHarness).toBe(true);
   });
 
-  test("can read harness version", async ({ device }) => {
-    const version = await device.evaluate<string>("globalThis.__RN_DRIVER__.version");
-    expect(version).toBe("0.1.0");
+  test("can read harness API version", async ({ device }) => {
+    // The harness reports its protocol/contract version as the integer capabilities.apiVersion
+    // (HARNESS_API_VERSION) — there is no package-semver-shaped `version` string field.
+    const apiVersion = await device.evaluate<number>(
+      "globalThis.__RN_DRIVER__.capabilities.apiVersion",
+    );
+    expect(apiVersion).toBe(1);
   });
 
   test("can check app is running", async ({ device }) => {
