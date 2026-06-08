@@ -177,12 +177,14 @@ private async detectAwaitPromiseSupport(): Promise<void> {
 }
 ```
 
-> **The probe is exception-based.** It treats *any* non-exception result as "supported" — it does
-> **not** verify the returned value is actually `1`, nor inspect for the `{_h, _i, _j, _k}` polyfill
-> shape. So the stash path is the robust default for React Native; the probe mainly lets a future Hermes
-> that genuinely supports `awaitPromise` take the fast path. (If a runtime ever returned the serialized
-> polyfill *without* throwing, this probe would mis-classify it — hardening it to assert `result === 1`
-> would close that gap.)
+> **The probe asserts the awaited value (hardened, #3).** It reports `awaitPromise` supported **only**
+> when the runtime genuinely resolves the probe to its sentinel (`result.result?.value === 1`), not
+> merely when the call returns without an exception. That excludes both React Native's serialized
+> `{_h, _i, _j, _k}` polyfill shape (which RN can return *without* a CDP exception) and any other
+> non-resolved result, so RN deterministically selects the stash path. The stash path remains the robust
+> default for React Native; the probe lets a future Hermes that genuinely supports `awaitPromise` take
+> the fast path. (Covered by `packages/driver/src/cdp/client.test.ts`: native-supported / exception /
+> serialized-polyfill.)
 
 `evaluate()` then dispatches on the probe result (`client.ts:120`):
 
@@ -196,12 +198,10 @@ async evaluate<T>(expression: string): Promise<T> {
 ```
 
 > **Why a probe (and which path to trust):** the intent is to let a future Hermes that genuinely
-> supports `awaitPromise` take the fast path without breaking today's RN. But per the caveat above, the
-> probe only catches the *exception* case — so it reliably selects the stash path on RN **only if** RN
-> raises a CDP exception for `awaitPromise` rather than returning the serialized polyfill (not
-> re-verified here). **Treat the stash path as the source of truth for React Native**: if you ever see
-> async-path breakage on RN, the probe mis-classified — harden it to assert `result === 1`, or force the
-> stash path. Both code paths exist; do not delete the stash path.
+> supports `awaitPromise` take the fast path without breaking today's RN. The probe now asserts the
+> awaited value (see the caveat above), so it selects the stash path on RN whether RN raises a CDP
+> exception **or** returns the serialized polyfill without one. **Treat the stash path as the source of
+> truth for React Native**: both code paths exist; do not delete the stash path.
 
 ### The kick-and-poll-a-global pattern
 

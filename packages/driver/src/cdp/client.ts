@@ -216,11 +216,14 @@ export class CDPClient {
         returnByValue: true,
         awaitPromise: true,
       });
-      if (result.exceptionDetails) {
-        this.supportsAwaitPromise = false;
-        return;
-      }
-      this.supportsAwaitPromise = true;
+      // Sound support means the runtime actually RESOLVED the probe promise to our sentinel (1), not
+      // merely that the call returned without a CDP exception. React Native's Promise polyfill makes
+      // `awaitPromise: true` resolve to the serialized polyfill object (`{_h, _i, _j, _k}`) WITHOUT
+      // raising an exception — so an exception-only probe mis-classifies RN as supported and routes
+      // evaluate() to evaluateWithAwaitPromise (which returns garbage on RN) instead of the
+      // evaluateWithStash fallback. Asserting the value excludes both that polyfill shape and any
+      // other non-resolved result.
+      this.supportsAwaitPromise = !result.exceptionDetails && result.result?.value === 1;
     } catch {
       this.supportsAwaitPromise = false;
     }
