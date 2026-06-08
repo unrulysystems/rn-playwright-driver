@@ -427,7 +427,7 @@ The design is "one assertion library, two drivers" — `scenic-playwright` (web 
 ## 6. Known duplication + the convergence plan
 
 The two Hermes constraints from [§3](#3-the-two-hermes-constraints-the-gold) currently live in **three**
-places, plus a version drift:
+places:
 
 1. **Driver** — `evaluateWithStash` / `pollForResult` / `detectAwaitPromiseSupport`
    (`packages/driver/src/cdp/client.ts`). The canonical,
@@ -439,11 +439,12 @@ places, plus a version drift:
    plus the inline comment block in `scenicSettleGate.mjs:131-140`. This playbook is intended to
    **supersede them** as the single prose source; leave a one-line pointer there, not a copy.
 
-**Version drift.** The driver package is `@0xbigboss/rn-playwright-driver@0.3.0`
-(`packages/driver/package.json`), but the injected harness still reports `version: "0.1.0"`
-(`packages/driver/harness/index.ts:509`). This is a stale
-constant, not a behavior bug, but it makes the harness version useless for diagnostics. Wire it to the
-package version (or a build-time constant) when touching the harness.
+**Harness version (resolved, #4).** The injected harness no longer carries a package-semver-shaped
+`version` string (the old stale `"0.1.0"` constant is gone). Its single version surface is the integer
+**`capabilities.apiVersion`** (`HARNESS_API_VERSION` — the protocol/contract version), intentionally
+independent of the package semver (`@0xbigboss/rn-playwright-driver`, `packages/driver/package.json`).
+Read `capabilities.apiVersion` for harness diagnostics; the package version is the npm/git release
+version.
 
 **Intended end-state.** The gate should **sit on the driver + `scenic-native`** rather than carry a
 fourth hand-rolled CDP client: discovery via the driver's `discoverTargets`/`selectTarget`, transport
