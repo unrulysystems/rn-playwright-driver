@@ -1,12 +1,19 @@
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+
+// Tall filler blocks between the controls and the below-the-fold target. Eight
+// ~200pt blocks push the target well past one viewport height, so
+// scrollIntoView must issue more than one swipe to reach it. This is the e2e
+// fixture for the scroll API (device.scroll / Locator.scrollIntoView). Stable
+// string ids double as React keys and testIDs.
+const FILLER_IDS = Array.from({ length: 8 }, (_, i) => `filler-${i}`);
 
 export default function App() {
   const [count, setCount] = useState(0);
 
   return (
-    <View style={styles.container}>
+    <ScrollView testID="scroll-view" style={styles.scroll} contentContainerStyle={styles.content}>
       <Text style={styles.title} testID="title">
         RN Playwright Driver Example
       </Text>
@@ -47,18 +54,37 @@ export default function App() {
         <Text style={styles.buttonText}>Reset</Text>
       </Pressable>
 
+      {/* Filler pushes the target below the fold so scrolling is required. */}
+      {FILLER_IDS.map((id) => (
+        <View key={id} style={styles.filler} testID={id}>
+          <Text style={styles.fillerText}>Scroll down…</Text>
+        </View>
+      ))}
+
+      <View style={styles.target} testID="below-fold-target">
+        <Text style={styles.targetText}>You found me!</Text>
+      </View>
+
+      <Text style={styles.bottomMarker} testID="bottom-marker">
+        End of content
+      </Text>
+
       <StatusBar style="auto" />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  content: {
+    // No flex:1 here — the content must be allowed to exceed the viewport so
+    // the ScrollView actually scrolls.
     alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
+    paddingVertical: 60,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 24,
@@ -90,5 +116,37 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 24,
     fontWeight: "bold",
+  },
+  filler: {
+    width: "100%",
+    height: 200,
+    marginTop: 20,
+    borderRadius: 10,
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fillerText: {
+    color: "#999",
+    fontSize: 16,
+  },
+  target: {
+    width: "100%",
+    marginTop: 20,
+    paddingVertical: 40,
+    borderRadius: 10,
+    backgroundColor: "#34C759",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  targetText: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "bold",
+  },
+  bottomMarker: {
+    marginTop: 40,
+    fontSize: 16,
+    color: "#666",
   },
 });
