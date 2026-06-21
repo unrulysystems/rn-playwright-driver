@@ -58,6 +58,16 @@ vi.mock("./touch", () => ({
   }),
 }));
 
+/** Route the mocked CDP evaluate so getWindowMetrics() resolves to `metrics`. */
+function mockWindowMetrics(metrics: unknown): void {
+  mockEvaluateFn.mockImplementation((expr: string) => {
+    if (expr.includes("getWindowMetrics")) {
+      return Promise.resolve(metrics);
+    }
+    return Promise.resolve(undefined);
+  });
+}
+
 describe("RNDevice Core Primitives", () => {
   let device: RNDevice;
 
@@ -88,17 +98,34 @@ describe("RNDevice Core Primitives", () => {
         orientation: "portrait" as const,
       };
 
-      mockEvaluateFn.mockImplementation((expr: string) => {
-        if (expr.includes("getWindowMetrics")) {
-          return Promise.resolve(mockMetrics);
-        }
-        return Promise.resolve(undefined);
-      });
+      mockWindowMetrics(mockMetrics);
 
       const metrics = await device.getWindowMetrics();
 
       expect(metrics).toEqual(mockMetrics);
       expect(mockEvaluateFn).toHaveBeenCalledWith("globalThis.__RN_DRIVER__.getWindowMetrics()");
+    });
+  });
+
+  describe("scroll", () => {
+    it("queries window metrics and swipes the finger up to scroll content down", async () => {
+      mockWindowMetrics({
+        width: 400,
+        height: 800,
+        pixelRatio: 2,
+        scale: 2,
+        fontScale: 1,
+        orientation: "portrait" as const,
+      });
+      const swipeSpy = vi.spyOn(device.pointer, "swipe").mockResolvedValue(undefined);
+
+      await device.scroll({ dy: 200 });
+
+      expect(mockEvaluateFn).toHaveBeenCalledWith("globalThis.__RN_DRIVER__.getWindowMetrics()");
+      expect(swipeSpy).toHaveBeenCalledTimes(1);
+      const arg = swipeSpy.mock.calls[0][0];
+      // dy > 0 (scroll down) drags the finger upward.
+      expect(arg.to.y).toBeLessThan(arg.from.y);
     });
   });
 

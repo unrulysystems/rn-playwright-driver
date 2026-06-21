@@ -4,6 +4,7 @@ import { buildCapabilitiesExpression, buildHarnessCall } from "./harness-express
 import type { Locator } from "./locator";
 import { buildRoleSelector, createLocator, LocatorError } from "./locator";
 import { Pointer } from "./pointer";
+import { computeScrollGesture } from "./scroll";
 import { createTouchBackend, type TouchBackend } from "./touch";
 import type {
   Capabilities,
@@ -11,6 +12,7 @@ import type {
   DeviceOptions,
   DriverEvent,
   ElementBounds,
+  ScrollOptions,
   TouchBackendInfo,
   TracingOptions,
   WindowMetrics,
@@ -143,6 +145,16 @@ export class RNDevice implements Device {
 
   get pointer(): Pointer {
     return this._pointer;
+  }
+
+  /**
+   * Scroll content by a delta via a single swipe gesture (no element target).
+   * Geometry is resolved by the pure {@link computeScrollGesture}; this only
+   * wires window metrics to the pointer backend.
+   */
+  async scroll(options: ScrollOptions): Promise<void> {
+    const metrics = await this.getWindowMetrics();
+    await this._pointer.swipe(computeScrollGesture(metrics, options));
   }
 
   // --- Screenshots (Phase 3) ---

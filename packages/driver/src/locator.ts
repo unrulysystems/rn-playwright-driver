@@ -1,12 +1,16 @@
 import type { ElementInfo, NativeResult } from "@0xbigboss/rn-driver-shared-types";
 import { buildHarnessCall } from "./harness-expressions";
+import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from "./scroll";
 import type {
   Capabilities,
   ElementBounds,
   Locator,
+  ScrollIntoViewOptions,
+  ScrollOptions,
   TapOptions,
   WaitForOptions,
   WaitForState,
+  WindowMetrics,
 } from "./types";
 
 /**
@@ -37,6 +41,10 @@ interface Evaluator {
   };
   waitForTimeout(ms: number): Promise<void>;
   capabilities(): Promise<Capabilities>;
+  /** Window metrics, used to decide when an element is within the viewport. */
+  getWindowMetrics(): Promise<WindowMetrics>;
+  /** Content-delta scroll, used to bring elements into view. */
+  scroll(options: ScrollOptions): Promise<void>;
   /** Platform for conditional behavior */
   platform: "ios" | "android";
 }
@@ -56,6 +64,18 @@ export class LocatorError extends Error {
 
 const DEFAULT_WAIT_TIMEOUT = 30_000;
 const DEFAULT_POLLING_INTERVAL = 100;
+const DEFAULT_MAX_SCROLLS = 10;
+// scrollIntoView settle: after a swipe, poll the element position this often,
+// up to this budget, until it stabilizes (ScrollView momentum settles).
+const SCROLL_SETTLE_POLL_INTERVAL = 100;
+const SCROLL_SETTLE_TIMEOUT = 2_000;
+// Minimum scroll magnitude per scrollIntoView step, in logical points. A swipe
+// shorter than the platform touch slop (~10pt) is treated as a tap and does not
+// scroll at all, leaving the element stuck just short of fully visible. Flooring
+// the magnitude guarantees each step actually moves the content; overshooting a
+// small residual is harmless because the element only needs to land anywhere in
+// the (much larger) in-view band, and the loop re-measures.
+const MIN_SCROLL_STEP = 64;
 
 /**
  * Locator implementation for finding and interacting with RN views.
@@ -242,33 +262,119 @@ export class LocatorImpl implements Locator {
   }
 
   /**
-   * Scroll the element into view.
+   * Scroll the element into the viewport.
    *
-   * NOT YET IMPLEMENTED: Scroll-to-view requires either:
-   * 1. A native module that can programmatically scroll ScrollView/FlatList containers
-   * 2. Integration with React Native's scrollToEnd/scrollTo methods via refs
+   * Bounded loop: each iteration measures the element, and if it is not fully on
+   * screen, issues one swipe (via `device.scroll`) toward it, then re-measures.
+   * Direction is inferred from the measured bounds; when the element is not yet
+   * in the view tree (e.g. virtualized content), `options.direction` drives a
+   * blind scroll. The loop terminates on success, on reaching the scroll
+   * boundary (no progress), or after `maxScrolls` — never spins unbounded.
    *
-   * Workaround: Use device.evaluate() to call scroll methods on ScrollView refs:
-   * ```typescript
-   * await device.evaluate(`
-   *   const scrollView = ... // get ref to ScrollView
-   *   scrollView.scrollTo({ y: 500, animated: true });
-   * `);
-   * ```
-   *
-   * @throws LocatorError with code "NOT_SUPPORTED"
+   * @throws LocatorError "TIMEOUT" if the boundary is hit or `maxScrolls` is
+   * exhausted before the element is fully visible; "NOT_FOUND" if the element
+   * never appears; or surfaces "NOT_SUPPORTED"/"INTERNAL"/"MULTIPLE_FOUND" from
+   * the underlying query immediately.
    */
-  async scrollIntoView(): Promise<void> {
-    // ScrollIntoView requires:
-    // 1. Finding the nearest scrollable ancestor (ScrollView, FlatList, etc.)
-    // 2. Calculating the scroll offset needed to bring element into view
-    // 3. Invoking scroll methods on the container
-    // This requires native module support not yet implemented.
-    throw new LocatorError(
-      "scrollIntoView requires native scroll integration (not yet implemented). " +
-        "Workaround: Use device.evaluate() to call scrollTo on ScrollView refs.",
-      "NOT_SUPPORTED",
-    );
+  async scrollIntoView(options?: ScrollIntoViewOptions): Promise<void> {
+    const maxScrolls = options?.maxScrolls ?? DEFAULT_MAX_SCROLLS;
+    const margin = options?.margin ?? 0;
+    const blindDirection = options?.direction ?? "down";
+    // Fetched once: the viewport is assumed stable for the duration of a scroll
+    // (orientation changes mid-scroll are not a real automation scenario), and
+    // re-querying per iteration would add a CDP round-trip to every step.
+    const metrics = await this.device.getWindowMetrics();
+
+    // Leading-edge position recorded before the previous scroll, per axis, so we
+    // can detect when a scroll made no progress (scroll container at its limit).
+    let last: { axis: "vertical" | "horizontal"; position: number } | null = null;
+
+    for (let attempt = 0; ; attempt++) {
+      const result = await this.query();
+
+      if (!result.success) {
+        // Non-retryable query errors surface immediately, like tap()/waitFor().
+        if (
+          result.code === "NOT_SUPPORTED" ||
+          result.code === "INTERNAL" ||
+          result.code === "MULTIPLE_FOUND"
+        ) {
+          throw new LocatorError(result.error, result.code);
+        }
+        // Not measurable yet (NOT_FOUND/NOT_VISIBLE/NOT_ENABLED): blind-scroll.
+        if (attempt >= maxScrolls) {
+          throw new LocatorError(
+            `scrollIntoView: ${this.toString()} not found after ${maxScrolls} scroll(s)`,
+            "NOT_FOUND",
+          );
+        }
+        await this.device.scroll(scrollForDirection(blindDirection, metrics));
+        last = null; // position is unknown while unmeasurable
+        continue;
+      }
+
+      const step = computeScrollIntoViewStep(result.data.bounds, metrics, margin);
+      if (step.inView) {
+        return;
+      }
+
+      if (attempt >= maxScrolls) {
+        throw new LocatorError(
+          `scrollIntoView: ${this.toString()} could not be brought fully into view after ${maxScrolls} scroll(s)`,
+          "TIMEOUT",
+        );
+      }
+
+      // Boundary detection: if the previous scroll on this axis did not move the
+      // element, the container is at its limit — stop rather than spin.
+      if (
+        last !== null &&
+        last.axis === step.axis &&
+        isSamePosition(step.position, last.position)
+      ) {
+        throw new LocatorError(
+          `scrollIntoView: reached scroll boundary before ${this.toString()} was fully visible`,
+          "TIMEOUT",
+        );
+      }
+      last = { axis: step.axis, position: step.position };
+
+      // Floor the magnitude so the swipe clears the touch-slop threshold and
+      // actually scrolls; preserve the direction.
+      const magnitude = Math.max(Math.abs(step.delta), MIN_SCROLL_STEP);
+      const signed = step.delta < 0 ? -magnitude : magnitude;
+      const scrollOptions: ScrollOptions =
+        step.axis === "vertical" ? { dy: signed } : { dx: signed };
+      await this.device.scroll(scrollOptions);
+      // The swipe finishes before the ScrollView settles (RN momentum continues
+      // after pointer-up). Wait for the element position to stop changing before
+      // the next measurement, otherwise the boundary detector reads a stale,
+      // unchanged position and false-fires "reached scroll boundary".
+      await this.settleAfterScroll(step.axis);
+    }
+  }
+
+  /**
+   * Poll the element's leading-edge position along `axis` until it stops moving
+   * (the scroll has settled) or the settle budget elapses. Bounded; returns
+   * early if the element stops being measurable.
+   */
+  private async settleAfterScroll(axis: "vertical" | "horizontal"): Promise<void> {
+    const deadline = Date.now() + SCROLL_SETTLE_TIMEOUT;
+    let previous: number | null = null;
+
+    while (Date.now() < deadline) {
+      await this.device.waitForTimeout(SCROLL_SETTLE_POLL_INTERVAL);
+      const result = await this.query();
+      if (!result.success) {
+        return;
+      }
+      const position = axis === "vertical" ? result.data.bounds.y : result.data.bounds.x;
+      if (previous !== null && isSamePosition(position, previous)) {
+        return;
+      }
+      previous = position;
+    }
   }
 
   /**
