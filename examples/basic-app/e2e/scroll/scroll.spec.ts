@@ -22,6 +22,11 @@ test.describe("Scroll API", () => {
   test("scrollIntoView brings a below-the-fold element into view and screenshots it", async ({
     device,
   }) => {
+    // Reset to the top so the target is genuinely below the fold regardless of
+    // where a prior test left the scroll position (the app is a single live
+    // instance shared across tests).
+    await device.getByTestId("title").scrollIntoView();
+
     const metrics = await device.getWindowMetrics();
     const target = device.getByTestId("below-fold-target");
 
