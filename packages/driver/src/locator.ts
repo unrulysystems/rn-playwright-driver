@@ -1,12 +1,16 @@
 import type { ElementInfo, NativeResult } from "@0xbigboss/rn-driver-shared-types";
 import { buildHarnessCall } from "./harness-expressions";
+import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from "./scroll";
 import type {
   Capabilities,
   ElementBounds,
   Locator,
+  ScrollIntoViewOptions,
+  ScrollOptions,
   TapOptions,
   WaitForOptions,
   WaitForState,
+  WindowMetrics,
 } from "./types";
 
 /**
@@ -37,6 +41,10 @@ interface Evaluator {
   };
   waitForTimeout(ms: number): Promise<void>;
   capabilities(): Promise<Capabilities>;
+  /** Window metrics, used to decide when an element is within the viewport. */
+  getWindowMetrics(): Promise<WindowMetrics>;
+  /** Content-delta scroll, used to bring elements into view. */
+  scroll(options: ScrollOptions): Promise<void>;
   /** Platform for conditional behavior */
   platform: "ios" | "android";
 }
@@ -56,6 +64,7 @@ export class LocatorError extends Error {
 
 const DEFAULT_WAIT_TIMEOUT = 30_000;
 const DEFAULT_POLLING_INTERVAL = 100;
+const DEFAULT_MAX_SCROLLS = 10;
 
 /**
  * Locator implementation for finding and interacting with RN views.
@@ -242,33 +251,84 @@ export class LocatorImpl implements Locator {
   }
 
   /**
-   * Scroll the element into view.
+   * Scroll the element into the viewport.
    *
-   * NOT YET IMPLEMENTED: Scroll-to-view requires either:
-   * 1. A native module that can programmatically scroll ScrollView/FlatList containers
-   * 2. Integration with React Native's scrollToEnd/scrollTo methods via refs
+   * Bounded loop: each iteration measures the element, and if it is not fully on
+   * screen, issues one swipe (via `device.scroll`) toward it, then re-measures.
+   * Direction is inferred from the measured bounds; when the element is not yet
+   * in the view tree (e.g. virtualized content), `options.direction` drives a
+   * blind scroll. The loop terminates on success, on reaching the scroll
+   * boundary (no progress), or after `maxScrolls` — never spins unbounded.
    *
-   * Workaround: Use device.evaluate() to call scroll methods on ScrollView refs:
-   * ```typescript
-   * await device.evaluate(`
-   *   const scrollView = ... // get ref to ScrollView
-   *   scrollView.scrollTo({ y: 500, animated: true });
-   * `);
-   * ```
-   *
-   * @throws LocatorError with code "NOT_SUPPORTED"
+   * @throws LocatorError "TIMEOUT" if the boundary is hit or `maxScrolls` is
+   * exhausted before the element is fully visible; "NOT_FOUND" if the element
+   * never appears; or surfaces "NOT_SUPPORTED"/"INTERNAL"/"MULTIPLE_FOUND" from
+   * the underlying query immediately.
    */
-  async scrollIntoView(): Promise<void> {
-    // ScrollIntoView requires:
-    // 1. Finding the nearest scrollable ancestor (ScrollView, FlatList, etc.)
-    // 2. Calculating the scroll offset needed to bring element into view
-    // 3. Invoking scroll methods on the container
-    // This requires native module support not yet implemented.
-    throw new LocatorError(
-      "scrollIntoView requires native scroll integration (not yet implemented). " +
-        "Workaround: Use device.evaluate() to call scrollTo on ScrollView refs.",
-      "NOT_SUPPORTED",
-    );
+  async scrollIntoView(options?: ScrollIntoViewOptions): Promise<void> {
+    const maxScrolls = options?.maxScrolls ?? DEFAULT_MAX_SCROLLS;
+    const margin = options?.margin ?? 0;
+    const blindDirection = options?.direction ?? "down";
+    const metrics = await this.device.getWindowMetrics();
+
+    // Leading-edge position recorded before the previous scroll, per axis, so we
+    // can detect when a scroll made no progress (scroll container at its limit).
+    let last: { axis: "vertical" | "horizontal"; position: number } | null = null;
+
+    for (let attempt = 0; ; attempt++) {
+      const result = await this.query();
+
+      if (!result.success) {
+        // Non-retryable query errors surface immediately, like tap()/waitFor().
+        if (
+          result.code === "NOT_SUPPORTED" ||
+          result.code === "INTERNAL" ||
+          result.code === "MULTIPLE_FOUND"
+        ) {
+          throw new LocatorError(result.error, result.code);
+        }
+        // Not measurable yet (NOT_FOUND/NOT_VISIBLE/NOT_ENABLED): blind-scroll.
+        if (attempt >= maxScrolls) {
+          throw new LocatorError(
+            `scrollIntoView: ${this.toString()} not found after ${maxScrolls} scroll(s)`,
+            "NOT_FOUND",
+          );
+        }
+        await this.device.scroll(scrollForDirection(blindDirection, metrics));
+        last = null; // position is unknown while unmeasurable
+        continue;
+      }
+
+      const step = computeScrollIntoViewStep(result.data.bounds, metrics, margin);
+      if (step.inView) {
+        return;
+      }
+
+      if (attempt >= maxScrolls) {
+        throw new LocatorError(
+          `scrollIntoView: ${this.toString()} could not be brought fully into view after ${maxScrolls} scroll(s)`,
+          "TIMEOUT",
+        );
+      }
+
+      // Boundary detection: if the previous scroll on this axis did not move the
+      // element, the container is at its limit — stop rather than spin.
+      if (
+        last !== null &&
+        last.axis === step.axis &&
+        isSamePosition(step.position, last.position)
+      ) {
+        throw new LocatorError(
+          `scrollIntoView: reached scroll boundary before ${this.toString()} was fully visible`,
+          "TIMEOUT",
+        );
+      }
+      last = { axis: step.axis, position: step.position };
+
+      const scrollOptions: ScrollOptions =
+        step.axis === "vertical" ? { dy: step.delta } : { dx: step.delta };
+      await this.device.scroll(scrollOptions);
+    }
   }
 
   /**

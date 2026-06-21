@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { computeScrollGesture } from "./scroll";
-import type { WindowMetrics } from "./types";
+import { computeScrollGesture, computeScrollIntoViewStep, scrollForDirection } from "./scroll";
+import type { ElementBounds, WindowMetrics } from "./types";
 
 function metrics(overrides: Partial<WindowMetrics> = {}): WindowMetrics {
   return {
@@ -114,5 +114,64 @@ describe("computeScrollGesture", () => {
   it("produces a no-op segment when no delta is given", () => {
     const g = computeScrollGesture(metrics(), {});
     expect(g.from).toEqual(g.to);
+  });
+});
+
+function bounds(overrides: Partial<ElementBounds> = {}): ElementBounds {
+  return { x: 0, y: 0, width: 100, height: 50, ...overrides };
+}
+
+describe("computeScrollIntoViewStep", () => {
+  // Viewport 400x800, margin 0.
+  it("reports inView for an element fully inside the viewport", () => {
+    const step = computeScrollIntoViewStep(bounds({ x: 50, y: 300 }), metrics(), 0);
+    expect(step.inView).toBe(true);
+  });
+
+  it("returns a positive vertical delta for an element below the fold", () => {
+    const step = computeScrollIntoViewStep(bounds({ y: 1000, height: 50 }), metrics(), 0);
+    expect(step.axis).toBe("vertical");
+    expect(step.delta).toBeGreaterThan(0); // scroll down
+    expect(step.inView).toBe(false);
+    expect(step.position).toBe(1000);
+  });
+
+  it("returns a negative vertical delta for an element above the fold", () => {
+    const step = computeScrollIntoViewStep(bounds({ y: -200, height: 50 }), metrics(), 0);
+    expect(step.delta).toBeLessThan(0); // scroll up
+  });
+
+  it("prefers the horizontal axis when the off-screen-right correction is larger", () => {
+    const step = computeScrollIntoViewStep(bounds({ x: 1000, y: 300, width: 100 }), metrics(), 0);
+    expect(step.axis).toBe("horizontal");
+    expect(step.delta).toBeGreaterThan(0); // scroll right
+    expect(step.position).toBe(1000);
+  });
+
+  it("honors margin when deciding the delta", () => {
+    // x=100 keeps the horizontal axis inside the margin box so only the
+    // vertical correction matters. Element bottom at 760; with margin 50 the box
+    // bottom is 750, so it must scroll down 10 to clear the bottom margin.
+    const step = computeScrollIntoViewStep(bounds({ x: 100, y: 710, height: 50 }), metrics(), 50);
+    expect(step.axis).toBe("vertical");
+    expect(step.delta).toBeCloseTo(10);
+  });
+
+  it("aligns the leading edge for an element taller than the viewport box", () => {
+    // height 900 > 800: cannot fit; align its top to the box top (delta brings y→0).
+    const step = computeScrollIntoViewStep(bounds({ y: 100, height: 900 }), metrics(), 0);
+    expect(step.delta).toBeCloseTo(100);
+    const aligned = computeScrollIntoViewStep(bounds({ y: 0, height: 900 }), metrics(), 0);
+    expect(aligned.inView).toBe(true);
+  });
+});
+
+describe("scrollForDirection", () => {
+  it("maps cardinal directions to one-viewport content deltas", () => {
+    const m = metrics();
+    expect(scrollForDirection("down", m)).toEqual({ dy: m.height });
+    expect(scrollForDirection("up", m)).toEqual({ dy: -m.height });
+    expect(scrollForDirection("right", m)).toEqual({ dx: m.width });
+    expect(scrollForDirection("left", m)).toEqual({ dx: -m.width });
   });
 });

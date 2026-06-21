@@ -1,4 +1,11 @@
-import type { Easing, Point, ScrollOptions, SwipeOptions, WindowMetrics } from "./types";
+import type {
+  Easing,
+  ElementBounds,
+  Point,
+  ScrollOptions,
+  SwipeOptions,
+  WindowMetrics,
+} from "./types";
 
 /**
  * Default gesture duration for a scroll, in ms.
@@ -136,4 +143,103 @@ export function computeScrollGesture(metrics: WindowMetrics, options: ScrollOpti
   if (options.holdStart !== undefined) swipe.holdStart = options.holdStart;
   if (options.holdEnd !== undefined) swipe.holdEnd = options.holdEnd;
   return swipe;
+}
+
+/**
+ * Sub-pixel tolerance (logical points) for "is the element already in view" and
+ * "did the last scroll move it" comparisons. Guards against jitter from
+ * floating-point density conversions in the native bounds.
+ */
+const FIT_EPSILON = 0.5;
+
+/** One step of a `scrollIntoView` loop, derived purely from measured bounds. */
+export type ScrollIntoViewStep = {
+  /** The element is fully inside the margin-inset viewport; stop scrolling. */
+  inView: boolean;
+  /** Axis to scroll along this step (the one needing the larger correction). */
+  axis: "vertical" | "horizontal";
+  /** Content delta ({@link ScrollOptions} sign) to apply along `axis`. */
+  delta: number;
+  /** Element leading-edge coordinate along `axis`, used for boundary detection. */
+  position: number;
+};
+
+/**
+ * Content delta needed to bring one axis of an element into the margin-inset
+ * viewport box `[margin, viewport - margin]`.
+ *
+ * Returns 0 when already inside. Sign follows {@link ScrollOptions}: positive
+ * scrolls forward (down/right), negative scrolls back (up/left). When the
+ * element is larger than the box it can't fit fully, so its leading edge is
+ * aligned to the box start instead.
+ */
+function fitAxis(start: number, size: number, viewport: number, margin: number): number {
+  const lo = margin;
+  const hi = viewport - margin;
+  const box = hi - lo;
+  const end = start + size;
+  if (size >= box) return start - lo; // too big to fit → align leading edge to box start
+  if (start < lo) return start - lo; // before the box → scroll back (negative)
+  if (end > hi) return end - hi; // past the box → scroll forward (positive)
+  return 0;
+}
+
+/**
+ * Compute the next scroll step to bring `bounds` fully into the viewport.
+ *
+ * Pure: deterministic from the element bounds + window metrics, so the
+ * scroll-into-view convergence logic is unit-testable without a device. The
+ * caller (the locator loop) applies `delta` along `axis` via {@link
+ * ScrollOptions} and re-measures.
+ *
+ * Only the axis needing the larger correction is scrolled per step (one clean
+ * single-axis swipe at a time); the loop re-measures and handles the other axis
+ * on a subsequent step if needed.
+ */
+export function computeScrollIntoViewStep(
+  bounds: ElementBounds,
+  metrics: WindowMetrics,
+  margin: number,
+): ScrollIntoViewStep {
+  const dy = fitAxis(bounds.y, bounds.height, metrics.height, margin);
+  const dx = fitAxis(bounds.x, bounds.width, metrics.width, margin);
+  const inView = Math.abs(dx) < FIT_EPSILON && Math.abs(dy) < FIT_EPSILON;
+  const vertical = Math.abs(dy) >= Math.abs(dx);
+  return {
+    inView,
+    axis: vertical ? "vertical" : "horizontal",
+    delta: vertical ? dy : dx,
+    position: vertical ? bounds.y : bounds.x,
+  };
+}
+
+/** True when two axis positions are equal within the fit tolerance. */
+export function isSamePosition(a: number, b: number): boolean {
+  return Math.abs(a - b) < FIT_EPSILON;
+}
+
+/**
+ * Blind scroll request for a cardinal direction, used by `scrollIntoView` when
+ * the element isn't yet in the view tree (so its position can't be measured to
+ * infer direction). Magnitude is one viewport span; {@link computeScrollGesture}
+ * clamps it to the on-screen safe band.
+ */
+export function scrollForDirection(
+  direction: "up" | "down" | "left" | "right",
+  metrics: WindowMetrics,
+): ScrollOptions {
+  switch (direction) {
+    case "down":
+      return { dy: metrics.height };
+    case "up":
+      return { dy: -metrics.height };
+    case "right":
+      return { dx: metrics.width };
+    case "left":
+      return { dx: -metrics.width };
+    default: {
+      const _exhaustive: never = direction;
+      throw new Error(`Unknown scroll direction: ${_exhaustive}`);
+    }
+  }
 }
