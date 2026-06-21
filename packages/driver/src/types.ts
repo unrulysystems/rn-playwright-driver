@@ -105,6 +105,52 @@ export type SwipeOptions = TimingOptions &
     to: Point;
   };
 
+/**
+ * Options for {@link Device.scroll} — a content-delta scroll performed as a
+ * single swipe gesture.
+ *
+ * Sign convention matches the web `scrollBy`: a positive delta reveals later
+ * content (the finger drags the opposite way).
+ * - `dy > 0` scrolls DOWN (reveals content below the fold).
+ * - `dy < 0` scrolls UP.
+ * - `dx > 0` scrolls RIGHT, `dx < 0` scrolls LEFT.
+ *
+ * The gesture is anchored at the viewport center unless `x`/`y` are given, and
+ * is clamped to a mid-screen safe band, so the effective scroll magnitude is
+ * bounded by the available on-screen swipe distance.
+ */
+export type ScrollOptions = TimingOptions &
+  InterpolationOptions & {
+    /** Horizontal content delta in logical points (default: 0). */
+    dx?: number;
+    /** Vertical content delta in logical points (default: 0). */
+    dy?: number;
+    /** Swipe anchor X in logical points (default: viewport center). */
+    x?: number;
+    /** Swipe anchor Y in logical points (default: viewport center). */
+    y?: number;
+  };
+
+/**
+ * Options for {@link Locator.scrollIntoView}.
+ */
+export type ScrollIntoViewOptions = {
+  /** Maximum number of scroll gestures to attempt (default: 10). */
+  maxScrolls?: number;
+  /**
+   * Minimum gap in logical points to keep between the element and each viewport
+   * edge once it is considered "in view" (default: 0).
+   */
+  margin?: number;
+  /**
+   * Direction to scroll when the element is not currently in the view tree
+   * (e.g. virtualized off-screen content), so its position can't be measured to
+   * infer direction. Ignored once the element is found (direction is then
+   * derived from its bounds). Default: "down".
+   */
+  direction?: "up" | "down" | "left" | "right";
+};
+
 export type TouchBackendType = "xctest" | "instrumentation" | "native-module" | "cli";
 
 // --- Touch Backend Info ---
@@ -279,12 +325,21 @@ export type Locator = {
   /** Capture screenshot of element. REQUIRES: RNDriverScreenshot (Phase 3) */
   screenshot(): Promise<Buffer>;
   /**
-   * Scroll the element into view.
-   * NOT YET IMPLEMENTED: Requires native scroll integration.
-   * Use device.evaluate() with scrollTo on ScrollView refs as workaround.
-   * @throws LocatorError with code "NOT_SUPPORTED"
+   * Scroll the element into the viewport.
+   *
+   * Repeatedly issues swipe gestures (via {@link Device.scroll}) on the
+   * scrollable content until the element is fully on screen, bounded by
+   * `maxScrolls`. Direction is inferred from the element's measured bounds when
+   * it is in the view tree; for not-yet-rendered (e.g. virtualized) elements,
+   * `options.direction` controls the blind scroll direction.
+   *
+   * REQUIRES: RNDriverViewTree (to measure) + a working touch backend.
+   *
+   * @throws LocatorError "TIMEOUT" if the scroll boundary is reached or
+   * `maxScrolls` is exhausted before the element is fully visible, or
+   * "NOT_FOUND" if the element never appears.
    */
-  scrollIntoView(): Promise<void>;
+  scrollIntoView(options?: ScrollIntoViewOptions): Promise<void>;
 
   // --- Chaining methods ---
   /** Find element by testID within this element's subtree */
@@ -381,6 +436,16 @@ export interface Device {
     /** Multi-touch gesture builder */
     multiGesture(): MultiGestureBuilder;
   };
+
+  /**
+   * Scroll the content by a delta via a single swipe gesture, without needing
+   * an element target. Anchored at the viewport center by default.
+   *
+   * Sign convention matches web `scrollBy`: `dy > 0` reveals content below the
+   * fold (scroll down), `dx > 0` reveals content to the right. See
+   * {@link ScrollOptions}.
+   */
+  scroll(options: ScrollOptions): Promise<void>;
 
   // --- Screenshots (Phase 3 - require native module) ---
   screenshot(options?: { clip?: ElementBounds }): Promise<Buffer>;

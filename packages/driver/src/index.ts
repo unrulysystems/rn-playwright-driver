@@ -57,6 +57,8 @@ export type {
   Point,
   PointerEventOptions,
   RotateOptions,
+  ScrollIntoViewOptions,
+  ScrollOptions,
   SwipeOptions,
   TapOptions,
   TimingOptions,
