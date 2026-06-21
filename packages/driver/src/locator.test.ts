@@ -50,6 +50,11 @@ type ScrollModel = {
   maxOffsetY: number;
   /** Per-gesture movement cap, modeling the on-screen swipe band. */
   maxStep: number;
+  /**
+   * Touch-slop threshold: a swipe shorter than this is treated as a tap and
+   * does not scroll at all (models real RN ScrollView behavior). Default 0.
+   */
+  slop: number;
 };
 
 function defaultModel(overrides: Partial<ScrollModel> = {}): ScrollModel {
@@ -63,6 +68,7 @@ function defaultModel(overrides: Partial<ScrollModel> = {}): ScrollModel {
     maxOffsetX: 0,
     maxOffsetY: 5000,
     maxStep: 400,
+    slop: 0,
     ...overrides,
   };
 }
@@ -77,9 +83,18 @@ class FakeDevice {
     private readonly model: ScrollModel,
     /** Optional override to simulate query failures / virtualization. */
     private readonly queryResult?: (calls: number) => NativeResult<ElementInfo>,
+    /**
+     * When true, a scroll does not move the element immediately; the offset
+     * eases toward the target across subsequent waitForTimeout() ticks. Models
+     * RN ScrollView momentum that continues after pointer-up — the case the
+     * synchronous default fake cannot reproduce.
+     */
+    private readonly momentum = false,
   ) {}
 
   private queries = 0;
+  private pendingX = 0;
+  private pendingY = 0;
 
   async evaluate<T>(): Promise<T> {
     this.queries += 1;
@@ -118,15 +133,42 @@ class FakeDevice {
     this.scrollCalls.push(options);
     if (options.dy !== undefined) {
       const step = clamp(options.dy, -this.model.maxStep, this.model.maxStep);
-      this.model.offsetY = clamp(this.model.offsetY + step, 0, this.model.maxOffsetY);
+      if (Math.abs(step) >= this.model.slop) {
+        const target = clamp(this.model.offsetY + step, 0, this.model.maxOffsetY);
+        if (this.momentum) {
+          this.pendingY = target - this.model.offsetY;
+        } else {
+          this.model.offsetY = target;
+        }
+      }
     }
     if (options.dx !== undefined) {
       const step = clamp(options.dx, -this.model.maxStep, this.model.maxStep);
-      this.model.offsetX = clamp(this.model.offsetX + step, 0, this.model.maxOffsetX);
+      if (Math.abs(step) >= this.model.slop) {
+        const target = clamp(this.model.offsetX + step, 0, this.model.maxOffsetX);
+        if (this.momentum) {
+          this.pendingX = target - this.model.offsetX;
+        } else {
+          this.model.offsetX = target;
+        }
+      }
     }
   }
 
-  async waitForTimeout(): Promise<void> {}
+  async waitForTimeout(): Promise<void> {
+    if (!this.momentum) return;
+    // Ease toward the target: apply half the remaining delta per tick, snapping
+    // when it gets small — the offset keeps moving for a few polls, then settles.
+    for (const axis of ["X", "Y"] as const) {
+      const key = `pending${axis}` as const;
+      const pending = this[key];
+      if (pending === 0) continue;
+      const applied = Math.abs(pending) < 1 ? pending : pending / 2;
+      if (axis === "Y") this.model.offsetY += applied;
+      else this.model.offsetX += applied;
+      this[key] = pending - applied;
+    }
+  }
 
   async capabilities(): Promise<Capabilities> {
     return CAPABILITIES;
@@ -167,6 +209,33 @@ describe("Locator.scrollIntoView", () => {
       expect(call.dy ?? 0).toBeGreaterThan(0); // dy > 0 → scroll down
     }
     // Element ended fully inside the viewport.
+    expect(device.boundsY()).toBeGreaterThanOrEqual(0);
+    expect(device.boundsY() + 50).toBeLessThanOrEqual(METRICS.height);
+  });
+
+  it("floors the scroll magnitude so a small residual still clears touch slop", async () => {
+    // Regression for the e2e bug: the element sits just below the fold needing a
+    // ~10pt scroll, but a swipe that small is below the touch-slop threshold and
+    // does not scroll at all → the loop got stuck at the boundary. Flooring the
+    // step magnitude makes the final swipe big enough to land it in view.
+    // Element bottom at 760 + 50 = 810, viewport 800 → needs ~10pt; slop is 20.
+    const device = new FakeDevice(defaultModel({ contentY: 760, height: 50, slop: 20 }));
+    await locatorFor(device).scrollIntoView();
+    expect(device.boundsY()).toBeGreaterThanOrEqual(0);
+    expect(device.boundsY() + 50).toBeLessThanOrEqual(METRICS.height);
+  });
+
+  it("converges despite scroll momentum settling after the swipe", async () => {
+    // Regression for the e2e bug: a real ScrollView keeps moving after pointer-up,
+    // so re-measuring immediately reads an unchanged position and the boundary
+    // detector false-fires. With the post-scroll settle, the loop waits for the
+    // position to stabilize and converges.
+    const device = new FakeDevice(
+      defaultModel({ contentY: 2000, height: 50, maxStep: 400 }),
+      undefined,
+      true, // momentum
+    );
+    await locatorFor(device).scrollIntoView();
     expect(device.boundsY()).toBeGreaterThanOrEqual(0);
     expect(device.boundsY() + 50).toBeLessThanOrEqual(METRICS.height);
   });

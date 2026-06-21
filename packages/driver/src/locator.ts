@@ -65,6 +65,17 @@ export class LocatorError extends Error {
 const DEFAULT_WAIT_TIMEOUT = 30_000;
 const DEFAULT_POLLING_INTERVAL = 100;
 const DEFAULT_MAX_SCROLLS = 10;
+// scrollIntoView settle: after a swipe, poll the element position this often,
+// up to this budget, until it stabilizes (ScrollView momentum settles).
+const SCROLL_SETTLE_POLL_INTERVAL = 100;
+const SCROLL_SETTLE_TIMEOUT = 2_000;
+// Minimum scroll magnitude per scrollIntoView step, in logical points. A swipe
+// shorter than the platform touch slop (~10pt) is treated as a tap and does not
+// scroll at all, leaving the element stuck just short of fully visible. Flooring
+// the magnitude guarantees each step actually moves the content; overshooting a
+// small residual is harmless because the element only needs to land anywhere in
+// the (much larger) in-view band, and the loop re-measures.
+const MIN_SCROLL_STEP = 64;
 
 /**
  * Locator implementation for finding and interacting with RN views.
@@ -328,9 +339,41 @@ export class LocatorImpl implements Locator {
       }
       last = { axis: step.axis, position: step.position };
 
+      // Floor the magnitude so the swipe clears the touch-slop threshold and
+      // actually scrolls; preserve the direction.
+      const magnitude = Math.max(Math.abs(step.delta), MIN_SCROLL_STEP);
+      const signed = step.delta < 0 ? -magnitude : magnitude;
       const scrollOptions: ScrollOptions =
-        step.axis === "vertical" ? { dy: step.delta } : { dx: step.delta };
+        step.axis === "vertical" ? { dy: signed } : { dx: signed };
       await this.device.scroll(scrollOptions);
+      // The swipe finishes before the ScrollView settles (RN momentum continues
+      // after pointer-up). Wait for the element position to stop changing before
+      // the next measurement, otherwise the boundary detector reads a stale,
+      // unchanged position and false-fires "reached scroll boundary".
+      await this.settleAfterScroll(step.axis);
+    }
+  }
+
+  /**
+   * Poll the element's leading-edge position along `axis` until it stops moving
+   * (the scroll has settled) or the settle budget elapses. Bounded; returns
+   * early if the element stops being measurable.
+   */
+  private async settleAfterScroll(axis: "vertical" | "horizontal"): Promise<void> {
+    const deadline = Date.now() + SCROLL_SETTLE_TIMEOUT;
+    let previous: number | null = null;
+
+    while (Date.now() < deadline) {
+      await this.device.waitForTimeout(SCROLL_SETTLE_POLL_INTERVAL);
+      const result = await this.query();
+      if (!result.success) {
+        return;
+      }
+      const position = axis === "vertical" ? result.data.bounds.y : result.data.bounds.x;
+      if (previous !== null && isSamePosition(position, previous)) {
+        return;
+      }
+      previous = position;
     }
   }
 
