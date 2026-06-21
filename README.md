@@ -143,6 +143,41 @@ test("get window metrics", async ({ device }) => {
 });
 ```
 
+### Scrolling
+
+Reach content below the fold with `locator.scrollIntoView()`, or scroll the
+content directly with `device.scroll()`.
+
+```ts
+test("assert a below-the-fold chart", async ({ device }) => {
+  // Scrolls the content (bounded swipes) until the element is fully on screen.
+  const chart = device.getByTestId("revenue-chart");
+  await chart.scrollIntoView();
+  expect(await chart.isVisible()).toBe(true);
+  await chart.screenshot();
+});
+
+test("scroll without an element target", async ({ device }) => {
+  // Content-delta scroll, anchored at the viewport center. Sign matches the web
+  // `scrollBy`: dy > 0 reveals content below, dx > 0 reveals content to the right.
+  await device.scroll({ dy: 400 }); // scroll down ~400 logical points
+  await device.scroll({ dy: -400 }); // scroll back up
+});
+```
+
+`scrollIntoView()` infers the direction from the element's measured bounds. For
+not-yet-rendered (virtualized) content, pass `direction` to drive a blind scroll
+until it appears, and tune `maxScrolls`/`margin` as needed:
+
+```ts
+await device.getByText("Load more").scrollIntoView({ direction: "down", maxScrolls: 20 });
+```
+
+> Scroll gestures stay within a mid-screen safe band and use a low-momentum
+> motion, so the scrolled offset approximates the requested delta. The magnitude
+> of a single `device.scroll()` is therefore bounded by the on-screen swipe
+> distance; `scrollIntoView()` loops as many gestures as needed.
+
 ## Configuration
 
 Environment variables for target selection and timeouts:
