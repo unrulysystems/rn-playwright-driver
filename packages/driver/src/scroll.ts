@@ -195,14 +195,27 @@ function fitAxis(start: number, size: number, viewport: number, margin: number):
  * Only the axis needing the larger correction is scrolled per step (one clean
  * single-axis swipe at a time); the loop re-measures and handles the other axis
  * on a subsequent step if needed.
+ *
+ * "In view" means inside the SAFE content area, not the raw screen: an element
+ * tucked under the notch / status bar / home indicator is occluded, so the fit
+ * box is inset by `metrics.safeAreaInsets`. `margin` adds a further symmetric
+ * gap inside that safe box. `position` stays in raw screen coordinates (the
+ * constant inset cancels in the delta) so the loop's no-progress detection
+ * compares like for like across measurements.
  */
 export function computeScrollIntoViewStep(
   bounds: ElementBounds,
   metrics: WindowMetrics,
   margin: number,
 ): ScrollIntoViewStep {
-  const dy = fitAxis(bounds.y, bounds.height, metrics.height, margin);
-  const dx = fitAxis(bounds.x, bounds.width, metrics.width, margin);
+  const insets = metrics.safeAreaInsets;
+  const top = insets?.top ?? 0;
+  const bottom = insets?.bottom ?? 0;
+  const left = insets?.left ?? 0;
+  const right = insets?.right ?? 0;
+
+  const dy = fitAxis(bounds.y - top, bounds.height, metrics.height - top - bottom, margin);
+  const dx = fitAxis(bounds.x - left, bounds.width, metrics.width - left - right, margin);
   const inView = Math.abs(dx) < FIT_EPSILON && Math.abs(dy) < FIT_EPSILON;
   const vertical = Math.abs(dy) >= Math.abs(dx);
   return {

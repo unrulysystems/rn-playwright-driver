@@ -10,7 +10,7 @@
 
 import type { ElementInfo, NativeResult } from "@0xbigboss/rn-driver-shared-types";
 import { describe, expect, it } from "vitest";
-import { createLocator, type Locator, LocatorError } from "./locator";
+import { createLocator, type Locator } from "./locator";
 import type { Capabilities, ScrollOptions, WindowMetrics } from "./types";
 
 const METRICS: WindowMetrics = {
@@ -144,10 +144,10 @@ function locatorFor(device: FakeDevice): Locator {
 }
 
 async function expectLocatorError(promise: Promise<unknown>, code: string): Promise<void> {
-  await expect(promise).rejects.toBeInstanceOf(LocatorError);
-  await promise.catch((err) => {
-    expect((err as LocatorError).code).toBe(code);
-  });
+  // Single assertion: fails if the promise resolves (no error) OR the rejection
+  // isn't a LocatorError with the expected code. Avoids the .catch trap where a
+  // resolved promise would skip the code check entirely.
+  await expect(promise).rejects.toMatchObject({ name: "LocatorError", code });
 }
 
 describe("Locator.scrollIntoView", () => {
@@ -248,6 +248,17 @@ describe("Locator.scrollIntoView", () => {
     }));
     await expectLocatorError(locatorFor(device).scrollIntoView(), "NOT_SUPPORTED");
     expect(device.scrollCalls).toHaveLength(0);
+  });
+
+  it("terminates (does not spin) when off-screen on both axes with neither able to scroll", async () => {
+    // Element off-screen right AND below, but both containers are at their limit
+    // (maxOffset 0). No progress is possible on either axis.
+    const device = new FakeDevice(
+      defaultModel({ contentX: 1000, contentY: 1000, maxOffsetX: 0, maxOffsetY: 0 }),
+    );
+    await expectLocatorError(locatorFor(device).scrollIntoView(), "TIMEOUT");
+    // Boundary detected quickly rather than burning every scroll attempt.
+    expect(device.scrollCalls.length).toBeLessThan(10);
   });
 
   it("scrolls horizontally to reach an off-screen-right element", async () => {

@@ -125,9 +125,17 @@ export type ScrollOptions = TimingOptions &
     dx?: number;
     /** Vertical content delta in logical points (default: 0). */
     dy?: number;
-    /** Swipe anchor X in logical points (default: viewport center). */
+    /**
+     * Swipe anchor X in logical points (default: viewport center). Clamped to
+     * the mid-screen safe band, so an out-of-band value is moved to the nearest
+     * band edge.
+     */
     x?: number;
-    /** Swipe anchor Y in logical points (default: viewport center). */
+    /**
+     * Swipe anchor Y in logical points (default: viewport center). Clamped to
+     * the mid-screen safe band, so an out-of-band value is moved to the nearest
+     * band edge.
+     */
     y?: number;
   };
 

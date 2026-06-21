@@ -269,6 +269,9 @@ export class LocatorImpl implements Locator {
     const maxScrolls = options?.maxScrolls ?? DEFAULT_MAX_SCROLLS;
     const margin = options?.margin ?? 0;
     const blindDirection = options?.direction ?? "down";
+    // Fetched once: the viewport is assumed stable for the duration of a scroll
+    // (orientation changes mid-scroll are not a real automation scenario), and
+    // re-querying per iteration would add a CDP round-trip to every step.
     const metrics = await this.device.getWindowMetrics();
 
     // Leading-edge position recorded before the previous scroll, per axis, so we

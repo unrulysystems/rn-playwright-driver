@@ -164,6 +164,21 @@ describe("computeScrollIntoViewStep", () => {
     const aligned = computeScrollIntoViewStep(bounds({ y: 0, height: 900 }), metrics(), 0);
     expect(aligned.inView).toBe(true);
   });
+
+  it("treats an element under a safe-area inset as not in view", () => {
+    // home indicator: bottom inset 34. Safe content bottom is 800 - 34 = 766.
+    const m = metrics({ safeAreaInsets: { top: 44, bottom: 34, left: 0, right: 0 } });
+    const occluded = bounds({ x: 100, y: 750, height: 50 }); // bottom at 800, behind indicator
+    const step = computeScrollIntoViewStep(occluded, m, 0);
+    expect(step.inView).toBe(false);
+    expect(step.axis).toBe("vertical");
+    // Must scroll down enough to lift the element fully above the inset (766 - 800 = -34).
+    expect(step.delta).toBeCloseTo(34);
+
+    // Same element fully within the safe area reads as in view.
+    const safe = computeScrollIntoViewStep(bounds({ x: 100, y: 400, height: 50 }), m, 0);
+    expect(safe.inView).toBe(true);
+  });
 });
 
 describe("scrollForDirection", () => {
