@@ -412,4 +412,22 @@ describe('RNDevice failOnUncaughtException', () => {
     // Buffer drained — the next operation proceeds normally.
     await expect(device.evaluate('2')).resolves.toBe('ok')
   })
+
+  it('clears buffered exceptions on disconnect so a reconnect is not poisoned', async () => {
+    vi.clearAllMocks()
+    const device = new RNDevice({ timeout: 1000, failOnUncaughtException: true })
+    mockEvaluateFn.mockResolvedValue('ok')
+    await device.connect()
+
+    fireCdpEvent('Runtime.exceptionThrown', {
+      exceptionDetails: { exception: { description: 'Error: stale from previous session' } },
+    })
+
+    // Disconnect before the exception is ever surfaced, then reconnect the SAME
+    // instance. The stale exception must not throw on the new session.
+    await device.disconnect()
+    await device.connect()
+
+    await expect(device.evaluate('1')).resolves.toBe('ok')
+  })
 })

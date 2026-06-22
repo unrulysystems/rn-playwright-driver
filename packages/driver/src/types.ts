@@ -24,8 +24,11 @@ export type DeviceOptions = {
   touch?: TouchBackendConfig
   /**
    * When true, an uncaught JS exception in the app (CDP `Runtime.exceptionThrown`)
-   * makes the next device operation reject with an `UncaughtExceptionError`.
-   * Off by default — exceptions are still delivered via `device.on("pageerror")`.
+   * makes the next JS-evaluating device operation reject with an
+   * `UncaughtExceptionError` — i.e. `evaluate()` and anything built on it (locator
+   * queries, `waitForFunction`, frame waits). Pure-timing ops (`waitForTimeout`,
+   * `ping`) do not gate on it. Off by default — exceptions are always delivered
+   * via `device.on("pageerror")` regardless.
    */
   failOnUncaughtException?: boolean
 } & TargetSelectionOptions
@@ -361,9 +364,10 @@ export type Locator = {
    */
   type(text: string): Promise<void>
   /**
-   * Set a text input's value in one shot. Mirrors the value onto the native view
-   * and fires a synthetic change so CONTROLLED inputs update React state (not just
-   * setNativeProps). Auto-waits for the element to be actionable. No native
+   * Set a text input's value in one shot. REPLACES the current value (it is not a
+   * key-by-key append like a keyboard `type()`). Mirrors the value onto the native
+   * view and fires a synthetic change so CONTROLLED inputs update React state (not
+   * just setNativeProps). Auto-waits for the element to be actionable. No native
    * keyboard module required.
    *
    * @throws LocatorError "NOT_A_TEXT_INPUT" if the element is not a text input.

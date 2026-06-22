@@ -128,6 +128,9 @@ export class RNDevice implements Device {
       cleanup()
     }
     this._eventForwarderCleanups = []
+    // Drop buffered exceptions so a stale one can't poison a later reconnect of
+    // this same device instance.
+    this._uncaughtExceptions.length = 0
     if (this._touchBackend) {
       await this._touchBackend.dispose()
       this._touchBackend = null

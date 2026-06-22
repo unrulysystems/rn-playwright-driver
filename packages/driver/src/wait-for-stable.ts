@@ -42,6 +42,9 @@ export async function waitForStable<T>(
 
   let previous: T | undefined
 
+  // The deadline is checked at the top of each iteration, so one sample may run
+  // after the wait pushes the clock just past `deadline` — total samples can
+  // slightly exceed timeout/pollInterval. Bounded and intentional.
   while (now() < deadline) {
     await timer.waitForTimeout(pollInterval)
     const current = await sample()

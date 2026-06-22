@@ -247,7 +247,11 @@ type FiberNode = {
 }
 
 function isTextInputProps(props: Record<string, unknown>): boolean {
-  return typeof props.onChangeText === 'function' || typeof props.onChange === 'function'
+  // Discriminate on onChangeText: it is RN-TextInput-specific, whereas onChange
+  // is shared by pickers/sliders/custom controls. Matching onChange here would
+  // let fill() resolve a non-text-input that happens to share the testID. We
+  // still FIRE onChange in applyFill when present, but it is not the gate.
+  return typeof props.onChangeText === 'function'
 }
 
 /** Iterative DFS over child/sibling links for a text input with `testId`. */
@@ -262,11 +266,13 @@ function findFiberByTestId(root: FiberNode | null, testId: string): FiberNode | 
     if (props && props.testID === testId && isTextInputProps(props)) {
       return fiber
     }
-    if (fiber.child) {
-      stack.push(fiber.child)
-    }
+    // Push sibling first so pop() visits the child subtree first — natural
+    // document order, which disambiguates if a testID somehow appears twice.
     if (fiber.sibling) {
       stack.push(fiber.sibling)
+    }
+    if (fiber.child) {
+      stack.push(fiber.child)
     }
   }
   return null

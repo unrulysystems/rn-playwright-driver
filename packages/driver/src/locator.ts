@@ -158,8 +158,10 @@ export class LocatorImpl implements Locator {
     // Auto-wait for the element to be actionable (exists + visible) before filling.
     await this.waitForActionable()
     // The synthetic-change dispatch must happen in-app (the harness resolves the
-    // TextInput's React component), so pass the selector and let it match there.
-    const args = `${JSON.stringify(this.selector)}, ${JSON.stringify(text)}`
+    // TextInput's React component). Ship only the minimal {type,value} the harness
+    // matches on — not internal locator state (index/parent bounds).
+    const fillSelector = { type: this.selector.type, value: this.selector.value }
+    const args = `${JSON.stringify(fillSelector)}, ${JSON.stringify(text)}`
     const result = await this.device.evaluate<NativeResult<FillDispatch>>(
       buildHarnessCall('fill', args),
     )
