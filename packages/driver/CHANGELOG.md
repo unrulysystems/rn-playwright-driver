@@ -1,5 +1,11 @@
 # @0xbigboss/rn-playwright-driver
 
+## 0.4.1
+
+### Patch Changes
+
+- Republish of 0.4.0 with the `@0xbigboss/rn-driver-shared-types` dependency correctly resolved. 0.4.0 was published with `changeset publish` (which delegates to `npm publish` and does not rewrite bun's `workspace:` protocol), so its tarball shipped an uninstallable `"workspace:*"` dependency spec. 0.4.1 is published with `bun publish`, which rewrites the spec to a real version. No source changes from 0.4.0; **0.4.0 is deprecated — use 0.4.1+.**
+
 ## 0.4.0
 
 ### Minor Changes
