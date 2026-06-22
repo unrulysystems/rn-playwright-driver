@@ -7,7 +7,7 @@ export type { DebugTarget, TargetSelectionOptions } from './cdp/discovery'
 export { discoverTargets, selectTarget } from './cdp/discovery'
 export type { RNDeviceOptions } from './device'
 // --- Device ---
-export { createDevice, RNDevice, TimeoutError } from './device'
+export { createDevice, RNDevice, TimeoutError, UncaughtExceptionError } from './device'
 // --- Assertions ---
 export type {
   AssertionOptions,
@@ -36,7 +36,9 @@ export {
 // --- Types ---
 export type {
   Capabilities,
+  ConsoleMessage,
   Device,
+  DeviceEventMap,
   DeviceOptions,
   DragOptions,
   DragPathOptions,
@@ -52,6 +54,7 @@ export type {
   MoveOptions,
   MovePathOptions,
   MultiGestureBuilder,
+  PageError,
   PinchOptions,
   PlannedPointerEvent,
   Point,

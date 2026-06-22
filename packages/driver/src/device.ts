@@ -1,5 +1,6 @@
 import { CDPClient, type CDPClientOptions } from './cdp/client'
 import { discoverTargets, selectTarget } from './cdp/discovery'
+import { parseConsoleEvent, parseExceptionEvent } from './cdp/runtime-events'
 import { buildCapabilitiesExpression, buildHarnessCall } from './harness-expressions'
 import type { Locator } from './locator'
 import { buildRoleSelector, createLocator, LocatorError } from './locator'
@@ -8,10 +9,13 @@ import { computeScrollGesture } from './scroll'
 import { createTouchBackend, type TouchBackend } from './touch'
 import type {
   Capabilities,
+  ConsoleMessage,
   Device,
+  DeviceEventMap,
   DeviceOptions,
   DriverEvent,
   ElementBounds,
+  PageError,
   ScrollOptions,
   TouchBackendInfo,
   TracingOptions,
@@ -33,6 +37,21 @@ export class TimeoutError extends Error {
 }
 
 /**
+ * Error a device operation rejects with when `failOnUncaughtException` is set and
+ * an uncaught app exception was captured before the operation ran. Carries the
+ * original {@link PageError} for inspection.
+ */
+export class UncaughtExceptionError extends Error {
+  readonly pageError: PageError
+
+  constructor(pageError: PageError) {
+    super(`Uncaught exception in app: ${pageError.message}`)
+    this.name = 'UncaughtExceptionError'
+    this.pageError = pageError
+  }
+}
+
+/**
  * Result type from native module calls.
  */
 type NativeResult<T> = { success: true; data: T } | { success: false; error: string; code: string }
@@ -49,6 +68,13 @@ export class RNDevice implements Device {
   private _touchBackend: TouchBackend | null = null
   private _touchBackendInfo: TouchBackendInfo | null = null
   private _platform: 'ios' | 'android' = 'ios'
+  // Runtime-event listeners, keyed by event name. Function identity is the
+  // unsubscribe key; payloads are cast at the typed on()/emit() boundary.
+  private readonly _listeners = new Map<string, Set<(payload: unknown) => void>>()
+  // Uncaught app exceptions captured since the last failOnUncaughtException check.
+  private readonly _uncaughtExceptions: PageError[] = []
+  // Teardown for the CDP event forwarders registered in connect().
+  private _eventForwarderCleanups: Array<() => void> = []
 
   constructor(options: RNDeviceOptions = {}) {
     const timeout = options.timeout ?? DEFAULT_WAIT_TIMEOUT
@@ -69,6 +95,9 @@ export class RNDevice implements Device {
     const target = selectTarget(targets, this.options)
 
     await this.cdp.connect(target.webSocketDebuggerUrl)
+
+    // Forward console + exception events now that Runtime is enabled.
+    this.registerRuntimeEventForwarders()
 
     // Detect platform from target info or via JS
     this._platform = await this.detectPlatform(target)
@@ -94,6 +123,10 @@ export class RNDevice implements Device {
   }
 
   async disconnect(): Promise<void> {
+    for (const cleanup of this._eventForwarderCleanups) {
+      cleanup()
+    }
+    this._eventForwarderCleanups = []
     if (this._touchBackend) {
       await this._touchBackend.dispose()
       this._touchBackend = null
@@ -105,9 +138,79 @@ export class RNDevice implements Device {
     return this.cdp.ping()
   }
 
+  // --- Runtime events (console + uncaught exceptions) ---
+
+  on<E extends keyof DeviceEventMap>(
+    event: E,
+    listener: (payload: DeviceEventMap[E]) => void,
+  ): () => void {
+    let set = this._listeners.get(event)
+    if (!set) {
+      set = new Set()
+      this._listeners.set(event, set)
+    }
+    set.add(listener as (payload: unknown) => void)
+    return () => this.off(event, listener)
+  }
+
+  off<E extends keyof DeviceEventMap>(
+    event: E,
+    listener: (payload: DeviceEventMap[E]) => void,
+  ): void {
+    this._listeners.get(event)?.delete(listener as (payload: unknown) => void)
+  }
+
+  private emit<E extends keyof DeviceEventMap>(event: E, payload: DeviceEventMap[E]): void {
+    const set = this._listeners.get(event)
+    if (!set) {
+      return
+    }
+    for (const listener of set) {
+      try {
+        listener(payload)
+      } catch (err) {
+        console.error(`Device: "${event}" listener threw:`, err)
+      }
+    }
+  }
+
+  /**
+   * Forward CDP runtime events to device listeners. Called once per connection;
+   * the returned CDP unsubscribers are torn down on disconnect.
+   */
+  private registerRuntimeEventForwarders(): void {
+    this._eventForwarderCleanups.push(
+      this.cdp.onEvent('Runtime.consoleAPICalled', (params) => {
+        const message: ConsoleMessage = parseConsoleEvent(params)
+        this.emit('console', message)
+      }),
+      this.cdp.onEvent('Runtime.exceptionThrown', (params) => {
+        const error = parseExceptionEvent(params)
+        // Buffer for failOnUncaughtException; the next op surfaces it.
+        this._uncaughtExceptions.push(error)
+        this.emit('pageerror', error)
+      }),
+    )
+  }
+
+  /**
+   * If failOnUncaughtException is enabled and an app exception was captured,
+   * throw the oldest one (removing it) so the failing operation reports it.
+   */
+  private throwIfUncaughtException(): void {
+    if (!this.options.failOnUncaughtException) {
+      return
+    }
+    const first = this._uncaughtExceptions.shift()
+    if (first) {
+      throw new UncaughtExceptionError(first)
+    }
+  }
+
   // --- JS Evaluation (Phase 1) ---
 
   async evaluate<T>(expression: string): Promise<T> {
+    this.throwIfUncaughtException()
     const result = await this.cdp.evaluate<T>(expression)
     // Trace the evaluate call if tracing is active
     // We do this after the call to avoid tracing internal startTracing/stopTracing calls

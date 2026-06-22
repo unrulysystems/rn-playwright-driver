@@ -4,10 +4,12 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { RNDevice, TimeoutError } from './device'
+import { RNDevice, TimeoutError, UncaughtExceptionError } from './device'
+import type { ConsoleMessage, PageError } from './types'
 
-// Store mock evaluate for tests to access
+// Store mock evaluate + onEvent for tests to access
 let mockEvaluateFn: ReturnType<typeof vi.fn>
+let mockOnEventFn: ReturnType<typeof vi.fn>
 
 // Mock the CDP client with a class
 vi.mock('./cdp/client', () => {
@@ -17,13 +19,24 @@ vi.mock('./cdp/client', () => {
       connect = vi.fn()
       disconnect = vi.fn()
       ping = vi.fn().mockResolvedValue(true)
+      onEvent = vi.fn().mockReturnValue(() => undefined)
 
       constructor() {
         mockEvaluateFn = this.evaluate
+        mockOnEventFn = this.onEvent
       }
     },
   }
 })
+
+/** Invoke the device's registered CDP forwarder for `method` with `params`. */
+function fireCdpEvent(method: string, params: Record<string, unknown>): void {
+  const call = mockOnEventFn.mock.calls.find((c) => c[0] === method)
+  if (!call) {
+    throw new Error(`no onEvent forwarder registered for ${method}`)
+  }
+  ;(call[1] as (p: Record<string, unknown>) => void)(params)
+}
 
 // Mock CDP discovery
 vi.mock('./cdp/discovery', () => ({
@@ -302,5 +315,80 @@ describe('RNDevice Core Primitives', () => {
       const traceCalls = mockEvaluateFn.mock.calls.filter((call) => call[0].includes('traceEvent'))
       expect(traceCalls).toHaveLength(0)
     })
+  })
+})
+
+describe('RNDevice runtime events', () => {
+  let device: RNDevice
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    device = new RNDevice({ timeout: 1000 })
+    mockEvaluateFn.mockResolvedValue(undefined)
+    await device.connect()
+  })
+
+  it('forwards console events to on("console") listeners as parsed messages', () => {
+    const seen: ConsoleMessage[] = []
+    device.on('console', (m) => seen.push(m))
+
+    fireCdpEvent('Runtime.consoleAPICalled', {
+      type: 'warning',
+      args: [{ value: 'hello' }, { value: 7 }],
+      timestamp: 5,
+    })
+
+    expect(seen).toEqual([{ type: 'warning', text: 'hello 7', args: ['hello', 7], timestamp: 5 }])
+  })
+
+  it('forwards exception events to on("pageerror") listeners', () => {
+    const seen: PageError[] = []
+    device.on('pageerror', (e) => seen.push(e))
+
+    fireCdpEvent('Runtime.exceptionThrown', {
+      exceptionDetails: { exception: { description: 'TypeError: boom' } },
+    })
+
+    expect(seen).toHaveLength(1)
+    expect(seen[0]?.message).toBe('TypeError: boom')
+  })
+
+  it('off() and the returned unsubscribe both stop delivery', () => {
+    const a = vi.fn()
+    const b = vi.fn()
+    const unsub = device.on('console', a)
+    device.on('console', b)
+
+    unsub()
+    device.off('console', b)
+    fireCdpEvent('Runtime.consoleAPICalled', { type: 'log', args: [] })
+
+    expect(a).not.toHaveBeenCalled()
+    expect(b).not.toHaveBeenCalled()
+  })
+
+  it('does not fail operations on uncaught exceptions by default', async () => {
+    fireCdpEvent('Runtime.exceptionThrown', {
+      exceptionDetails: { exception: { description: 'Error: ignored' } },
+    })
+
+    await expect(device.evaluate('1')).resolves.toBeUndefined()
+  })
+})
+
+describe('RNDevice failOnUncaughtException', () => {
+  it('rejects the next operation with the captured exception, once', async () => {
+    vi.clearAllMocks()
+    const device = new RNDevice({ timeout: 1000, failOnUncaughtException: true })
+    mockEvaluateFn.mockResolvedValue('ok')
+    await device.connect()
+
+    fireCdpEvent('Runtime.exceptionThrown', {
+      exceptionDetails: { exception: { description: 'TypeError: kaboom' } },
+    })
+
+    await expect(device.evaluate('1')).rejects.toBeInstanceOf(UncaughtExceptionError)
+    // Buffer drained — the next operation proceeds normally.
+    await expect(device.evaluate('2')).resolves.toBe('ok')
   })
 })

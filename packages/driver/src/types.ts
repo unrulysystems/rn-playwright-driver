@@ -21,7 +21,49 @@ export type DeviceOptions = {
   metroUrl?: string
   /** Touch backend selection and config */
   touch?: TouchBackendConfig
+  /**
+   * When true, an uncaught JS exception in the app (CDP `Runtime.exceptionThrown`)
+   * makes the next device operation reject with an `UncaughtExceptionError`.
+   * Off by default — exceptions are still delivered via `device.on("pageerror")`.
+   */
+  failOnUncaughtException?: boolean
 } & TargetSelectionOptions
+
+// --- Runtime events (console + uncaught exceptions) ---
+
+/**
+ * A console call captured from the app runtime (CDP `Runtime.consoleAPICalled`).
+ */
+export interface ConsoleMessage {
+  /** Console method: 'log' | 'warning' | 'error' | 'info' | 'debug' | 'dir' | ... */
+  type: string
+  /** Best-effort flattened text of the console arguments. */
+  text: string
+  /** Argument payloads, by value where the runtime serialized one (else undefined). */
+  args: unknown[]
+  /** Runtime timestamp in ms, when provided by CDP. */
+  timestamp?: number
+}
+
+/**
+ * An uncaught error captured from the app runtime (CDP `Runtime.exceptionThrown`).
+ */
+export interface PageError {
+  /** Error message / description (includes the stack on Hermes/V8). */
+  message: string
+  /** Stack trace text, when available. */
+  stack?: string
+  /** Runtime timestamp in ms, when provided by CDP. */
+  timestamp?: number
+}
+
+/** Payload map for {@link Device.on} / {@link Device.off}. */
+export interface DeviceEventMap {
+  /** Fired for each `console.*` call in the app. */
+  console: ConsoleMessage
+  /** Fired for each uncaught JS exception in the app. */
+  pageerror: PageError
+}
 
 // --- Wait states for Locator.waitFor ---
 
@@ -375,6 +417,26 @@ export interface Device {
   disconnect(): Promise<void>
   /** Health check - returns true if connection is alive */
   ping(): Promise<boolean>
+
+  // --- Runtime events (console + uncaught exceptions) ---
+  /**
+   * Subscribe to a runtime event from the app. Returns an unsubscribe function.
+   *
+   * - `"console"`: each `console.*` call (CDP `Runtime.consoleAPICalled`)
+   * - `"pageerror"`: each uncaught JS exception (CDP `Runtime.exceptionThrown`)
+   *
+   * Events are only delivered while connected; listeners registered before
+   * `connect()` receive events from the connection onward.
+   */
+  on<E extends keyof DeviceEventMap>(
+    event: E,
+    listener: (payload: DeviceEventMap[E]) => void,
+  ): () => void
+  /** Remove a previously-registered runtime event listener. */
+  off<E extends keyof DeviceEventMap>(
+    event: E,
+    listener: (payload: DeviceEventMap[E]) => void,
+  ): void
 
   // --- JS Evaluation (Phase 1 - the foundation) ---
   /**

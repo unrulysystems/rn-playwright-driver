@@ -43,6 +43,9 @@ export class CDPClient {
   private targetInfo: { id?: string; url?: string } = {}
   private awaitPromiseChecked = false
   private supportsAwaitPromise = false
+  // Handlers for CDP events (messages with `method`, no `id`), keyed by method
+  // name (e.g. "Runtime.consoleAPICalled"). Persist across reconnects.
+  private eventHandlers = new Map<string, Set<(params: Record<string, unknown>) => void>>()
 
   constructor(options: CDPClientOptions = {}) {
     this.options = {
@@ -104,6 +107,23 @@ export class CDPClient {
       this.ws.removeAllListeners()
       this.ws.close()
       this.ws = null
+    }
+  }
+
+  /**
+   * Subscribe to a CDP event (a protocol message carrying `method`, e.g.
+   * "Runtime.consoleAPICalled"). Returns an unsubscribe function. Handlers
+   * persist across auto-reconnects since `Runtime.enable` is re-sent.
+   */
+  onEvent(method: string, handler: (params: Record<string, unknown>) => void): () => void {
+    let handlers = this.eventHandlers.get(method)
+    if (!handlers) {
+      handlers = new Set()
+      this.eventHandlers.set(method, handlers)
+    }
+    handlers.add(handler)
+    return () => {
+      this.eventHandlers.get(method)?.delete(handler)
     }
   }
 
@@ -340,8 +360,26 @@ export class CDPClient {
       } else {
         resolve(msg.result)
       }
+      return
     }
-    // TODO: Handle CDP events (msg.method) for console, exceptions, etc.
+
+    // Events carry `method` and no matching `id` (e.g. Runtime.consoleAPICalled,
+    // Runtime.exceptionThrown). Dispatch to subscribers; a throwing handler must
+    // not take down the message pump.
+    const method = msg.method as string | undefined
+    if (method !== undefined) {
+      const handlers = this.eventHandlers.get(method)
+      if (handlers) {
+        const params = (msg.params as Record<string, unknown> | undefined) ?? {}
+        for (const handler of handlers) {
+          try {
+            handler(params)
+          } catch (err) {
+            console.error(`CDP: event handler for ${method} threw:`, err)
+          }
+        }
+      }
+    }
   }
 
   private handleClose(code: number, reason: Buffer) {
