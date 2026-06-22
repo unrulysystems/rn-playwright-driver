@@ -123,7 +123,10 @@ describe('RNDevice Core Primitives', () => {
 
       expect(mockEvaluateFn).toHaveBeenCalledWith('globalThis.__RN_DRIVER__.getWindowMetrics()')
       expect(swipeSpy).toHaveBeenCalledTimes(1)
-      const arg = swipeSpy.mock.calls[0][0]
+      const arg = swipeSpy.mock.calls[0]?.[0]
+      if (!arg) {
+        throw new Error('expected pointer.swipe to have been called')
+      }
       // dy > 0 (scroll down) drags the finger upward.
       expect(arg.to.y).toBeLessThan(arg.from.y)
     })

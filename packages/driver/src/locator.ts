@@ -631,8 +631,11 @@ export class LocatorImpl implements Locator {
 
     const targetIndex = index ?? 0
     const actualIndex = targetIndex < 0 ? elements.length + targetIndex : targetIndex
+    const element = elements[actualIndex]
 
-    if (actualIndex < 0 || actualIndex >= elements.length) {
+    // A missing element is the only out-of-bounds signal we need: negative or
+    // overflowing indices both resolve to undefined on the array.
+    if (!element) {
       return {
         success: false,
         error: `Index ${targetIndex} out of bounds (found ${elements.length} elements${context.boundsSuffix})`,
@@ -640,7 +643,7 @@ export class LocatorImpl implements Locator {
       }
     }
 
-    return { success: true, data: elements[actualIndex] }
+    return { success: true, data: element }
   }
 }
 

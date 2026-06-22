@@ -196,7 +196,8 @@ export class Pointer {
    * exact waypoints - useful for complex gestures like bezier curves.
    */
   async dragPath(points: Point[], options?: DragPathOptions): Promise<void> {
-    if (points.length === 0) {
+    const [first, ...rest] = points
+    if (!first) {
       return
     }
 
@@ -204,13 +205,13 @@ export class Pointer {
     const holdStart = Math.max(0, options?.holdStart ?? DEFAULT_FRAME_MS)
     const holdEnd = Math.max(0, options?.holdEnd ?? DEFAULT_FRAME_MS)
 
-    await this.sendDown(points[0].x, points[0].y)
+    await this.sendDown(first.x, first.y)
     if (holdStart > 0) {
       await this.timeoutProvider.waitForTimeout(holdStart)
     }
 
-    for (let i = 1; i < points.length; i++) {
-      await this.sendMove(points[i].x, points[i].y)
+    for (const point of rest) {
+      await this.sendMove(point.x, point.y)
       if (delay > 0) {
         await this.timeoutProvider.waitForTimeout(delay)
       }
@@ -228,14 +229,10 @@ export class Pointer {
    * is already down (or doesn't need to be).
    */
   async movePath(points: Point[], options?: MovePathOptions): Promise<void> {
-    if (points.length === 0) {
-      return
-    }
-
     const delay = options?.delay ?? 0
 
-    for (let i = 0; i < points.length; i++) {
-      await this.sendMove(points[i].x, points[i].y)
+    for (const [i, point] of points.entries()) {
+      await this.sendMove(point.x, point.y)
       if (delay > 0 && i < points.length - 1) {
         await this.timeoutProvider.waitForTimeout(delay)
       }

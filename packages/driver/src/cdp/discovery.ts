@@ -79,10 +79,12 @@ export function selectTarget(
     return match
   }
 
-  // Default: select by page index
+  // Default: select by page index. The presence check also covers out-of-range
+  // indices (negative or >= length both index to undefined under the array type).
   const index = options.pageIndex ?? 0
-  if (index < 0 || index >= targets.length) {
+  const target = targets[index]
+  if (!target) {
     throw new Error(`Invalid pageIndex ${index}. Found ${targets.length} target(s).`)
   }
-  return targets[index]
+  return target
 }

@@ -87,10 +87,17 @@ async function connectBackend(
   const backend = new XCTestTouchBackend(options)
   const initPromise = backend.init()
   const socket = wsState.instances[0]
+  if (!socket) {
+    throw new Error('expected XCTestTouchBackend to open a websocket')
+  }
   socket.emitOpen()
   await flushMicrotasks()
 
-  expect(JSON.parse(socket.sent[0])).toEqual({
+  const hello = socket.sent[0]
+  if (!hello) {
+    throw new Error('expected a hello frame to be sent')
+  }
+  expect(JSON.parse(hello)).toEqual({
     id: 1,
     type: 'hello',
     protocolVersion: 1,
@@ -197,7 +204,11 @@ describe('XCTestTouchBackend', () => {
   it('maps websocket connection failures to unavailable errors', async () => {
     const backend = new XCTestTouchBackend({ url: 'ws://companion.test' })
     const initPromise = backend.init()
-    wsState.instances[0].emitError(new Error('ECONNREFUSED'))
+    const socket = wsState.instances[0]
+    if (!socket) {
+      throw new Error('expected a websocket instance to be created')
+    }
+    socket.emitError(new Error('ECONNREFUSED'))
 
     await expect(initPromise).rejects.toThrow(TouchBackendUnavailableError)
     await expect(initPromise).rejects.toMatchObject({

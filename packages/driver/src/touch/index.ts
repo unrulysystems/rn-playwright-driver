@@ -6,9 +6,22 @@ import { InstrumentationTouchBackend } from './instrumentation-backend'
 import { NativeModuleTouchBackend } from './native-module-backend'
 import { XCTestTouchBackend } from './xctest-backend'
 
-const DEFAULT_ORDER_BY_PLATFORM: Record<'ios' | 'android', TouchBackendType[]> = {
-  ios: ['native-module'],
-  android: ['native-module'],
+// Per-platform default backend resolution order. Returned as a non-empty tuple so
+// the first element is statically known to exist — the `force` path needs a definite
+// backend, which a Record index access cannot provide under noUncheckedIndexedAccess.
+function defaultOrderForPlatform(
+  platform: TouchBackendContext['platform'],
+): readonly [TouchBackendType, ...TouchBackendType[]] {
+  switch (platform) {
+    case 'ios':
+      return ['native-module']
+    case 'android':
+      return ['native-module']
+    default: {
+      const _exhaustive: never = platform
+      throw new Error(`Unsupported platform: ${String(_exhaustive)}`)
+    }
+  }
 }
 
 export type TouchBackendSelection = {
@@ -28,10 +41,11 @@ export async function createTouchBackend(
   const mode = config.mode ?? 'auto'
   const attempted: Array<{ backend: TouchBackendType; error: Error }> = []
 
-  const order =
+  const platformDefault = defaultOrderForPlatform(context.platform)
+  const order: TouchBackendType[] =
     mode === 'force'
-      ? [config.backend ?? DEFAULT_ORDER_BY_PLATFORM[context.platform][0]]
-      : (config.order ?? DEFAULT_ORDER_BY_PLATFORM[context.platform])
+      ? [config.backend ?? platformDefault[0]]
+      : (config.order ?? [...platformDefault])
 
   for (const backendType of order) {
     if (!isBackendSupportedOnPlatform(backendType, context.platform)) {

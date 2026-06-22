@@ -75,8 +75,8 @@ describe('Pointer Path Methods', () => {
 
       const calls = mockBackend.move.mock.calls
       expect(calls).toHaveLength(2)
-      expect(calls[0][0]).toBeCloseTo(2.5, 5)
-      expect(calls[1][0]).toBeCloseTo(10, 5)
+      expect(calls[0]?.[0]).toBeCloseTo(2.5, 5)
+      expect(calls[1]?.[0]).toBeCloseTo(10, 5)
     })
   })
 
