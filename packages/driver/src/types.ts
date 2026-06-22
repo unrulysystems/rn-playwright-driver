@@ -356,10 +356,20 @@ export type Locator = {
   /**
    * Type text into the element.
    * NOT YET IMPLEMENTED: Requires RNDriverKeyboard native module.
-   * Use device.evaluate() with setNativeProps as workaround.
+   * Use {@link Locator.fill} (no native module) or device.evaluate() as workaround.
    * @throws LocatorError with code "NOT_SUPPORTED"
    */
   type(text: string): Promise<void>
+  /**
+   * Set a text input's value in one shot. Mirrors the value onto the native view
+   * and fires a synthetic change so CONTROLLED inputs update React state (not just
+   * setNativeProps). Auto-waits for the element to be actionable. No native
+   * keyboard module required.
+   *
+   * @throws LocatorError "NOT_A_TEXT_INPUT" if the element is not a text input.
+   * @throws LocatorError "NOT_SUPPORTED" if the harness cannot resolve the input.
+   */
+  fill(text: string): Promise<void>
   /**
    * Wait for element to reach a specific state.
    * - "attached": element exists in the view tree

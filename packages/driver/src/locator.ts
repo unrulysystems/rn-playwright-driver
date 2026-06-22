@@ -1,4 +1,5 @@
 import type { ElementInfo, NativeResult } from '@0xbigboss/rn-driver-shared-types'
+import type { FillDispatch } from './fill'
 import { buildHarnessCall } from './harness-expressions'
 import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from './scroll'
 import { waitForStable } from './wait-for-stable'
@@ -142,6 +143,29 @@ export class LocatorImpl implements Locator {
         'Workaround: Use device.evaluate() to set TextInput text via setNativeProps.',
       'NOT_SUPPORTED',
     )
+  }
+
+  /**
+   * Set a text input's value in one shot. Auto-waits for the element to be
+   * actionable, then delegates to the in-app harness, which resolves the
+   * TextInput's React component and fires a synthetic change so controlled inputs
+   * update React state (see fill.ts). No native keyboard module required.
+   *
+   * @throws LocatorError "NOT_A_TEXT_INPUT" if the element is not a text input.
+   * @throws LocatorError "NOT_SUPPORTED" if the harness cannot resolve the input.
+   */
+  async fill(text: string): Promise<void> {
+    // Auto-wait for the element to be actionable (exists + visible) before filling.
+    await this.waitForActionable()
+    // The synthetic-change dispatch must happen in-app (the harness resolves the
+    // TextInput's React component), so pass the selector and let it match there.
+    const args = `${JSON.stringify(this.selector)}, ${JSON.stringify(text)}`
+    const result = await this.device.evaluate<NativeResult<FillDispatch>>(
+      buildHarnessCall('fill', args),
+    )
+    if (!result.success) {
+      throw new LocatorError(result.error, result.code)
+    }
   }
 
   /**

@@ -57,6 +57,7 @@ export type ErrorCode =
   | 'NOT_SUPPORTED'
   | 'INVALID_URL'
   | 'TAP_FAILED'
+  | 'NOT_A_TEXT_INPUT'
 
 /**
  * Standard result wrapper for native module calls.

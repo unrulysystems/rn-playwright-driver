@@ -342,3 +342,79 @@ describe('Locator.scrollIntoView', () => {
     }
   })
 })
+
+describe('Locator.fill', () => {
+  const ELEMENT: ElementInfo = {
+    handle: 'element_field',
+    testId: 'field',
+    text: null,
+    role: null,
+    label: null,
+    bounds: { x: 0, y: 0, width: 100, height: 40 },
+    visible: true,
+    enabled: true,
+  }
+
+  /**
+   * Minimal fake: the query (waitForActionable) resolves an actionable element;
+   * the harness fill() call returns a configurable NativeResult.
+   */
+  function fillDevice(fillResult: NativeResult<unknown>): {
+    device: Parameters<typeof createLocator>[0]
+    calls: string[]
+  } {
+    const calls: string[] = []
+    const device = {
+      evaluate: (async <T>(expr: string): Promise<T> => {
+        calls.push(expr)
+        if (expr.includes('.fill(')) {
+          return fillResult as T
+        }
+        return { success: true, data: ELEMENT } as T
+      }) as <T>(expression: string) => Promise<T>,
+      pointer: { tap: async () => undefined },
+      waitForTimeout: async () => undefined,
+      capabilities: async () => CAPABILITIES,
+      getWindowMetrics: async () => METRICS,
+      scroll: async () => undefined,
+      platform: 'ios' as const,
+    }
+    return { device, calls }
+  }
+
+  it('passes the selector + text to the harness and resolves on success', async () => {
+    const { device, calls } = fillDevice({
+      success: true,
+      data: { onChangeText: true, onChange: false, setNativeProps: true },
+    })
+    const locator = createLocator(device, { type: 'testId', value: 'field' })
+
+    await locator.fill('hello')
+
+    const fillCall = calls.find((c) => c.includes('.fill('))
+    expect(fillCall).toContain('"testId"')
+    expect(fillCall).toContain('"hello"')
+  })
+
+  it('throws NOT_A_TEXT_INPUT when the harness rejects the target', async () => {
+    const { device } = fillDevice({
+      success: false,
+      error: 'fill() target is not a text input',
+      code: 'NOT_A_TEXT_INPUT',
+    })
+    const locator = createLocator(device, { type: 'testId', value: 'field' })
+
+    await expect(locator.fill('x')).rejects.toMatchObject({ code: 'NOT_A_TEXT_INPUT' })
+  })
+
+  it('throws NOT_SUPPORTED when the harness cannot resolve the input', async () => {
+    const { device } = fillDevice({
+      success: false,
+      error: 'could not resolve a TextInput',
+      code: 'NOT_SUPPORTED',
+    })
+    const locator = createLocator(device, { type: 'testId', value: 'field' })
+
+    await expect(locator.fill('x')).rejects.toMatchObject({ code: 'NOT_SUPPORTED' })
+  })
+})

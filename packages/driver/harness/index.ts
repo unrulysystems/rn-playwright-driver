@@ -22,6 +22,7 @@ import type {
   TracingOptions,
   WindowMetrics,
 } from './shared-types'
+import { applyFill, type FillableNode, type FillDispatch, type FillSelector } from '../src/fill'
 
 export type {
   ElementBounds,
@@ -129,6 +130,13 @@ export type RNDriverGlobal = {
   getFrameCount: () => number
 
   /**
+   * Fill a text input matched by `selector`: mirror the value to the native view
+   * and fire a synthetic change so controlled inputs update React state. Returns
+   * what was dispatched, or a NOT_A_TEXT_INPUT / NOT_SUPPORTED error.
+   */
+  fill: (selector: FillSelector, text: string) => NativeResult<FillDispatch>
+
+  /**
    * Start tracing driver events.
    * Events are stored in a bounded ring buffer.
    */
@@ -220,6 +228,95 @@ function notSupportedResult<T>(feature: string): NativeResult<T> {
     error: errorMessage,
     code: 'NOT_SUPPORTED',
   }
+}
+
+// --- Locator.fill resolution (in-app) ---
+
+/** React DevTools global hook shape we read (present on dev / E2E builds). */
+type DevtoolsHook = {
+  renderers?: Map<number, unknown>
+  getFiberRoots?: (rendererId: number) => Set<{ current?: FiberNode | null }>
+}
+
+/** The slice of a React fiber we traverse — all optional, so we fail closed. */
+type FiberNode = {
+  memoizedProps?: Record<string, unknown> | null
+  stateNode?: { setNativeProps?: (props: { text: string }) => void } | null
+  child?: FiberNode | null
+  sibling?: FiberNode | null
+}
+
+function isTextInputProps(props: Record<string, unknown>): boolean {
+  return typeof props.onChangeText === 'function' || typeof props.onChange === 'function'
+}
+
+/** Iterative DFS over child/sibling links for a text input with `testId`. */
+function findFiberByTestId(root: FiberNode | null, testId: string): FiberNode | null {
+  const stack: FiberNode[] = root ? [root] : []
+  while (stack.length > 0) {
+    const fiber = stack.pop()
+    if (!fiber) {
+      continue
+    }
+    const props = fiber.memoizedProps
+    if (props && props.testID === testId && isTextInputProps(props)) {
+      return fiber
+    }
+    if (fiber.child) {
+      stack.push(fiber.child)
+    }
+    if (fiber.sibling) {
+      stack.push(fiber.sibling)
+    }
+  }
+  return null
+}
+
+function fiberToFillable(fiber: FiberNode): FillableNode {
+  const props = fiber.memoizedProps ?? {}
+  const onChangeText = props.onChangeText
+  const onChange = props.onChange
+  const setNativeProps = fiber.stateNode?.setNativeProps
+  return {
+    isTextInput: true,
+    ...(typeof onChangeText === 'function'
+      ? { onChangeText: onChangeText as (text: string) => void }
+      : {}),
+    ...(typeof onChange === 'function'
+      ? { onChange: onChange as (event: { nativeEvent: { text: string } }) => void }
+      : {}),
+    ...(typeof setNativeProps === 'function'
+      ? { setNativeProps: setNativeProps.bind(fiber.stateNode) }
+      : {}),
+  }
+}
+
+/**
+ * DEVICE-DEFERRED (#11): resolve a text input's React component via the React
+ * DevTools global hook (present on dev / E2E builds) so we can fire its
+ * onChangeText — the only way controlled inputs commit to React state. Fails
+ * CLOSED (returns null on any missing internal or non-testId selector) so
+ * fill() reports NOT_SUPPORTED rather than guessing. On-device behavior is
+ * proven in an attended session, not headlessly.
+ */
+function resolveFillableNode(selector: FillSelector): FillableNode | null {
+  if (selector.type !== 'testId') {
+    return null
+  }
+  const hook = (globalThis as { __REACT_DEVTOOLS_GLOBAL_HOOK__?: DevtoolsHook })
+    .__REACT_DEVTOOLS_GLOBAL_HOOK__
+  if (!hook?.getFiberRoots || !hook.renderers) {
+    return null
+  }
+  for (const rendererId of hook.renderers.keys()) {
+    for (const root of hook.getFiberRoots(rendererId)) {
+      const match = findFiberByTestId(root.current ?? null, selector.value)
+      if (match) {
+        return fiberToFillable(match)
+      }
+    }
+  }
+  return null
 }
 
 /**
@@ -562,6 +659,26 @@ function installHarness(): void {
 
     getFrameCount(): number {
       return frameCount
+    },
+
+    fill(selector: FillSelector, text: string): NativeResult<FillDispatch> {
+      const node = resolveFillableNode(selector)
+      if (!node) {
+        return {
+          success: false,
+          error:
+            'Locator.fill could not resolve a TextInput for this selector. fill() ' +
+            'needs the React DevTools hook (dev/E2E builds) and a testID selector; ' +
+            'on-device support is proven in an attended session (issue #11). ' +
+            'Workaround: device.evaluate() with setNativeProps.',
+          code: 'NOT_SUPPORTED',
+        }
+      }
+      const outcome = applyFill(node, text)
+      if (!outcome.success) {
+        return { success: false, error: outcome.error, code: outcome.code }
+      }
+      return { success: true, data: outcome.dispatched }
     },
 
     startTracing(options?: TracingOptions): void {
