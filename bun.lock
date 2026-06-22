@@ -38,12 +38,12 @@
     },
     "packages/driver": {
       "name": "@0xbigboss/rn-playwright-driver",
-      "version": "0.3.0",
+      "version": "0.4.1",
       "bin": {
         "rn-inspect": "./bin/inspect.ts",
       },
       "dependencies": {
-        "@0xbigboss/rn-driver-shared-types": "workspace:*",
+        "@0xbigboss/rn-driver-shared-types": "^0.1.0",
         "pixelmatch": "^7.1.0",
         "pngjs": "^7.0.0",
         "ws": "^8.18.3",
@@ -79,7 +79,7 @@
       "name": "@0xbigboss/rn-driver-lifecycle",
       "version": "0.1.0",
       "dependencies": {
-        "@0xbigboss/rn-driver-shared-types": "workspace:*",
+        "@0xbigboss/rn-driver-shared-types": "^0.1.0",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.3.10",
@@ -116,7 +116,7 @@
       "name": "@0xbigboss/rn-driver-screenshot",
       "version": "0.1.0",
       "dependencies": {
-        "@0xbigboss/rn-driver-shared-types": "workspace:*",
+        "@0xbigboss/rn-driver-shared-types": "^0.1.0",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.3.10",
@@ -145,7 +145,7 @@
       "name": "@0xbigboss/rn-driver-view-tree",
       "version": "0.1.0",
       "dependencies": {
-        "@0xbigboss/rn-driver-shared-types": "workspace:*",
+        "@0xbigboss/rn-driver-shared-types": "^0.1.0",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.3.10",

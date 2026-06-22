@@ -80,7 +80,7 @@
     }
   },
   "dependencies": {
-    "@0xbigboss/rn-driver-shared-types": "workspace:*",
+    "@0xbigboss/rn-driver-shared-types": "^0.1.0",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "ws": "^8.18.3"

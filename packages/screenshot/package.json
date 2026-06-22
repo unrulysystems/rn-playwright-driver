@@ -27,7 +27,7 @@
 		"directory": "packages/screenshot"
 	},
 	"dependencies": {
-		"@0xbigboss/rn-driver-shared-types": "workspace:*"
+		"@0xbigboss/rn-driver-shared-types": "^0.1.0"
 	},
 	"peerDependencies": {
 		"expo": "*",
