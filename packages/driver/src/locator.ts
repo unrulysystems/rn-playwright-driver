@@ -1,6 +1,7 @@
 import type { ElementInfo, NativeResult } from '@0xbigboss/rn-driver-shared-types'
 import { buildHarnessCall } from './harness-expressions'
 import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from './scroll'
+import { waitForStable } from './wait-for-stable'
 import type {
   Capabilities,
   ElementBounds,
@@ -360,21 +361,22 @@ export class LocatorImpl implements Locator {
    * early if the element stops being measurable.
    */
   private async settleAfterScroll(axis: 'vertical' | 'horizontal'): Promise<void> {
-    const deadline = Date.now() + SCROLL_SETTLE_TIMEOUT
-    let previous: number | null = null
-
-    while (Date.now() < deadline) {
-      await this.device.waitForTimeout(SCROLL_SETTLE_POLL_INTERVAL)
-      const result = await this.query()
-      if (!result.success) {
-        return
-      }
-      const position = axis === 'vertical' ? result.data.bounds.y : result.data.bounds.x
-      if (previous !== null && isSamePosition(position, previous)) {
-        return
-      }
-      previous = position
-    }
+    await waitForStable(
+      async () => {
+        const result = await this.query()
+        // No longer measurable (e.g. scrolled out of the tree) — stop waiting.
+        if (!result.success) {
+          return undefined
+        }
+        return axis === 'vertical' ? result.data.bounds.y : result.data.bounds.x
+      },
+      this.device,
+      {
+        timeout: SCROLL_SETTLE_TIMEOUT,
+        pollInterval: SCROLL_SETTLE_POLL_INTERVAL,
+        equals: isSamePosition,
+      },
+    )
   }
 
   /**

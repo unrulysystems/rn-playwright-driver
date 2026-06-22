@@ -6,6 +6,7 @@ import type {
   WindowMetrics,
 } from '../harness/shared-types'
 import type { TargetSelectionOptions } from './cdp/discovery'
+import type { WaitForStableOptions } from './wait-for-stable'
 
 export type { ElementBounds } from '@0xbigboss/rn-driver-shared-types'
 export type {
@@ -572,6 +573,20 @@ export interface Device {
    * @param target Target frame count to wait for
    */
   waitForFrameCount(target: number): Promise<void>
+
+  /**
+   * Poll `sample` until two consecutive samples are equal (the value has settled)
+   * or the timeout elapses. Bounded; resolves on stabilization or budget
+   * exhaustion (never throws). The first poll waits before sampling, so call it
+   * right after triggering motion (a scroll, a layout change).
+   *
+   * Return `undefined` from `sample` to stop immediately (e.g. the target is no
+   * longer measurable). Pass `equals` for tolerant comparison of noisy values.
+   */
+  waitForStable<T>(
+    sample: () => Promise<T | undefined>,
+    options?: WaitForStableOptions<T>,
+  ): Promise<void>
 
   /**
    * Get information about the currently selected touch backend.

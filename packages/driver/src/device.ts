@@ -7,6 +7,7 @@ import { buildRoleSelector, createLocator, LocatorError } from './locator'
 import { Pointer } from './pointer'
 import { computeScrollGesture } from './scroll'
 import { createTouchBackend, type TouchBackend } from './touch'
+import { waitForStable, type WaitForStableOptions } from './wait-for-stable'
 import type {
   Capabilities,
   ConsoleMessage,
@@ -388,6 +389,14 @@ export class RNDevice implements Device {
     }
 
     throw new TimeoutError(`waitForFrameCount(${target}) timed out after ${timeout}ms`)
+  }
+
+  async waitForStable<T>(
+    sample: () => Promise<T | undefined>,
+    options?: WaitForStableOptions<T>,
+  ): Promise<void> {
+    // `this` supplies waitForTimeout (the WaitForStableTimer dependency).
+    await waitForStable(sample, this, options)
   }
 
   async getTouchBackendInfo(): Promise<TouchBackendInfo> {

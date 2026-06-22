@@ -21,6 +21,9 @@ export type { Locator as LocatorType, LocatorSelector } from './locator'
 export { createLocator, LocatorError, LocatorImpl } from './locator'
 // --- Pointer ---
 export { Pointer } from './pointer'
+// --- Stabilization primitive ---
+export type { WaitForStableOptions, WaitForStableTimer } from './wait-for-stable'
+export { waitForStable } from './wait-for-stable'
 export type { TouchBackend, TouchBackendContext, TouchBackendSelection } from './touch'
 export {
   CliTouchBackend,

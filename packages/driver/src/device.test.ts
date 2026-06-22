@@ -145,6 +145,27 @@ describe('RNDevice Core Primitives', () => {
     })
   })
 
+  describe('waitForStable', () => {
+    it('polls the sample until it stabilizes', async () => {
+      const values = [1, 2, 2]
+      let i = 0
+      await device.waitForStable(async () => values[i++], { pollInterval: 0 })
+      expect(i).toBe(3)
+    })
+
+    it('stops when the sample returns undefined', async () => {
+      let calls = 0
+      await device.waitForStable(
+        async () => {
+          calls++
+          return undefined
+        },
+        { pollInterval: 0 },
+      )
+      expect(calls).toBe(1)
+    })
+  })
+
   describe('getFrameCount', () => {
     it('should call harness getFrameCount and return result', async () => {
       mockEvaluateFn.mockImplementation((expr: string) => {
