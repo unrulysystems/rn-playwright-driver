@@ -4,6 +4,10 @@ node_modules/
 # Build output
 dist/
 
+# Android module build artifacts (autolinked gradle builds write in-place under packages/*/android)
+packages/*/android/build/
+packages/*/android/.cxx/
+
 # Expo
 .expo/
 

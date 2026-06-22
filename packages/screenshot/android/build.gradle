@@ -71,7 +71,7 @@ repositories {
 
 dependencies {
   implementation project(':expo-modules-core')
-  implementation project(':rn-driver-view-tree')
+  implementation project(':0xbigboss-rn-driver-view-tree')
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getKotlinVersion()}"
 }
 
