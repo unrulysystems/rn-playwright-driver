@@ -1,14 +1,14 @@
-import type { Capabilities } from "./types";
+import type { Capabilities } from './types'
 
-const HARNESS_GLOBAL = "globalThis.__RN_DRIVER__";
+const HARNESS_GLOBAL = 'globalThis.__RN_DRIVER__'
 
 export function buildHarnessCall(path: string, args?: string): string {
-  const suffix = args === undefined ? "" : args;
-  return `${HARNESS_GLOBAL}.${path}(${suffix})`;
+  const suffix = args === undefined ? '' : args
+  return `${HARNESS_GLOBAL}.${path}(${suffix})`
 }
 
 export function buildCapabilitiesExpression(): string {
-  const capabilitiesPath = `${HARNESS_GLOBAL}?.capabilities`;
+  const capabilitiesPath = `${HARNESS_GLOBAL}?.capabilities`
   const fallback: Capabilities = {
     apiVersion: 0,
     viewTree: false,
@@ -17,7 +17,7 @@ export function buildCapabilitiesExpression(): string {
     screenshotCaptureElement: false,
     lifecycle: false,
     touchNative: false,
-  };
+  }
 
   return `({
     apiVersion: ${capabilitiesPath}?.apiVersion ?? ${fallback.apiVersion},
@@ -27,5 +27,5 @@ export function buildCapabilitiesExpression(): string {
     screenshotCaptureElement: ${capabilitiesPath}?.screenshotCaptureElement ?? ${fallback.screenshotCaptureElement},
     lifecycle: ${capabilitiesPath}?.lifecycle ?? ${fallback.lifecycle},
     touchNative: ${capabilitiesPath}?.touchNative ?? ${fallback.touchNative},
-  })`;
+  })`
 }

@@ -4,19 +4,19 @@ Detailed implementation tasks for touch injection backends. See `NATIVE-MODULES-
 
 ## Status Overview
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| TouchBackend interface | ✅ Complete | `packages/driver/src/touch/backend.ts` |
-| Backend factory + types | ✅ Complete | `packages/driver/src/touch/index.ts` |
-| NativeModuleTouchBackend | ✅ Complete | Driver-side client via CDP |
-| XCTestTouchBackend | ✅ Complete | WebSocket client to companion |
-| InstrumentationTouchBackend | ✅ Complete | HTTP client to companion |
-| CliTouchBackend | 🔶 Stub | Needs idb/adb implementation |
-| XCTest Companion (iOS) | ✅ Reference impl (manual integration) | `packages/xctest-companion/` |
-| Instrumentation Companion (Android) | ✅ Reference impl (manual integration) | `packages/instrumentation-companion/` |
-| RNDriverTouchInjector (iOS) | ✅ Implemented | DEBUG builds only; uses UIKit private touch synthesis |
-| RNDriverTouchInjector (Android) | ✅ Implemented | Requires Android instrumentation to provide `Instrumentation` |
-| Harness touchNative bridge | ✅ Complete | Loads `RNDriverTouchInjector` and exposes `capabilities.touchNative` |
+| Component                           | Status                                 | Notes                                                                |
+| ----------------------------------- | -------------------------------------- | -------------------------------------------------------------------- |
+| TouchBackend interface              | ✅ Complete                            | `packages/driver/src/touch/backend.ts`                               |
+| Backend factory + types             | ✅ Complete                            | `packages/driver/src/touch/index.ts`                                 |
+| NativeModuleTouchBackend            | ✅ Complete                            | Driver-side client via CDP                                           |
+| XCTestTouchBackend                  | ✅ Complete                            | WebSocket client to companion                                        |
+| InstrumentationTouchBackend         | ✅ Complete                            | HTTP client to companion                                             |
+| CliTouchBackend                     | 🔶 Stub                                | Needs idb/adb implementation                                         |
+| XCTest Companion (iOS)              | ✅ Reference impl (manual integration) | `packages/xctest-companion/`                                         |
+| Instrumentation Companion (Android) | ✅ Reference impl (manual integration) | `packages/instrumentation-companion/`                                |
+| RNDriverTouchInjector (iOS)         | ✅ Implemented                         | DEBUG builds only; uses UIKit private touch synthesis                |
+| RNDriverTouchInjector (Android)     | ✅ Implemented                         | Requires Android instrumentation to provide `Instrumentation`        |
+| Harness touchNative bridge          | ✅ Complete                            | Loads `RNDriverTouchInjector` and exposes `capabilities.touchNative` |
 
 ## Current Defaults
 
@@ -27,10 +27,10 @@ Use explicit configuration for companion runs:
 ```ts
 createDevice({
   touch: {
-    order: ["instrumentation", "native-module"],
+    order: ['instrumentation', 'native-module'],
     instrumentation: { port: 9999 },
   },
-});
+})
 ```
 
 `cli` remains a typed placeholder and should not appear in default orders until idb/adb execution, device selection, timeout handling, and shell escaping are implemented. The previous JS harness fallback has been removed from the current source surface.
@@ -62,6 +62,7 @@ In-app touch synthesis is the current default because it is packaged with the te
 Both companion processes are implemented as reference code. Integrate into your app's test target to use.
 
 ### XCTest Companion (iOS)
+
 - **Location**: `packages/xctest-companion/ios/RNDriverTouchCompanion.swift`
 - **Status**: Reference impl (manual integration)
 - **Features**: hello, tap, down/move/up, swipe, longPress, typeText
@@ -75,6 +76,7 @@ Both companion processes are implemented as reference code. Integrate into your 
 Integrate `RNDriverTouchCompanion.swift` into your app's UI test target, then run your test scheme to start the companion server. See `packages/xctest-companion/README.md` for details.
 
 ### Instrumentation Companion (Android)
+
 - **Location**: `packages/instrumentation-companion/android/src/main/java/com/rndriver/touchcompanion/RNDriverTouchCompanion.kt`
 - **Status**: Reference impl (manual integration)
 - **Features**: hello, tap, down/move/up, swipe, longPress, typeText
@@ -84,6 +86,7 @@ Integrate `RNDriverTouchCompanion.swift` into your app's UI test target, then ru
 - **Injection**: UiAutomation.injectInputEvent (kernel-level)
 
 **Usage**:
+
 ```bash
 # See packages/instrumentation-companion/README.md for build instructions
 adb shell am instrument -w \
@@ -176,6 +179,7 @@ Fallback for when companions aren't running but CLI tools are available.
 ## Quick Start Testing
 
 ### iOS with XCTest Companion
+
 ```bash
 # Terminal 1: Start companion
 # Integrate RNDriverTouchCompanion.swift into your app's UI test target
@@ -187,6 +191,7 @@ bun run test:e2e
 ```
 
 ### Android with Instrumentation Companion
+
 ```bash
 # Terminal 1: Start companion
 # Integrate RNDriverTouchCompanion.kt into your androidTest target
@@ -198,17 +203,19 @@ bun run test:e2e
 ```
 
 ### Force Specific Backend
+
 ```typescript
 // In test fixture or createDevice call
 const device = createDevice({
   touch: {
-    mode: "force",
-    backend: "xctest",  // or "instrumentation", "harness", etc.
+    mode: 'force',
+    backend: 'xctest', // or "instrumentation", "harness", etc.
   },
-});
+})
 ```
 
 ### Default (Harness)
+
 ```bash
 cd example
 bun run test:e2e  # Falls back to JS harness if no companion is running

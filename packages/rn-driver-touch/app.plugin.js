@@ -1,5 +1,5 @@
 function withRNDriverTouch(config) {
-	return config;
+  return config
 }
 
-module.exports = withRNDriverTouch;
+module.exports = withRNDriverTouch

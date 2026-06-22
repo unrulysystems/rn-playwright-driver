@@ -1,34 +1,29 @@
 {
-	"name": "@0xbigboss/rn-driver-shared-types",
-	"version": "0.1.0",
-	"description": "Shared types for rn-playwright-driver packages",
-	"main": "src/index.ts",
-	"types": "src/index.ts",
-	"scripts": {
-		"build": "echo 'Types only - no build needed'",
-		"clean": "echo 'Types only - no build artifacts'",
-		"lint": "biome check .",
-		"lint:fix": "biome check --write .",
-		"format": "biome format --write .",
-		"typecheck": "tsgo --noEmit",
-		"check": "bun run typecheck && bun run lint"
-	},
-	"keywords": [
-		"react-native",
-		"playwright",
-		"types"
-	],
-	"author": "0xbigboss",
-	"license": "MIT",
-	"homepage": "https://github.com/0xbigboss/rn-playwright-driver#readme",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/0xbigboss/rn-playwright-driver",
-		"directory": "packages/shared-types"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.3.10",
-		"@typescript/native-preview": "^7.0.0-dev.20251227.1",
-		"typescript": "^5.9.3"
-	}
+  "name": "@0xbigboss/rn-driver-shared-types",
+  "version": "0.1.0",
+  "description": "Shared types for rn-playwright-driver packages",
+  "keywords": [
+    "playwright",
+    "react-native",
+    "types"
+  ],
+  "homepage": "https://github.com/0xbigboss/rn-playwright-driver#readme",
+  "license": "MIT",
+  "author": "0xbigboss",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0xbigboss/rn-playwright-driver",
+    "directory": "packages/shared-types"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo 'Types only - no build needed'",
+    "clean": "echo 'Types only - no build artifacts'",
+    "typecheck": "tsgo --noEmit"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "^7.0.0-dev.20251227.1",
+    "typescript": "^5.9.3"
+  }
 }

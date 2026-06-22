@@ -1,48 +1,48 @@
-import WebSocket from "ws";
+import WebSocket from 'ws'
 
 export type CDPClientOptions = {
   /** Request timeout in ms (default: 30000) */
-  timeout?: number;
+  timeout?: number
   /** Auto-reconnect on connection loss (default: false) */
-  autoReconnect?: boolean;
+  autoReconnect?: boolean
   /** Maximum reconnect attempts (default: 3) */
-  maxReconnectAttempts?: number;
+  maxReconnectAttempts?: number
   /** Base backoff delay in ms, doubles each attempt (default: 1000) */
-  reconnectBackoffMs?: number;
-};
+  reconnectBackoffMs?: number
+}
 
 type PendingRequest = {
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
-};
+  resolve: (value: unknown) => void
+  reject: (error: Error) => void
+  timer: ReturnType<typeof setTimeout>
+}
 
 /**
  * CDP protocol result type - intentionally loose as CDP responses vary by method.
  */
 type CDPResult = {
-  result?: { value?: unknown };
+  result?: { value?: unknown }
   exceptionDetails?: {
-    text?: string;
-    exception?: { description?: string };
-  };
-  [key: string]: unknown;
-};
+    text?: string
+    exception?: { description?: string }
+  }
+  [key: string]: unknown
+}
 
 /**
  * Chrome DevTools Protocol client for Hermes runtime.
  */
 export class CDPClient {
-  private ws: WebSocket | null = null;
-  private messageId = 0;
-  private pending = new Map<number, PendingRequest>();
-  private options: Required<CDPClientOptions>;
-  private wsUrl: string | null = null;
-  private reconnectAttempts = 0;
-  private isReconnecting = false;
-  private targetInfo: { id?: string; url?: string } = {};
-  private awaitPromiseChecked = false;
-  private supportsAwaitPromise = false;
+  private ws: WebSocket | null = null
+  private messageId = 0
+  private pending = new Map<number, PendingRequest>()
+  private options: Required<CDPClientOptions>
+  private wsUrl: string | null = null
+  private reconnectAttempts = 0
+  private isReconnecting = false
+  private targetInfo: { id?: string; url?: string } = {}
+  private awaitPromiseChecked = false
+  private supportsAwaitPromise = false
 
   constructor(options: CDPClientOptions = {}) {
     this.options = {
@@ -50,78 +50,78 @@ export class CDPClient {
       autoReconnect: options.autoReconnect ?? false,
       maxReconnectAttempts: options.maxReconnectAttempts ?? 3,
       reconnectBackoffMs: options.reconnectBackoffMs ?? 1000,
-    };
+    }
   }
 
   async connect(wsUrl: string, targetInfo?: { id?: string; url?: string }): Promise<void> {
-    this.wsUrl = wsUrl;
-    this.targetInfo = targetInfo ?? {};
-    this.reconnectAttempts = 0;
-    await this.doConnect();
+    this.wsUrl = wsUrl
+    this.targetInfo = targetInfo ?? {}
+    this.reconnectAttempts = 0
+    await this.doConnect()
   }
 
   private async doConnect(): Promise<void> {
     if (!this.wsUrl) {
-      throw new Error("CDP client: no WebSocket URL configured");
+      throw new Error('CDP client: no WebSocket URL configured')
     }
 
-    this.ws = new WebSocket(this.wsUrl);
+    this.ws = new WebSocket(this.wsUrl)
 
     await new Promise<void>((resolve, reject) => {
       const onOpen = () => {
-        cleanup();
-        resolve();
-      };
+        cleanup()
+        resolve()
+      }
       const onError = (err: Error) => {
-        cleanup();
-        reject(err);
-      };
+        cleanup()
+        reject(err)
+      }
       const cleanup = () => {
-        this.ws?.removeListener("open", onOpen);
-        this.ws?.removeListener("error", onError);
-      };
-      this.ws!.on("open", onOpen);
-      this.ws!.on("error", onError);
-    });
+        this.ws?.removeListener('open', onOpen)
+        this.ws?.removeListener('error', onError)
+      }
+      this.ws!.on('open', onOpen)
+      this.ws!.on('error', onError)
+    })
 
-    this.ws.on("message", this.handleMessage.bind(this));
-    this.ws.on("close", this.handleClose.bind(this));
-    this.ws.on("error", this.handleError.bind(this));
+    this.ws.on('message', this.handleMessage.bind(this))
+    this.ws.on('close', this.handleClose.bind(this))
+    this.ws.on('error', this.handleError.bind(this))
 
-    await this.send("Runtime.enable", {});
-    await this.detectAwaitPromiseSupport();
+    await this.send('Runtime.enable', {})
+    await this.detectAwaitPromiseSupport()
   }
 
   async disconnect(): Promise<void> {
     // Reject all pending requests
     for (const [, { reject, timer }] of this.pending) {
-      clearTimeout(timer);
-      reject(new Error("CDP client disconnected"));
+      clearTimeout(timer)
+      reject(new Error('CDP client disconnected'))
     }
-    this.pending.clear();
+    this.pending.clear()
 
     if (this.ws) {
-      this.ws.removeAllListeners();
-      this.ws.close();
-      this.ws = null;
+      this.ws.removeAllListeners()
+      this.ws.close()
+      this.ws = null
     }
   }
 
   /** Health check - validates connection is alive */
   async ping(): Promise<boolean> {
     try {
-      await this.send("Runtime.evaluate", { expression: "1", returnByValue: true });
-      return true;
+      await this.send('Runtime.evaluate', { expression: '1', returnByValue: true })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
   async evaluate<T>(expression: string): Promise<T> {
     if (this.supportsAwaitPromise) {
-      return this.evaluateWithAwaitPromise<T>(expression);
+      return this.evaluateWithAwaitPromise<T>(expression)
     }
-    return this.evaluateWithStash<T>(expression);
+    return this.evaluateWithStash<T>(expression)
   }
 
   private async evaluateWithAwaitPromise<T>(expression: string): Promise<T> {
@@ -129,24 +129,24 @@ export class CDPClient {
       (async function() {
         return eval(${JSON.stringify(expression)});
       })()
-    `;
+    `
 
-    const result = await this.send("Runtime.evaluate", {
+    const result = await this.send('Runtime.evaluate', {
       expression: wrappedExpression,
       returnByValue: true,
       awaitPromise: true,
-    });
+    })
 
     if (result.exceptionDetails) {
-      throw new Error(this.formatEvaluateError(expression, result.exceptionDetails));
+      throw new Error(this.formatEvaluateError(expression, result.exceptionDetails))
     }
 
-    const value = result.result?.value as T | undefined;
-    return value as T;
+    const value = result.result?.value as T | undefined
+    return value as T
   }
 
   private async evaluateWithStash<T>(expression: string): Promise<T> {
-    const resultId = `__CDP_RESULT_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const resultId = `__CDP_RESULT_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
     // Detect if expression is a single expression or multiple statements.
     // Multi-statement code contains semicolons outside of strings/parens and needs
@@ -175,47 +175,47 @@ export class CDPClient {
           return { async: false, error: e && e.message ? e.message : String(e) };
         }
       })()
-    `;
+    `
 
-    const result = await this.send("Runtime.evaluate", {
+    const result = await this.send('Runtime.evaluate', {
       expression: wrappedExpression,
       returnByValue: true,
-    });
+    })
     if (result.exceptionDetails) {
-      throw new Error(this.formatEvaluateError(expression, result.exceptionDetails));
+      throw new Error(this.formatEvaluateError(expression, result.exceptionDetails))
     }
 
     type EvaluatePayload =
       | { async: true; id: string }
       | { async: false; hasValue: boolean; value?: T }
-      | { async: false; error: string };
+      | { async: false; error: string }
 
-    const payload = result.result?.value as EvaluatePayload | undefined;
+    const payload = result.result?.value as EvaluatePayload | undefined
     if (!payload) {
-      throw new Error("CDP evaluate failed: empty result");
+      throw new Error('CDP evaluate failed: empty result')
     }
 
-    if ("error" in payload) {
-      throw new Error(`CDP evaluate failed: ${payload.error}`);
+    if ('error' in payload) {
+      throw new Error(`CDP evaluate failed: ${payload.error}`)
     }
 
     if (payload.async) {
-      return this.pollForResult<T>(payload.id);
+      return this.pollForResult<T>(payload.id)
     }
 
-    return (payload.hasValue ? payload.value : undefined) as T;
+    return (payload.hasValue ? payload.value : undefined) as T
   }
 
   private async detectAwaitPromiseSupport(): Promise<void> {
-    if (this.awaitPromiseChecked) return;
-    this.awaitPromiseChecked = true;
+    if (this.awaitPromiseChecked) return
+    this.awaitPromiseChecked = true
 
     try {
-      const result = await this.send("Runtime.evaluate", {
-        expression: "Promise.resolve(1)",
+      const result = await this.send('Runtime.evaluate', {
+        expression: 'Promise.resolve(1)',
         returnByValue: true,
         awaitPromise: true,
-      });
+      })
       // Sound support means the runtime actually RESOLVED the probe promise to our sentinel (1), not
       // merely that the call returned without a CDP exception. React Native's Promise polyfill makes
       // `awaitPromise: true` resolve to the serialized polyfill object (`{_h, _i, _j, _k}`) WITHOUT
@@ -223,33 +223,33 @@ export class CDPClient {
       // evaluate() to evaluateWithAwaitPromise (which returns garbage on RN) instead of the
       // evaluateWithStash fallback. Asserting the value excludes both that polyfill shape and any
       // other non-resolved result.
-      this.supportsAwaitPromise = !result.exceptionDetails && result.result?.value === 1;
+      this.supportsAwaitPromise = !result.exceptionDetails && result.result?.value === 1
     } catch {
-      this.supportsAwaitPromise = false;
+      this.supportsAwaitPromise = false
     }
   }
 
   private formatEvaluateError(
     expression: string,
-    exceptionDetails: CDPResult["exceptionDetails"],
+    exceptionDetails: CDPResult['exceptionDetails'],
   ): string {
     const text =
-      exceptionDetails?.text ?? exceptionDetails?.exception?.description ?? "Unknown error";
-    const exprSnippet = expression.length > 100 ? `${expression.slice(0, 100)}...` : expression;
+      exceptionDetails?.text ?? exceptionDetails?.exception?.description ?? 'Unknown error'
+    const exprSnippet = expression.length > 100 ? `${expression.slice(0, 100)}...` : expression
     const targetDesc = this.targetInfo.url
       ? ` [target: ${this.targetInfo.url}]`
       : this.targetInfo.id
         ? ` [target: ${this.targetInfo.id}]`
-        : "";
-    return `CDP evaluate failed: ${text}${targetDesc}\nExpression: ${exprSnippet}`;
+        : ''
+    return `CDP evaluate failed: ${text}${targetDesc}\nExpression: ${exprSnippet}`
   }
 
   /**
    * Poll for a result stored in globalThis by evaluate().
    */
   private async pollForResult<T>(resultId: string): Promise<T> {
-    const startTime = Date.now();
-    const timeout = this.options.timeout;
+    const startTime = Date.now()
+    const timeout = this.options.timeout
 
     while (Date.now() - startTime < timeout) {
       const checkExpr = `
@@ -261,96 +261,96 @@ export class CDPClient {
           }
           return { pending: true };
         })()
-      `;
+      `
 
-      const checkResult = await this.send("Runtime.evaluate", {
+      const checkResult = await this.send('Runtime.evaluate', {
         expression: checkExpr,
         returnByValue: true,
-      });
+      })
 
       if (checkResult.exceptionDetails) {
         const text =
           checkResult.exceptionDetails.text ??
           checkResult.exceptionDetails.exception?.description ??
-          "Unknown error";
-        throw new Error(`CDP evaluate failed: ${text}`);
+          'Unknown error'
+        throw new Error(`CDP evaluate failed: ${text}`)
       }
 
       const status = checkResult.result?.value as
         | { pending: true }
         | { done: true; hasValue: boolean; value?: T }
-        | { done: true; error: string };
+        | { done: true; error: string }
 
-      if (status && "done" in status && status.done) {
-        if ("error" in status) {
-          throw new Error(`CDP evaluate failed: ${status.error}`);
+      if (status && 'done' in status && status.done) {
+        if ('error' in status) {
+          throw new Error(`CDP evaluate failed: ${status.error}`)
         }
-        return (status.hasValue ? status.value : undefined) as T;
+        return (status.hasValue ? status.value : undefined) as T
       }
 
       // Wait a bit before polling again
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10))
     }
 
     // Cleanup and throw timeout
-    await this.send("Runtime.evaluate", {
+    await this.send('Runtime.evaluate', {
       expression: `delete globalThis['${resultId}']`,
       returnByValue: true,
-    });
-    throw new Error(`CDP evaluate timed out after ${timeout}ms`);
+    })
+    throw new Error(`CDP evaluate timed out after ${timeout}ms`)
   }
 
   private async send(method: string, params: object): Promise<CDPResult> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error("CDP client not connected");
+      throw new Error('CDP client not connected')
     }
 
-    const id = ++this.messageId;
+    const id = ++this.messageId
 
     return new Promise<CDPResult>((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`CDP request timed out after ${this.options.timeout}ms: ${method}`));
-      }, this.options.timeout);
+        this.pending.delete(id)
+        reject(new Error(`CDP request timed out after ${this.options.timeout}ms: ${method}`))
+      }, this.options.timeout)
 
-      this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
-      this.ws!.send(JSON.stringify({ id, method, params }));
-    });
+      this.pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer })
+      this.ws!.send(JSON.stringify({ id, method, params }))
+    })
   }
 
   private handleMessage(data: Buffer) {
-    let msg: Record<string, unknown>;
+    let msg: Record<string, unknown>
     try {
-      msg = JSON.parse(data.toString()) as Record<string, unknown>;
+      msg = JSON.parse(data.toString()) as Record<string, unknown>
     } catch (err) {
-      console.error("CDP: Failed to parse message:", err);
-      return;
+      console.error('CDP: Failed to parse message:', err)
+      return
     }
 
-    const id = msg.id as number | undefined;
+    const id = msg.id as number | undefined
     if (id !== undefined && this.pending.has(id)) {
-      const { resolve, reject, timer } = this.pending.get(id)!;
-      clearTimeout(timer);
-      this.pending.delete(id);
+      const { resolve, reject, timer } = this.pending.get(id)!
+      clearTimeout(timer)
+      this.pending.delete(id)
 
       // msg.error indicates CDP protocol error (distinct from JS exception)
-      const error = msg.error as { message?: string } | undefined;
+      const error = msg.error as { message?: string } | undefined
       if (error) {
-        reject(new Error(`CDP error: ${error.message ?? JSON.stringify(error)}`));
+        reject(new Error(`CDP error: ${error.message ?? JSON.stringify(error)}`))
       } else {
-        resolve(msg.result);
+        resolve(msg.result)
       }
     }
     // TODO: Handle CDP events (msg.method) for console, exceptions, etc.
   }
 
   private handleClose(code: number, reason: Buffer) {
-    const reasonStr = reason.toString() || "unknown";
+    const reasonStr = reason.toString() || 'unknown'
 
     // Attempt auto-reconnect if enabled
     if (this.options.autoReconnect && !this.isReconnecting && this.wsUrl) {
-      this.attemptReconnect();
-      return;
+      this.attemptReconnect()
+      return
     }
 
     // Reject all pending requests with detailed error
@@ -358,46 +358,46 @@ export class CDPClient {
       ? ` (target: ${this.targetInfo.url})`
       : this.targetInfo.id
         ? ` (target: ${this.targetInfo.id})`
-        : "";
-    const error = new Error(`CDP connection closed: ${code} ${reasonStr}${targetDesc}`);
+        : ''
+    const error = new Error(`CDP connection closed: ${code} ${reasonStr}${targetDesc}`)
     for (const [, { reject, timer }] of this.pending) {
-      clearTimeout(timer);
-      reject(error);
+      clearTimeout(timer)
+      reject(error)
     }
-    this.pending.clear();
+    this.pending.clear()
   }
 
   private async attemptReconnect(): Promise<void> {
     if (this.reconnectAttempts >= this.options.maxReconnectAttempts) {
-      const error = new Error(`CDP reconnect failed after ${this.reconnectAttempts} attempts`);
+      const error = new Error(`CDP reconnect failed after ${this.reconnectAttempts} attempts`)
       for (const [, { reject, timer }] of this.pending) {
-        clearTimeout(timer);
-        reject(error);
+        clearTimeout(timer)
+        reject(error)
       }
-      this.pending.clear();
-      return;
+      this.pending.clear()
+      return
     }
 
-    this.isReconnecting = true;
-    this.reconnectAttempts++;
+    this.isReconnecting = true
+    this.reconnectAttempts++
 
     // Exponential backoff
-    const delay = this.options.reconnectBackoffMs * 2 ** (this.reconnectAttempts - 1);
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    const delay = this.options.reconnectBackoffMs * 2 ** (this.reconnectAttempts - 1)
+    await new Promise((resolve) => setTimeout(resolve, delay))
 
     try {
-      await this.doConnect();
-      this.isReconnecting = false;
+      await this.doConnect()
+      this.isReconnecting = false
       // Re-enable runtime after reconnect
-      await this.send("Runtime.enable", {});
+      await this.send('Runtime.enable', {})
     } catch {
-      this.isReconnecting = false;
+      this.isReconnecting = false
       // Try again
-      await this.attemptReconnect();
+      await this.attemptReconnect()
     }
   }
 
   private handleError(err: Error) {
-    console.error("CDP WebSocket error:", err);
+    console.error('CDP WebSocket error:', err)
   }
 }

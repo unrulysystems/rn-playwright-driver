@@ -1,39 +1,39 @@
-import type { ElementBounds } from "@0xbigboss/rn-driver-shared-types";
+import type { ElementBounds } from '@0xbigboss/rn-driver-shared-types'
 import type {
   Capabilities,
   DriverEvent,
   TracingOptions,
   WindowMetrics,
-} from "../harness/shared-types";
-import type { TargetSelectionOptions } from "./cdp/discovery";
+} from '../harness/shared-types'
+import type { TargetSelectionOptions } from './cdp/discovery'
 
-export type { ElementBounds } from "@0xbigboss/rn-driver-shared-types";
+export type { ElementBounds } from '@0xbigboss/rn-driver-shared-types'
 export type {
   Capabilities,
   DriverEvent,
   DriverEventType,
   TracingOptions,
   WindowMetrics,
-} from "../harness/shared-types";
+} from '../harness/shared-types'
 
 export type DeviceOptions = {
   /** Metro bundler URL (default: 'http://localhost:8081') */
-  metroUrl?: string;
+  metroUrl?: string
   /** Touch backend selection and config */
-  touch?: TouchBackendConfig;
-} & TargetSelectionOptions;
+  touch?: TouchBackendConfig
+} & TargetSelectionOptions
 
 // --- Wait states for Locator.waitFor ---
 
 /** States for Locator.waitFor() */
-export type WaitForState = "attached" | "visible" | "hidden" | "detached";
+export type WaitForState = 'attached' | 'visible' | 'hidden' | 'detached'
 
 /** Options for Locator.waitFor() */
 export interface WaitForOptions {
   /** Target state to wait for (default: "visible") */
-  state?: WaitForState;
+  state?: WaitForState
   /** Timeout in milliseconds (default: 30000) */
-  timeout?: number;
+  timeout?: number
 }
 
 // --- Capabilities detection ---
@@ -41,69 +41,69 @@ export interface WaitForOptions {
 // --- Harness loading modes ---
 
 /** How to load the test harness in the app */
-export type HarnessLoadMode = "always" | "dev-only" | "explicit";
+export type HarnessLoadMode = 'always' | 'dev-only' | 'explicit'
 
 export type Point = {
   /** X position in logical points (not pixels) */
-  x: number;
+  x: number
   /** Y position in logical points */
-  y: number;
-};
+  y: number
+}
 
-export type Easing = "linear" | "ease-in" | "ease-out" | "ease-in-out" | ((t: number) => number);
+export type Easing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | ((t: number) => number)
 
 export type PointerEventOptions = {
   /** Pointer ID for multi-touch (default: 0) */
-  pointerId?: number;
+  pointerId?: number
   /** Pressure 0-1 for pressure-sensitive input (default: 1) */
-  pressure?: number;
-};
+  pressure?: number
+}
 
 export type MoveOptions = PointerEventOptions & {
   /** Number of intermediate move events (default: 1 = direct) */
-  steps?: number;
-};
+  steps?: number
+}
 
 export type TimingOptions = {
   /** Pause after pointer down, before movement (default: 16ms) */
-  holdStart?: number;
+  holdStart?: number
   /** Pause after movement, before pointer up (default: 16ms) */
-  holdEnd?: number;
-};
+  holdEnd?: number
+}
 
 export type InterpolationOptions = {
   /** Duration-based: total gesture time in ms (takes precedence over steps) */
-  duration?: number;
+  duration?: number
   /** Step-based: number of move events (ignored if duration is set) */
-  steps?: number;
+  steps?: number
   /** Easing function (default: 'linear' for drag, 'ease-out' for swipe) */
-  easing?: Easing;
-};
+  easing?: Easing
+}
 
 export type TapOptions = {
   /** Pause between down and up (default: 16ms) */
-  holdStart?: number;
+  holdStart?: number
   /** Number of taps (default: 1) */
-  count?: number;
+  count?: number
   /** Delay between taps for multi-tap (default: 100ms) */
-  tapDelay?: number;
-};
+  tapDelay?: number
+}
 
-export type DragOptions = TimingOptions & InterpolationOptions;
+export type DragOptions = TimingOptions & InterpolationOptions
 
 export type LongPressOptions = TimingOptions & {
   /** Hold duration in ms (default: 500ms) */
-  duration?: number;
-};
+  duration?: number
+}
 
 /** Options for swipe gesture */
 export type SwipeOptions = TimingOptions &
   InterpolationOptions & {
     /** Starting point */
-    from: Point;
+    from: Point
     /** Ending point */
-    to: Point;
-  };
+    to: Point
+  }
 
 /**
  * Options for {@link Device.scroll} — a content-delta scroll performed as a
@@ -122,44 +122,44 @@ export type SwipeOptions = TimingOptions &
 export type ScrollOptions = TimingOptions &
   InterpolationOptions & {
     /** Horizontal content delta in logical points (default: 0). */
-    dx?: number;
+    dx?: number
     /** Vertical content delta in logical points (default: 0). */
-    dy?: number;
+    dy?: number
     /**
      * Swipe anchor X in logical points (default: viewport center). Clamped to
      * the mid-screen safe band, so an out-of-band value is moved to the nearest
      * band edge.
      */
-    x?: number;
+    x?: number
     /**
      * Swipe anchor Y in logical points (default: viewport center). Clamped to
      * the mid-screen safe band, so an out-of-band value is moved to the nearest
      * band edge.
      */
-    y?: number;
-  };
+    y?: number
+  }
 
 /**
  * Options for {@link Locator.scrollIntoView}.
  */
 export type ScrollIntoViewOptions = {
   /** Maximum number of scroll gestures to attempt (default: 10). */
-  maxScrolls?: number;
+  maxScrolls?: number
   /**
    * Minimum gap in logical points to keep between the element and each viewport
    * edge once it is considered "in view" (default: 0).
    */
-  margin?: number;
+  margin?: number
   /**
    * Direction to scroll when the element is not currently in the view tree
    * (e.g. virtualized off-screen content), so its position can't be measured to
    * infer direction. Ignored once the element is found (direction is then
    * derived from its bounds). Default: "down".
    */
-  direction?: "up" | "down" | "left" | "right";
-};
+  direction?: 'up' | 'down' | 'left' | 'right'
+}
 
-export type TouchBackendType = "xctest" | "instrumentation" | "native-module" | "cli";
+export type TouchBackendType = 'xctest' | 'instrumentation' | 'native-module' | 'cli'
 
 // --- Touch Backend Info ---
 
@@ -168,12 +168,12 @@ export type TouchBackendType = "xctest" | "instrumentation" | "native-module" | 
  */
 export type TouchBackendInfo = {
   /** Currently selected backend */
-  selected: TouchBackendType;
+  selected: TouchBackendType
   /** All available backends */
-  available: TouchBackendType[];
+  available: TouchBackendType[]
   /** Reason for backend selection (for diagnostics) */
-  reason?: string;
-};
+  reason?: string
+}
 
 // --- Tracing ---
 
@@ -184,39 +184,39 @@ export type TouchBackendInfo = {
  */
 export type DragPathOptions = TimingOptions & {
   /** Delay between each point in ms (default: 0) */
-  delay?: number;
-};
+  delay?: number
+}
 
 /**
  * Options for move path operations (movePath).
  */
 export type MovePathOptions = {
   /** Delay between each point in ms (default: 0) */
-  delay?: number;
-};
+  delay?: number
+}
 
 export type PlannedPointerEvent = {
-  type: "down" | "move" | "up" | "wait";
-  x?: number;
-  y?: number;
-  ms?: number;
-  pointerId?: number;
-  pressure?: number;
-};
+  type: 'down' | 'move' | 'up' | 'wait'
+  x?: number
+  y?: number
+  ms?: number
+  pointerId?: number
+  pressure?: number
+}
 
 export interface GestureBuilder {
   // Pointer state
-  down(x: number, y: number, options?: PointerEventOptions): this;
-  up(options?: PointerEventOptions): this;
+  down(x: number, y: number, options?: PointerEventOptions): this
+  up(options?: PointerEventOptions): this
 
   // Movement
-  moveTo(x: number, y: number, options?: InterpolationOptions): this;
-  moveBy(dx: number, dy: number, options?: InterpolationOptions): this;
+  moveTo(x: number, y: number, options?: InterpolationOptions): this
+  moveBy(dx: number, dy: number, options?: InterpolationOptions): this
 
   // Timing
-  wait(ms: number): this;
+  wait(ms: number): this
   /** Wait for N animation frames (~16ms per frame at 60fps) */
-  waitFrames(count: number): this;
+  waitFrames(count: number): this
 
   // Path helpers
   arc(
@@ -225,79 +225,79 @@ export interface GestureBuilder {
     startAngle: number,
     endAngle: number,
     options?: InterpolationOptions,
-  ): this;
+  ): this
 
-  bezier(control1: Point, control2: Point, end: Point, options?: InterpolationOptions): this;
+  bezier(control1: Point, control2: Point, end: Point, options?: InterpolationOptions): this
 
   // Execution
-  execute(): Promise<void>;
+  execute(): Promise<void>
 
   // Debug: inspect planned events without executing
-  toEvents(): PlannedPointerEvent[];
+  toEvents(): PlannedPointerEvent[]
 }
 
 export type PinchOptions = TimingOptions &
   InterpolationOptions & {
-    center: Point;
-    startDistance: number;
-    endDistance: number;
-  };
+    center: Point
+    startDistance: number
+    endDistance: number
+  }
 
 export type RotateOptions = TimingOptions &
   InterpolationOptions & {
-    center: Point;
-    distance: number;
-    startAngle: number;
-    endAngle: number;
-  };
+    center: Point
+    distance: number
+    startAngle: number
+    endAngle: number
+  }
 
 export interface MultiGestureBuilder {
   /**
    * Get or create a gesture builder for a specific pointer ID.
    * All events added to the returned builder are tagged with this pointer ID.
    */
-  pointer(id: number): GestureBuilder;
+  pointer(id: number): GestureBuilder
 
   /**
    * Execute all pointer sequences in parallel.
    */
-  execute(): Promise<void>;
+  execute(): Promise<void>
 }
 
-export type TouchBackendMode = "auto" | "force";
+export type TouchBackendMode = 'auto' | 'force'
 
 export type TouchBackendConfig = {
   /** Selection mode (default: "auto") */
-  mode?: TouchBackendMode;
+  mode?: TouchBackendMode
   /** Force a specific backend when mode === "force" */
-  backend?: TouchBackendType;
+  backend?: TouchBackendType
   /** Ordered backend preference when mode === "auto" */
-  order?: TouchBackendType[];
+  order?: TouchBackendType[]
   /** XCTest companion connection options */
   xctest?: {
-    enabled?: boolean;
-    host?: string;
-    port?: number;
-    connectTimeoutMs?: number;
-    requestTimeoutMs?: number;
-  };
+    enabled?: boolean
+    host?: string
+    port?: number
+    connectTimeoutMs?: number
+    requestTimeoutMs?: number
+  }
   /** Android Instrumentation companion connection options */
   instrumentation?: {
-    enabled?: boolean;
-    host?: string;
-    port?: number;
-    connectTimeoutMs?: number;
-    requestTimeoutMs?: number;
-  };
+    enabled?: boolean
+    host?: string
+    port?: number
+    connectTimeoutMs?: number
+    requestTimeoutMs?: number
+  }
   /** Enable native-module backend (requires RNDriverTouchInjector / @0xbigboss/rn-driver-touch) */
   nativeModule?: {
-    enabled?: boolean;
-  };
+    enabled?: boolean
+  }
   /** Enable CLI backend (idb/adb) */
   cli?: {
-    enabled?: boolean;
-  };
-};
+    enabled?: boolean
+  }
+}
 
 /**
  * Locator for finding and interacting with RN views.
@@ -309,14 +309,14 @@ export type TouchBackendConfig = {
  */
 export type Locator = {
   /** Tap the element center. REQUIRES: RNDriverViewTree + RNDriverTouch (Phase 3) */
-  tap(): Promise<void>;
+  tap(): Promise<void>
   /**
    * Type text into the element.
    * NOT YET IMPLEMENTED: Requires RNDriverKeyboard native module.
    * Use device.evaluate() with setNativeProps as workaround.
    * @throws LocatorError with code "NOT_SUPPORTED"
    */
-  type(text: string): Promise<void>;
+  type(text: string): Promise<void>
   /**
    * Wait for element to reach a specific state.
    * - "attached": element exists in the view tree
@@ -325,13 +325,13 @@ export type Locator = {
    * - "detached": element does NOT exist
    * REQUIRES: RNDriverViewTree (Phase 3)
    */
-  waitFor(options?: WaitForOptions): Promise<void>;
+  waitFor(options?: WaitForOptions): Promise<void>
   /** Check if element exists and is visible. REQUIRES: RNDriverViewTree (Phase 3) */
-  isVisible(): Promise<boolean>;
+  isVisible(): Promise<boolean>
   /** Get element bounds in logical points. REQUIRES: RNDriverViewTree (Phase 3) */
-  bounds(): Promise<ElementBounds | null>;
+  bounds(): Promise<ElementBounds | null>
   /** Capture screenshot of element. REQUIRES: RNDriverScreenshot (Phase 3) */
-  screenshot(): Promise<Buffer>;
+  screenshot(): Promise<Buffer>
   /**
    * Scroll the element into the viewport.
    *
@@ -347,22 +347,22 @@ export type Locator = {
    * `maxScrolls` is exhausted before the element is fully visible, or
    * "NOT_FOUND" if the element never appears.
    */
-  scrollIntoView(options?: ScrollIntoViewOptions): Promise<void>;
+  scrollIntoView(options?: ScrollIntoViewOptions): Promise<void>
 
   // --- Chaining methods ---
   /** Find element by testID within this element's subtree */
-  getByTestId(testId: string): Locator;
+  getByTestId(testId: string): Locator
   /** Find element containing text within this element's subtree */
-  getByText(text: string, options?: { exact?: boolean }): Locator;
+  getByText(text: string, options?: { exact?: boolean }): Locator
   /** Find element by accessibility role within this element's subtree */
-  getByRole(role: string, options?: { name?: string }): Locator;
+  getByRole(role: string, options?: { name?: string }): Locator
   /** Return the nth matching element (0-indexed) */
-  nth(index: number): Locator;
+  nth(index: number): Locator
   /** Return the first matching element */
-  first(): Locator;
+  first(): Locator
   /** Return the last matching element */
-  last(): Locator;
-};
+  last(): Locator
+}
 
 /**
  * Coordinate system: All coordinates are in LOGICAL POINTS, not physical pixels.
@@ -371,34 +371,34 @@ export type Locator = {
  */
 export interface Device {
   // --- Connection ---
-  connect(): Promise<void>;
-  disconnect(): Promise<void>;
+  connect(): Promise<void>
+  disconnect(): Promise<void>
   /** Health check - returns true if connection is alive */
-  ping(): Promise<boolean>;
+  ping(): Promise<boolean>
 
   // --- JS Evaluation (Phase 1 - the foundation) ---
   /**
    * Evaluate JS expression in app context.
    * Expression must be a string; for complex logic, define functions in the app.
    */
-  evaluate<T>(expression: string): Promise<T>;
+  evaluate<T>(expression: string): Promise<T>
 
   // --- Locators (Phase 3 - require native modules) ---
   /**
    * Find element by testID prop.
    * Maps to accessibilityIdentifier on iOS, testID on Android.
    */
-  getByTestId(testId: string): Locator;
+  getByTestId(testId: string): Locator
   /**
    * Find element containing text.
    * Searches accessibilityLabel and Text component children.
    */
-  getByText(text: string, options?: { exact?: boolean }): Locator;
+  getByText(text: string, options?: { exact?: boolean }): Locator
   /**
    * Find element by accessibility role.
    * Maps to accessibilityRole prop.
    */
-  getByRole(role: string, options?: { name?: string }): Locator;
+  getByRole(role: string, options?: { name?: string }): Locator
 
   // --- Pointer/Touch (Phase 2 - via touch backend) ---
   /**
@@ -406,44 +406,44 @@ export interface Device {
    */
   pointer: {
     /** Tap at coordinates (down + up) */
-    tap(x: number, y: number, options?: TapOptions): Promise<void>;
+    tap(x: number, y: number, options?: TapOptions): Promise<void>
     /** Double-tap at coordinates */
-    doubleTap(x: number, y: number, options?: TapOptions): Promise<void>;
+    doubleTap(x: number, y: number, options?: TapOptions): Promise<void>
     /** Long press at coordinates */
-    longPress(x: number, y: number, options?: LongPressOptions): Promise<void>;
+    longPress(x: number, y: number, options?: LongPressOptions): Promise<void>
     /** Press down at coordinates */
-    down(x: number, y: number, options?: PointerEventOptions): Promise<void>;
+    down(x: number, y: number, options?: PointerEventOptions): Promise<void>
     /** Move to coordinates (while pressed) */
-    move(x: number, y: number, options?: MoveOptions): Promise<void>;
+    move(x: number, y: number, options?: MoveOptions): Promise<void>
     /** Release press */
-    up(options?: PointerEventOptions): Promise<void>;
+    up(options?: PointerEventOptions): Promise<void>
     /** Drag from one point to another with interpolation */
     drag(
       from: { x: number; y: number },
       to: { x: number; y: number },
       options?: DragOptions,
-    ): Promise<void>;
+    ): Promise<void>
     /** Swipe from one point to another with duration-based animation */
-    swipe(options: SwipeOptions): Promise<void>;
+    swipe(options: SwipeOptions): Promise<void>
     /**
      * Execute a drag gesture along a path of points.
      * Performs down at first point, moves through all points, up at last point.
      */
-    dragPath(points: { x: number; y: number }[], options?: DragPathOptions): Promise<void>;
+    dragPath(points: { x: number; y: number }[], options?: DragPathOptions): Promise<void>
     /**
      * Move through a path of points without down/up.
      * Useful for hover effects or tracking gestures.
      */
-    movePath(points: { x: number; y: number }[], options?: MovePathOptions): Promise<void>;
+    movePath(points: { x: number; y: number }[], options?: MovePathOptions): Promise<void>
     /** Create a gesture builder for complex sequences */
-    gesture(): GestureBuilder;
+    gesture(): GestureBuilder
     /** Pinch gesture with two fingers */
-    pinch(options: PinchOptions): Promise<void>;
+    pinch(options: PinchOptions): Promise<void>
     /** Two-finger rotation gesture */
-    rotate(options: RotateOptions): Promise<void>;
+    rotate(options: RotateOptions): Promise<void>
     /** Multi-touch gesture builder */
-    multiGesture(): MultiGestureBuilder;
-  };
+    multiGesture(): MultiGestureBuilder
+  }
 
   /**
    * Scroll the content by a delta via a single swipe gesture, without needing
@@ -453,23 +453,23 @@ export interface Device {
    * fold (scroll down), `dx > 0` reveals content to the right. See
    * {@link ScrollOptions}.
    */
-  scroll(options: ScrollOptions): Promise<void>;
+  scroll(options: ScrollOptions): Promise<void>
 
   // --- Screenshots (Phase 3 - require native module) ---
-  screenshot(options?: { clip?: ElementBounds }): Promise<Buffer>;
+  screenshot(options?: { clip?: ElementBounds }): Promise<Buffer>
 
   // --- Navigation/Lifecycle (Phase 3 - require native module) ---
-  openURL(url: string): Promise<void>;
-  reload(): Promise<void>;
-  background(): Promise<void>;
-  foreground(): Promise<void>;
+  openURL(url: string): Promise<void>
+  reload(): Promise<void>
+  background(): Promise<void>
+  foreground(): Promise<void>
 
   // --- Capabilities Detection ---
   /** Get available capabilities from the harness */
-  capabilities(): Promise<Capabilities>;
+  capabilities(): Promise<Capabilities>
 
   // --- Utilities (Phase 1) ---
-  waitForTimeout(ms: number): Promise<void>;
+  waitForTimeout(ms: number): Promise<void>
 
   /**
    * Wait for a JS expression to return a truthy value.
@@ -483,7 +483,7 @@ export interface Device {
   waitForFunction<T>(
     expression: string,
     options?: { timeout?: number; polling?: number },
-  ): Promise<T>;
+  ): Promise<T>
 
   // --- Core Primitives ---
 
@@ -491,43 +491,43 @@ export interface Device {
    * Get current window metrics (dimensions, pixel ratio, orientation).
    * All values are in logical points.
    */
-  getWindowMetrics(): Promise<WindowMetrics>;
+  getWindowMetrics(): Promise<WindowMetrics>
 
   /**
    * Get current RAF frame count from the harness.
    * Monotonically increasing counter incremented each requestAnimationFrame.
    */
-  getFrameCount(): Promise<number>;
+  getFrameCount(): Promise<number>
 
   /**
    * Wait for N animation frames to elapse.
    * @param count Number of frames to wait (default: 1)
    */
-  waitForRaf(count?: number): Promise<void>;
+  waitForRaf(count?: number): Promise<void>
 
   /**
    * Wait until the frame count reaches or exceeds the target value.
    * @param target Target frame count to wait for
    */
-  waitForFrameCount(target: number): Promise<void>;
+  waitForFrameCount(target: number): Promise<void>
 
   /**
    * Get information about the currently selected touch backend.
    */
-  getTouchBackendInfo(): Promise<TouchBackendInfo>;
+  getTouchBackendInfo(): Promise<TouchBackendInfo>
 
   /**
    * Start tracing driver events.
    * Events are stored in a bounded ring buffer on the device.
    */
-  startTracing(options?: TracingOptions): Promise<void>;
+  startTracing(options?: TracingOptions): Promise<void>
 
   /**
    * Stop tracing and return collected events.
    * Clears the trace buffer.
    */
-  stopTracing(): Promise<{ events: DriverEvent[] }>;
+  stopTracing(): Promise<{ events: DriverEvent[] }>
 
   // --- Platform Info ---
-  readonly platform: "ios" | "android";
+  readonly platform: 'ios' | 'android'
 }

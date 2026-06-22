@@ -1,2 +1,2 @@
-export { RNDriverTouchInjectorModule } from "./RNDriverTouchInjectorModule";
-export type { ErrorCode, NativeResult } from "./types";
+export { RNDriverTouchInjectorModule } from './RNDriverTouchInjectorModule'
+export type { ErrorCode, NativeResult } from './types'

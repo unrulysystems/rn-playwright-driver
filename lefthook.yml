@@ -1,24 +1,40 @@
 # Lefthook git hooks configuration
 # https://github.com/evilmartians/lefthook
+# oxc (oxlint/oxfmt) on staged files; typecheck/knip/cpd/test via root scripts.
 
 pre-commit:
-  parallel: true
   commands:
     typecheck:
+      glob: '*.{ts,tsx}'
       run: bun run typecheck
     lint:
-      run: bun run lint
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx}'
+      run: npx oxlint --fix {staged_files}
+      stage_fixed: true
+    format:
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc}'
+      run: npx oxfmt --write {staged_files}
+      stage_fixed: true
     cpd:
+      glob: '*.{ts,tsx}'
       run: bun run cpd
 
 pre-push:
-  parallel: true
   commands:
     typecheck:
+      glob: '*.{ts,tsx}'
       run: bun run typecheck
-    knip:
-      run: bun run knip
     lint:
-      run: bun run lint
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx}'
+      run: npx oxlint {push_files}
+    format:
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc}'
+      run: npx oxfmt --check {push_files}
+    knip:
+      glob: '*.{ts,tsx,json}'
+      run: bun run knip
+    cpd:
+      glob: '*.{ts,tsx}'
+      run: bun run cpd
     test:
       run: bun run test

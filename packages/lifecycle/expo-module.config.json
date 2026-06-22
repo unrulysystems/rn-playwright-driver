@@ -1,9 +1,9 @@
 {
-	"platforms": ["apple", "android"],
-	"apple": {
-		"modules": ["RNDriverLifecycleModule"]
-	},
-	"android": {
-		"modules": ["expo.modules.rndriverlifecycle.RNDriverLifecycleModule"]
-	}
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["RNDriverLifecycleModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.rndriverlifecycle.RNDriverLifecycleModule"]
+  }
 }

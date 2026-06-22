@@ -1,19 +1,16 @@
 {
   "name": "examples-basic-app",
   "version": "1.0.0",
+  "private": true,
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
     "typecheck": "tsgo --noEmit",
     "knip": "knip",
     "cpd": "jscpd .",
-    "check": "bun run typecheck && bun run knip && bun run cpd && bun run lint",
     "test:e2e": "playwright test",
     "prepare": "lefthook install"
   },
@@ -29,7 +26,6 @@
     "react-native": "0.81.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.10",
     "@playwright/test": "^1.57.0",
     "@types/node": "^25.9.3",
     "@types/react": "~19.1.0",
@@ -38,6 +34,5 @@
     "knip": "^5.78.0",
     "lefthook": "^2.0.13",
     "typescript": "~5.9.2"
-  },
-  "private": true
+  }
 }

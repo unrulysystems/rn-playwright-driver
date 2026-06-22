@@ -1,6 +1,6 @@
 {
-	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"project": ["src/**/*.ts"],
-	"ignore": ["dist/**"],
-	"ignoreDependencies": ["expo-modules-core"]
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "project": ["src/**/*.ts"],
+  "ignore": ["dist/**"],
+  "ignoreDependencies": ["expo-modules-core"]
 }

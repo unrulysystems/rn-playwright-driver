@@ -11,37 +11,37 @@ This document describes the complete architecture for Phase 3 native modules in 
 
 ## Quick Reference
 
-| Decision | Choice |
-|----------|--------|
-| Repository structure | Monorepo (`packages/driver`, `packages/view-tree`, etc.) |
-| Touch injection | Default backend: native module. Opt-in backends: companion (OS-level) and CLI stub. No harness fallback exists in current source. |
-| Element handles | Random IDs (`element_{16-char-hex}`) |
-| View tree queries | Fresh traversal (no caching) |
-| Native module API | Expo Modules API (Swift + Kotlin) |
-| Coordinates | Logical points (not pixels) |
-| Result type | `NativeResult<T>` with error codes |
+| Decision             | Choice                                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Repository structure | Monorepo (`packages/driver`, `packages/view-tree`, etc.)                                                                          |
+| Touch injection      | Default backend: native module. Opt-in backends: companion (OS-level) and CLI stub. No harness fallback exists in current source. |
+| Element handles      | Random IDs (`element_{16-char-hex}`)                                                                                              |
+| View tree queries    | Fresh traversal (no caching)                                                                                                      |
+| Native module API    | Expo Modules API (Swift + Kotlin)                                                                                                 |
+| Coordinates          | Logical points (not pixels)                                                                                                       |
+| Result type          | `NativeResult<T>` with error codes                                                                                                |
 
 ### Packages
 
-| Package | Purpose | Status |
-|---------|---------|--------|
-| `@0xbigboss/rn-playwright-driver` | Test driver (no native code) | ✅ Complete |
-| `@0xbigboss/rn-driver-shared-types` | Shared types across driver and native modules | ✅ Complete |
-| `@0xbigboss/rn-driver-view-tree` | Element queries, bounds, visibility | ✅ Complete |
-| `@0xbigboss/rn-driver-screenshot` | Screen/element capture | ✅ Complete |
-| `@0xbigboss/rn-driver-lifecycle` | App state control | 🔶 Partial |
-| `@0xbigboss/rn-playwright-driver-xctest-companion` | iOS OS-level touch injection | ✅ Reference impl (manual integration) |
-| `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android OS-level touch injection | ✅ Reference impl (manual integration) |
-| `@0xbigboss/rn-driver-touch` | In-app touch synthesis | ✅ Implemented, DEBUG/E2E-oriented |
+| Package                                                     | Purpose                                       | Status                                 |
+| ----------------------------------------------------------- | --------------------------------------------- | -------------------------------------- |
+| `@0xbigboss/rn-playwright-driver`                           | Test driver (no native code)                  | ✅ Complete                            |
+| `@0xbigboss/rn-driver-shared-types`                         | Shared types across driver and native modules | ✅ Complete                            |
+| `@0xbigboss/rn-driver-view-tree`                            | Element queries, bounds, visibility           | ✅ Complete                            |
+| `@0xbigboss/rn-driver-screenshot`                           | Screen/element capture                        | ✅ Complete                            |
+| `@0xbigboss/rn-driver-lifecycle`                            | App state control                             | 🔶 Partial                             |
+| `@0xbigboss/rn-playwright-driver-xctest-companion`          | iOS OS-level touch injection                  | ✅ Reference impl (manual integration) |
+| `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android OS-level touch injection              | ✅ Reference impl (manual integration) |
+| `@0xbigboss/rn-driver-touch`                                | In-app touch synthesis                        | ✅ Implemented, DEBUG/E2E-oriented     |
 
 ### Current Touch Backend Priority
 
 The source default in `packages/driver/src/touch/index.ts` is:
 
 | Platform | Default `auto` order |
-|----------|----------------------|
-| iOS | `native-module` |
-| Android | `native-module` |
+| -------- | -------------------- |
+| iOS      | `native-module`      |
+| Android  | `native-module`      |
 
 Companion backends are implemented and useful when the test environment starts them explicitly, but they are not selected by default. To use them, pass `DeviceOptions.touch.order` such as `["xctest", "native-module"]` or force a backend with `mode: "force"`. The `cli` backend is a stub and should not be advertised as a working fallback until `idb`/`adb` spawning is implemented.
 
@@ -124,8 +124,8 @@ The `global.__RN_DRIVER__` harness (already exists for Phase 2) is extended to e
 ```typescript
 // Driver side (test process)
 const bounds = await device.evaluate<ElementBounds>(
-  `global.__RN_DRIVER__.viewTree.getBounds('my-button')`
-);
+  `global.__RN_DRIVER__.viewTree.getBounds('my-button')`,
+)
 
 // This calls into the native module inside the app
 ```
@@ -139,12 +139,13 @@ Elements are referenced by handles (strings), not direct object references. This
 - Platform-agnostic element identification
 
 ```typescript
-type ElementHandle = string; // e.g., "element_a1b2c3d4"
+type ElementHandle = string // e.g., "element_a1b2c3d4"
 ```
 
 ### 4. Logical Points Everywhere
 
 All coordinates use **logical points** (not physical pixels). This matches:
+
 - React Native's coordinate system
 - Playwright's default behavior
 - Cross-device consistency
@@ -165,40 +166,40 @@ These types are shared across the driver, harness, and native modules:
  * Origin (0,0) is top-left of screen.
  */
 type ElementBounds = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
 /**
  * Element information returned from view tree queries.
  */
 type ElementInfo = {
   /** Stable handle for referencing this element */
-  handle: ElementHandle;
+  handle: ElementHandle
 
   /** testID prop (iOS: accessibilityIdentifier) */
-  testId: string | null;
+  testId: string | null
 
   /** Visible text content */
-  text: string | null;
+  text: string | null
 
   /** Accessibility role */
-  role: string | null;
+  role: string | null
 
   /** Accessibility label */
-  label: string | null;
+  label: string | null
 
   /** Bounding rectangle in logical points */
-  bounds: ElementBounds;
+  bounds: ElementBounds
 
   /** Whether element is currently visible on screen */
-  visible: boolean;
+  visible: boolean
 
   /** Whether element is enabled for interaction */
-  enabled: boolean;
-};
+  enabled: boolean
+}
 
 /**
  * Unique identifier for an element instance.
@@ -207,7 +208,7 @@ type ElementInfo = {
  * Generated by native module when element is found.
  * Valid only for the lifetime of the native view.
  */
-type ElementHandle = `element_${string}`;
+type ElementHandle = `element_${string}`
 
 /**
  * Handle generation (native side):
@@ -228,16 +229,16 @@ type ElementHandle = `element_${string}`;
  */
 type TextQueryOptions = {
   /** Require exact match (default: false = substring match) */
-  exact?: boolean;
-};
+  exact?: boolean
+}
 
 /**
  * Options for role-based queries.
  */
 type RoleQueryOptions = {
   /** Filter by accessible name */
-  name?: string;
-};
+  name?: string
+}
 
 // ══════════════════════════════════════════════════════════════════════════
 // RESULT TYPES
@@ -249,16 +250,16 @@ type RoleQueryOptions = {
  */
 type NativeResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string; code: ErrorCode };
+  | { success: false; error: string; code: ErrorCode }
 
 type ErrorCode =
-  | 'NOT_FOUND'        // Element not found
-  | 'MULTIPLE_FOUND'   // Multiple elements match (when expecting one)
-  | 'NOT_VISIBLE'      // Element exists but not visible
-  | 'NOT_ENABLED'      // Element visible but not enabled
-  | 'TIMEOUT'          // Operation timed out
-  | 'INTERNAL'         // Internal error
-  | 'NOT_SUPPORTED';   // Feature not available on this platform
+  | 'NOT_FOUND' // Element not found
+  | 'MULTIPLE_FOUND' // Multiple elements match (when expecting one)
+  | 'NOT_VISIBLE' // Element exists but not visible
+  | 'NOT_ENABLED' // Element visible but not enabled
+  | 'TIMEOUT' // Operation timed out
+  | 'INTERNAL' // Internal error
+  | 'NOT_SUPPORTED' // Feature not available on this platform
 ```
 
 ---
@@ -282,25 +283,25 @@ interface ViewTreeModule {
    * iOS: matches accessibilityIdentifier
    * Android: matches view tag set by testID
    */
-  findByTestId(testId: string): Promise<NativeResult<ElementInfo>>;
+  findByTestId(testId: string): Promise<NativeResult<ElementInfo>>
 
   /**
    * Find element by text content.
    * Searches: Text component children, accessibilityLabel
    */
-  findByText(text: string, options?: TextQueryOptions): Promise<NativeResult<ElementInfo>>;
+  findByText(text: string, options?: TextQueryOptions): Promise<NativeResult<ElementInfo>>
 
   /**
    * Find element by accessibility role.
    * Maps to accessibilityRole prop.
    */
-  findByRole(role: string, options?: RoleQueryOptions): Promise<NativeResult<ElementInfo>>;
+  findByRole(role: string, options?: RoleQueryOptions): Promise<NativeResult<ElementInfo>>
 
   // ── Multiple Element Queries ────────────────────────────────────────────
 
-  findAllByTestId(testId: string): Promise<NativeResult<ElementInfo[]>>;
-  findAllByText(text: string, options?: TextQueryOptions): Promise<NativeResult<ElementInfo[]>>;
-  findAllByRole(role: string, options?: RoleQueryOptions): Promise<NativeResult<ElementInfo[]>>;
+  findAllByTestId(testId: string): Promise<NativeResult<ElementInfo[]>>
+  findAllByText(text: string, options?: TextQueryOptions): Promise<NativeResult<ElementInfo[]>>
+  findAllByRole(role: string, options?: RoleQueryOptions): Promise<NativeResult<ElementInfo[]>>
 
   // ── Element State ───────────────────────────────────────────────────────
 
@@ -308,28 +309,29 @@ interface ViewTreeModule {
    * Get current bounds of element by handle.
    * Returns null if element no longer exists.
    */
-  getBounds(handle: ElementHandle): Promise<NativeResult<ElementBounds | null>>;
+  getBounds(handle: ElementHandle): Promise<NativeResult<ElementBounds | null>>
 
   /**
    * Check if element is visible on screen.
    */
-  isVisible(handle: ElementHandle): Promise<NativeResult<boolean>>;
+  isVisible(handle: ElementHandle): Promise<NativeResult<boolean>>
 
   /**
    * Check if element is enabled for interaction.
    */
-  isEnabled(handle: ElementHandle): Promise<NativeResult<boolean>>;
+  isEnabled(handle: ElementHandle): Promise<NativeResult<boolean>>
 
   /**
    * Refresh element info (re-query by handle).
    */
-  refresh(handle: ElementHandle): Promise<NativeResult<ElementInfo | null>>;
+  refresh(handle: ElementHandle): Promise<NativeResult<ElementInfo | null>>
 }
 ```
 
 #### Platform Implementation Notes
 
 **iOS (Swift)**:
+
 ```swift
 // Traverse UIView hierarchy from key window
 // Match testID via accessibilityIdentifier
@@ -340,6 +342,7 @@ interface ViewTreeModule {
 ```
 
 **Android (Kotlin)**:
+
 ```kotlin
 // Traverse View hierarchy from decorView
 // Match testID via view.getTag(R.id.accessibility_test_id) or contentDescription
@@ -365,25 +368,26 @@ interface ScreenshotModule {
    * Capture full screen screenshot.
    * Returns base64-encoded PNG.
    */
-  captureScreen(): Promise<NativeResult<string>>;
+  captureScreen(): Promise<NativeResult<string>>
 
   /**
    * Capture screenshot of specific element.
    * Returns base64-encoded PNG cropped to element bounds.
    */
-  captureElement(handle: ElementHandle): Promise<NativeResult<string>>;
+  captureElement(handle: ElementHandle): Promise<NativeResult<string>>
 
   /**
    * Capture screenshot of specific region.
    * Bounds are in logical points.
    */
-  captureRegion(bounds: ElementBounds): Promise<NativeResult<string>>;
+  captureRegion(bounds: ElementBounds): Promise<NativeResult<string>>
 }
 ```
 
 #### Platform Implementation Notes
 
 **iOS (Swift)**:
+
 ```swift
 // Use UIGraphicsImageRenderer for screen capture
 // Use drawHierarchy(in:afterScreenUpdates:) for view capture
@@ -393,6 +397,7 @@ interface ScreenshotModule {
 ```
 
 **Android (Kotlin)**:
+
 ```kotlin
 // Create Bitmap with view dimensions
 // Draw view hierarchy to Canvas
@@ -418,33 +423,34 @@ interface LifecycleModule {
    * Open a URL in the app.
    * Handles deep links and universal links.
    */
-  openURL(url: string): Promise<NativeResult<void>>;
+  openURL(url: string): Promise<NativeResult<void>>
 
   /**
    * Reload the JavaScript bundle.
    */
-  reload(): Promise<NativeResult<void>>;
+  reload(): Promise<NativeResult<void>>
 
   /**
    * Move app to background.
    */
-  background(): Promise<NativeResult<void>>;
+  background(): Promise<NativeResult<void>>
 
   /**
    * Bring app to foreground.
    */
-  foreground(): Promise<NativeResult<void>>;
+  foreground(): Promise<NativeResult<void>>
 
   /**
    * Get current app state.
    */
-  getState(): Promise<NativeResult<'active' | 'background' | 'inactive'>>;
+  getState(): Promise<NativeResult<'active' | 'background' | 'inactive'>>
 }
 ```
 
 #### Platform Implementation Notes
 
 **iOS (Swift)**:
+
 ```swift
 // openURL: UIApplication.shared.open(url)
 // reload: RCTBridge.reload() or DevSettings.reload()
@@ -454,6 +460,7 @@ interface LifecycleModule {
 ```
 
 **Android (Kotlin)**:
+
 ```kotlin
 // openURL: startActivity with Intent.ACTION_VIEW
 // reload: ReactInstanceManager.recreateReactContextInBackground()
@@ -471,61 +478,61 @@ The harness (`global.__RN_DRIVER__`) is extended to bridge native modules:
 ```typescript
 // harness/index.ts (Phase 3 additions)
 
-import ViewTreeModule from 'expo-rn-driver-view-tree';
-import ScreenshotModule from 'expo-rn-driver-screenshot';
-import LifecycleModule from 'expo-rn-driver-lifecycle';
+import ViewTreeModule from 'expo-rn-driver-view-tree'
+import ScreenshotModule from 'expo-rn-driver-screenshot'
+import LifecycleModule from 'expo-rn-driver-lifecycle'
 
 // Extend RNDriverGlobal type
 export type RNDriverGlobal = {
-  version: string;
+  version: string
 
   // Phase 3 - Native module bridges
   viewTree: {
-    findByTestId: (testId: string) => Promise<NativeResult<ElementInfo>>;
-    findByText: (text: string, exact?: boolean) => Promise<NativeResult<ElementInfo>>;
-    findByRole: (role: string, name?: string) => Promise<NativeResult<ElementInfo>>;
-    findAllByTestId: (testId: string) => Promise<NativeResult<ElementInfo[]>>;
-    findAllByText: (text: string, exact?: boolean) => Promise<NativeResult<ElementInfo[]>>;
-    findAllByRole: (role: string, name?: string) => Promise<NativeResult<ElementInfo[]>>;
-    getBounds: (handle: string) => Promise<NativeResult<ElementBounds | null>>;
-    isVisible: (handle: string) => Promise<NativeResult<boolean>>;
-    isEnabled: (handle: string) => Promise<NativeResult<boolean>>;
-    tap: (handle: string) => Promise<NativeResult<boolean>>;
-  };
+    findByTestId: (testId: string) => Promise<NativeResult<ElementInfo>>
+    findByText: (text: string, exact?: boolean) => Promise<NativeResult<ElementInfo>>
+    findByRole: (role: string, name?: string) => Promise<NativeResult<ElementInfo>>
+    findAllByTestId: (testId: string) => Promise<NativeResult<ElementInfo[]>>
+    findAllByText: (text: string, exact?: boolean) => Promise<NativeResult<ElementInfo[]>>
+    findAllByRole: (role: string, name?: string) => Promise<NativeResult<ElementInfo[]>>
+    getBounds: (handle: string) => Promise<NativeResult<ElementBounds | null>>
+    isVisible: (handle: string) => Promise<NativeResult<boolean>>
+    isEnabled: (handle: string) => Promise<NativeResult<boolean>>
+    tap: (handle: string) => Promise<NativeResult<boolean>>
+  }
 
   screenshot: {
-    captureScreen: () => Promise<NativeResult<string>>;
-    captureElement: (handle: string) => Promise<NativeResult<string>>;
-    captureRegion: (bounds: ElementBounds) => Promise<NativeResult<string>>;
-  };
+    captureScreen: () => Promise<NativeResult<string>>
+    captureElement: (handle: string) => Promise<NativeResult<string>>
+    captureRegion: (bounds: ElementBounds) => Promise<NativeResult<string>>
+  }
 
   lifecycle: {
-    openURL: (url: string) => Promise<NativeResult<void>>;
-    reload: () => Promise<NativeResult<void>>;
-    background: () => Promise<NativeResult<void>>;
-    foreground: () => Promise<NativeResult<void>>;
-    getState: () => Promise<NativeResult<'active' | 'background' | 'inactive'>>;
-  };
+    openURL: (url: string) => Promise<NativeResult<void>>
+    reload: () => Promise<NativeResult<void>>
+    background: () => Promise<NativeResult<void>>
+    foreground: () => Promise<NativeResult<void>>
+    getState: () => Promise<NativeResult<'active' | 'background' | 'inactive'>>
+  }
 
   // Phase 3.5 - Native touch injection
   touchNative: {
-    tap: (x: number, y: number) => Promise<NativeResult<void>>;
-    down: (x: number, y: number) => Promise<NativeResult<void>>;
-    move: (x: number, y: number) => Promise<NativeResult<void>>;
-    up: () => Promise<NativeResult<void>>;
-  };
+    tap: (x: number, y: number) => Promise<NativeResult<void>>
+    down: (x: number, y: number) => Promise<NativeResult<void>>
+    move: (x: number, y: number) => Promise<NativeResult<void>>
+    up: () => Promise<NativeResult<void>>
+  }
 
   // Feature detection
   capabilities: {
-    apiVersion: number;
-    viewTree: boolean;
-    viewTreeTap: boolean;
-    screenshot: boolean;
-    screenshotCaptureElement: boolean;
-    lifecycle: boolean;
-    touchNative: boolean;
-  };
-};
+    apiVersion: number
+    viewTree: boolean
+    viewTreeTap: boolean
+    screenshot: boolean
+    screenshotCaptureElement: boolean
+    lifecycle: boolean
+    touchNative: boolean
+  }
+}
 ```
 
 ### Capability Detection
@@ -541,12 +548,12 @@ function detectCapabilities(): Capabilities {
     screenshotCaptureElement: typeof ScreenshotModule?.captureElement === 'function',
     lifecycle: typeof LifecycleModule?.openURL === 'function',
     touchNative: typeof TouchNativeModule?.tap === 'function',
-  };
+  }
 }
 
 // Driver can check before calling
 if (!global.__RN_DRIVER__.capabilities.viewTree) {
-  throw new NativeModuleRequiredError('getByTestId', 'expo-rn-driver-view-tree');
+  throw new NativeModuleRequiredError('getByTestId', 'expo-rn-driver-view-tree')
 }
 ```
 
@@ -560,50 +567,50 @@ The driver's Locator implementation calls through to native modules:
 // src/locator.ts (Phase 3 implementation)
 
 export class LocatorImpl implements Locator {
-  private readonly device: RNDevice;
-  private readonly selector: LocatorSelector;
-  private cachedHandle: ElementHandle | null = null;
+  private readonly device: RNDevice
+  private readonly selector: LocatorSelector
+  private cachedHandle: ElementHandle | null = null
 
   async tap(): Promise<void> {
-    const info = await this.resolve();
+    const info = await this.resolve()
     const center = {
       x: info.bounds.x + info.bounds.width / 2,
       y: info.bounds.y + info.bounds.height / 2,
-    };
-    await this.device.pointer.tap(center.x, center.y);
+    }
+    await this.device.pointer.tap(center.x, center.y)
   }
 
   async bounds(): Promise<ElementBounds | null> {
-    const info = await this.resolve();
-    return info.bounds;
+    const info = await this.resolve()
+    return info.bounds
   }
 
   async isVisible(): Promise<boolean> {
-    const result = await this.query();
-    return result.success && result.data.visible;
+    const result = await this.query()
+    return result.success && result.data.visible
   }
 
   private async resolve(): Promise<ElementInfo> {
-    const result = await this.query();
+    const result = await this.query()
     if (!result.success) {
-      throw new LocatorError(result.error, result.code);
+      throw new LocatorError(result.error, result.code)
     }
-    return result.data;
+    return result.data
   }
 
   private async query(): Promise<NativeResult<ElementInfo>> {
-    const expr = this.buildQueryExpression();
-    return this.device.evaluate<NativeResult<ElementInfo>>(expr);
+    const expr = this.buildQueryExpression()
+    return this.device.evaluate<NativeResult<ElementInfo>>(expr)
   }
 
   private buildQueryExpression(): string {
     switch (this.selector.type) {
       case 'testId':
-        return `global.__RN_DRIVER__.viewTree.findByTestId(${JSON.stringify(this.selector.value)})`;
+        return `global.__RN_DRIVER__.viewTree.findByTestId(${JSON.stringify(this.selector.value)})`
       case 'text':
-        return `global.__RN_DRIVER__.viewTree.findByText(${JSON.stringify(this.selector.value)}, ${this.selector.exact})`;
+        return `global.__RN_DRIVER__.viewTree.findByText(${JSON.stringify(this.selector.value)}, ${this.selector.exact})`
       case 'role':
-        return `global.__RN_DRIVER__.viewTree.findByRole(${JSON.stringify(this.selector.value)}, ${JSON.stringify(this.selector.name)})`;
+        return `global.__RN_DRIVER__.viewTree.findByRole(${JSON.stringify(this.selector.value)}, ${JSON.stringify(this.selector.name)})`
     }
   }
 }
@@ -684,10 +691,7 @@ rn-playwright-driver/                      # Monorepo root
 {
   "name": "rn-playwright-driver-monorepo",
   "private": true,
-  "workspaces": [
-    "packages/*",
-    "example"
-  ]
+  "workspaces": ["packages/*", "example"]
 }
 ```
 
@@ -699,15 +703,15 @@ rn-playwright-driver/                      # Monorepo root
 
 All native modules return `NativeResult<T>` with standardized error codes:
 
-| Code | Meaning | Recovery |
-|------|---------|----------|
-| `NOT_FOUND` | No element matches query | Check selector, use waitFor |
-| `MULTIPLE_FOUND` | Multiple matches for singular query | Use more specific selector |
-| `NOT_VISIBLE` | Element exists but off-screen | Scroll into view first |
-| `NOT_ENABLED` | Element visible but disabled | Wait for enabled state |
-| `TIMEOUT` | Operation exceeded time limit | Increase timeout or fix app |
-| `INTERNAL` | Unexpected native error | Report bug with stack trace |
-| `NOT_SUPPORTED` | Platform doesn't support feature | Use alternative approach |
+| Code             | Meaning                             | Recovery                    |
+| ---------------- | ----------------------------------- | --------------------------- |
+| `NOT_FOUND`      | No element matches query            | Check selector, use waitFor |
+| `MULTIPLE_FOUND` | Multiple matches for singular query | Use more specific selector  |
+| `NOT_VISIBLE`    | Element exists but off-screen       | Scroll into view first      |
+| `NOT_ENABLED`    | Element visible but disabled        | Wait for enabled state      |
+| `TIMEOUT`        | Operation exceeded time limit       | Increase timeout or fix app |
+| `INTERNAL`       | Unexpected native error             | Report bug with stack trace |
+| `NOT_SUPPORTED`  | Platform doesn't support feature    | Use alternative approach    |
 
 ### Error Propagation
 
@@ -738,17 +742,17 @@ Driver checks result.success
 // expo-rn-driver-view-tree/__tests__/ViewTreeModule.test.ts
 describe('ViewTreeModule', () => {
   it('finds element by testId', async () => {
-    const result = await ViewTreeModule.findByTestId('submit-button');
-    expect(result.success).toBe(true);
-    expect(result.data.testId).toBe('submit-button');
-  });
+    const result = await ViewTreeModule.findByTestId('submit-button')
+    expect(result.success).toBe(true)
+    expect(result.data.testId).toBe('submit-button')
+  })
 
   it('returns NOT_FOUND for missing element', async () => {
-    const result = await ViewTreeModule.findByTestId('nonexistent');
-    expect(result.success).toBe(false);
-    expect(result.code).toBe('NOT_FOUND');
-  });
-});
+    const result = await ViewTreeModule.findByTestId('nonexistent')
+    expect(result.success).toBe(false)
+    expect(result.code).toBe('NOT_FOUND')
+  })
+})
 ```
 
 ### Integration Tests (driver + modules)
@@ -756,14 +760,14 @@ describe('ViewTreeModule', () => {
 ```typescript
 // Example project e2e tests
 test('locator finds element and taps', async ({ device }) => {
-  const button = device.getByTestId('increment');
-  await button.tap();
+  const button = device.getByTestId('increment')
+  await button.tap()
 
   const count = await device.evaluate<string>(
-    `global.__RN_DRIVER__.viewTree.findByTestId('count').data.text`
-  );
-  expect(count).toBe('1');
-});
+    `global.__RN_DRIVER__.viewTree.findByTestId('count').data.text`,
+  )
+  expect(count).toBe('1')
+})
 ```
 
 ---
@@ -792,6 +796,7 @@ test('locator finds element and taps', async ({ device }) => {
 ### 1. Monorepo Structure
 
 All packages live in a single repository:
+
 - Easier coordination between driver and native modules
 - Atomic updates across packages
 - Shared tooling (biome, tsgo, lefthook)
@@ -800,6 +805,7 @@ All packages live in a single repository:
 ### 2. JS Harness for Touch (No Native Touch Injection)
 
 Touch simulation continues to use the Phase 2 JS harness approach:
+
 - Already works reliably
 - Simpler than native touch synthesis (UITouch, MotionEvent)
 - Native touch injection (no JS touch handler routing)
@@ -808,6 +814,7 @@ Touch simulation continues to use the Phase 2 JS harness approach:
 ### 3. Random IDs for Element Handles
 
 Element handles use random hex identifiers:
+
 - Format: `element_{16-char-hex}` (e.g., `element_a1b2c3d4e5f67890`)
 - Generated on native side when element is found
 - Stored in a WeakMap keyed by native view reference
@@ -816,6 +823,7 @@ Element handles use random hex identifiers:
 ### 4. Fresh View Tree Queries (No Caching)
 
 Each query traverses the view tree fresh:
+
 - Always accurate, no staleness bugs
 - Simpler implementation
 - RN view trees are shallow enough that performance is acceptable
@@ -943,44 +951,44 @@ The driver supports multiple touch injection backends, organized in tiers by cap
 
 ### Touch Backend Tiers
 
-| Tier | Backend | Injection Level | System UI | Network | Requirements |
-|------|---------|-----------------|-----------|---------|--------------|
-| 1 | XCTest (iOS) / Instrumentation (Android) | Kernel (IOHIDEvent / UiAutomation) | ✅ | ❌ Local | Companion process |
-| 2 | Native Module (RNDriverTouchInjector) | App (UIKit / MotionEvent) | ❌ | ✅ | Native module in app |
-| 3 | CLI (idb / adb) | Kernel | ✅ | ❌ Local | Tools installed |
-| 4 | JS Harness | Synthetic (React events) | ❌ | ✅ | Harness import only |
+| Tier | Backend                                  | Injection Level                    | System UI | Network  | Requirements         |
+| ---- | ---------------------------------------- | ---------------------------------- | --------- | -------- | -------------------- |
+| 1    | XCTest (iOS) / Instrumentation (Android) | Kernel (IOHIDEvent / UiAutomation) | ✅        | ❌ Local | Companion process    |
+| 2    | Native Module (RNDriverTouchInjector)    | App (UIKit / MotionEvent)          | ❌        | ✅       | Native module in app |
+| 3    | CLI (idb / adb)                          | Kernel                             | ✅        | ❌ Local | Tools installed      |
+| 4    | JS Harness                               | Synthetic (React events)           | ❌        | ✅       | Harness import only  |
 
 ### Backend Selection
 
 ```typescript
-type TouchBackendType = "xctest" | "instrumentation" | "native-module" | "cli" | "harness";
+type TouchBackendType = 'xctest' | 'instrumentation' | 'native-module' | 'cli' | 'harness'
 
 type TouchBackendConfig = {
   /** Selection mode (default: "auto") */
-  mode?: "auto" | "force";
+  mode?: 'auto' | 'force'
   /** Force a specific backend when mode === "force" */
-  backend?: TouchBackendType;
+  backend?: TouchBackendType
   /** Ordered backend preference when mode === "auto" */
-  order?: TouchBackendType[];
+  order?: TouchBackendType[]
   /** Per-backend configuration */
   xctest?: {
-    enabled?: boolean;
-    host?: string;
-    port?: number;
-    connectTimeoutMs?: number;
-    requestTimeoutMs?: number;
-  };
+    enabled?: boolean
+    host?: string
+    port?: number
+    connectTimeoutMs?: number
+    requestTimeoutMs?: number
+  }
   instrumentation?: {
-    enabled?: boolean;
-    host?: string;
-    port?: number;
-    connectTimeoutMs?: number;
-    requestTimeoutMs?: number;
-  };
-  nativeModule?: { enabled?: boolean };
-  cli?: { enabled?: boolean };
-  harness?: { enabled?: boolean };
-};
+    enabled?: boolean
+    host?: string
+    port?: number
+    connectTimeoutMs?: number
+    requestTimeoutMs?: number
+  }
+  nativeModule?: { enabled?: boolean }
+  cli?: { enabled?: boolean }
+  harness?: { enabled?: boolean }
+}
 ```
 
 **Auto-selection logic** (default):
@@ -991,6 +999,7 @@ The driver tries backends in platform-specific order until one successfully init
 - **Android**: `instrumentation` → `native-module` → `cli` → `harness`
 
 For each backend:
+
 1. Check if supported on current platform (e.g., `xctest` is iOS-only)
 2. Check if enabled in config (all enabled by default)
 3. Attempt to initialize (connect and send `hello` command)
@@ -1011,16 +1020,16 @@ In `"force"` mode, only the specified backend is tried and errors are thrown imm
 ```typescript
 interface TouchInjectorModule {
   /** Tap at coordinates */
-  tap(x: number, y: number): Promise<NativeResult<void>>;
+  tap(x: number, y: number): Promise<NativeResult<void>>
 
   /** Press down at coordinates */
-  down(x: number, y: number): Promise<NativeResult<void>>;
+  down(x: number, y: number): Promise<NativeResult<void>>
 
   /** Move while pressed */
-  move(x: number, y: number): Promise<NativeResult<void>>;
+  move(x: number, y: number): Promise<NativeResult<void>>
 
   /** Release press */
-  up(): Promise<NativeResult<void>>;
+  up(): Promise<NativeResult<void>>
 
   /** Swipe between points */
   swipe(
@@ -1028,14 +1037,14 @@ interface TouchInjectorModule {
     fromY: number,
     toX: number,
     toY: number,
-    durationMs: number
-  ): Promise<NativeResult<void>>;
+    durationMs: number,
+  ): Promise<NativeResult<void>>
 
   /** Long press at coordinates */
-  longPress(x: number, y: number, durationMs: number): Promise<NativeResult<void>>;
+  longPress(x: number, y: number, durationMs: number): Promise<NativeResult<void>>
 
   /** Type text (requires focused input) */
-  typeText(text: string): Promise<NativeResult<void>>;
+  typeText(text: string): Promise<NativeResult<void>>
 }
 ```
 
@@ -1079,15 +1088,15 @@ fun synthesizeTap(x: Float, y: Float) {
 
 #### Capabilities vs Limitations
 
-| Capability | Native Module | OS-Level (XCTest/Instrumentation) |
-|------------|---------------|-----------------------------------|
-| Tap app UI | ✅ | ✅ |
-| Swipe/scroll | ✅ | ✅ |
-| Gesture recognizers | ✅ Works | ✅ Works |
-| System dialogs | ❌ | ✅ |
-| Keyboard input | ❌ Limited | ✅ Full |
-| Other apps | ❌ | ✅ |
-| Network testing | ✅ | ❌ Local only |
+| Capability          | Native Module | OS-Level (XCTest/Instrumentation) |
+| ------------------- | ------------- | --------------------------------- |
+| Tap app UI          | ✅            | ✅                                |
+| Swipe/scroll        | ✅            | ✅                                |
+| Gesture recognizers | ✅ Works      | ✅ Works                          |
+| System dialogs      | ❌            | ✅                                |
+| Keyboard input      | ❌ Limited    | ✅ Full                           |
+| Other apps          | ❌            | ✅                                |
+| Network testing     | ✅            | ❌ Local only                     |
 
 ---
 
@@ -1098,6 +1107,7 @@ fun synthesizeTap(x: Float, y: Float) {
 **Package**: `@0xbigboss/rn-playwright-driver-xctest-companion`
 
 The XCTest companion runs as a separate XCTest bundle that:
+
 1. Launches a WebSocket server
 2. Receives touch commands from the driver
 3. Executes via `XCUICoordinate` which uses `IOHIDEvent` for kernel-level injection
@@ -1142,18 +1152,18 @@ The XCTest companion runs as a separate XCTest bundle that:
 // Response: { id, ok: true, result? } or { id, ok: false, error: { message, code? } }
 
 type TouchRequest =
-  | { id: number; type: "hello"; protocolVersion: number; client: string }
-  | { id: number; type: "tap"; x: number; y: number }
-  | { id: number; type: "down"; x: number; y: number }
-  | { id: number; type: "move"; x: number; y: number }
-  | { id: number; type: "up" }
-  | { id: number; type: "swipe"; from: Point; to: Point; durationMs: number }
-  | { id: number; type: "longPress"; x: number; y: number; durationMs: number }
-  | { id: number; type: "typeText"; text: string };
+  | { id: number; type: 'hello'; protocolVersion: number; client: string }
+  | { id: number; type: 'tap'; x: number; y: number }
+  | { id: number; type: 'down'; x: number; y: number }
+  | { id: number; type: 'move'; x: number; y: number }
+  | { id: number; type: 'up' }
+  | { id: number; type: 'swipe'; from: Point; to: Point; durationMs: number }
+  | { id: number; type: 'longPress'; x: number; y: number; durationMs: number }
+  | { id: number; type: 'typeText'; text: string }
 
 type TouchResponse =
   | { id: number; ok: true; result?: unknown }
-  | { id: number; ok: false; error: { message: string; code?: string } };
+  | { id: number; ok: false; error: { message: string; code?: string } }
 ```
 
 #### Setup
@@ -1171,6 +1181,7 @@ Once integrated into your test target, run your UI test scheme to start the comp
 **Package**: `@0xbigboss/rn-playwright-driver-instrumentation-companion`
 
 The Instrumentation companion runs as a test APK that:
+
 1. Launches an HTTP server
 2. Receives touch commands from the driver
 3. Executes via `UiAutomation.injectInputEvent()` for kernel-level injection
@@ -1214,18 +1225,16 @@ The Instrumentation companion runs as a test APK that:
 // Response: { ok: true } or { ok: false, error: { message, code? } }
 
 type TouchCommand =
-  | { type: "hello" }
-  | { type: "tap"; x: number; y: number }
-  | { type: "down"; x: number; y: number }
-  | { type: "move"; x: number; y: number }
-  | { type: "up" }
-  | { type: "swipe"; from: Point; to: Point; durationMs: number }
-  | { type: "longPress"; x: number; y: number; durationMs: number }
-  | { type: "typeText"; text: string };
+  | { type: 'hello' }
+  | { type: 'tap'; x: number; y: number }
+  | { type: 'down'; x: number; y: number }
+  | { type: 'move'; x: number; y: number }
+  | { type: 'up' }
+  | { type: 'swipe'; from: Point; to: Point; durationMs: number }
+  | { type: 'longPress'; x: number; y: number; durationMs: number }
+  | { type: 'typeText'; text: string }
 
-type TouchResponse =
-  | { ok: true }
-  | { ok: false; error: { message: string; code?: string } };
+type TouchResponse = { ok: true } | { ok: false; error: { message: string; code?: string } }
 ```
 
 #### Setup
@@ -1246,45 +1255,45 @@ All backends implement a common interface:
 ```typescript
 interface TouchBackend {
   /** Backend identifier for debugging */
-  readonly name: string;
+  readonly name: string
 
   /** Initialize the backend (verify connectivity, etc.) */
-  init(): Promise<void>;
+  init(): Promise<void>
 
   /** Cleanup resources */
-  dispose(): Promise<void>;
+  dispose(): Promise<void>
 
   /** Single tap at coordinates */
-  tap(x: number, y: number, options?: TapOptions): Promise<void>;
+  tap(x: number, y: number, options?: TapOptions): Promise<void>
 
   /** Press down at coordinates */
-  down(x: number, y: number, options?: PointerEventOptions): Promise<void>;
+  down(x: number, y: number, options?: PointerEventOptions): Promise<void>
 
   /** Move while pressed */
-  move(x: number, y: number, options?: PointerEventOptions): Promise<void>;
+  move(x: number, y: number, options?: PointerEventOptions): Promise<void>
 
   /** Release press */
-  up(options?: PointerEventOptions): Promise<void>;
+  up(options?: PointerEventOptions): Promise<void>
 
   /** Swipe from one point to another */
-  swipe(from: Point, to: Point, durationMs: number): Promise<void>;
+  swipe(from: Point, to: Point, durationMs: number): Promise<void>
 
   /** Long press at coordinates */
-  longPress(x: number, y: number, options: LongPressOptions): Promise<void>;
+  longPress(x: number, y: number, options: LongPressOptions): Promise<void>
 
   /** Type text */
-  typeText(text: string): Promise<void>;
+  typeText(text: string): Promise<void>
 }
 ```
 
 ### Backend Implementations
 
-| Backend | Class | Connection |
-|---------|-------|------------|
-| XCTest | `XCTestTouchBackend` | WebSocket to companion |
-| Instrumentation | `InstrumentationTouchBackend` | HTTP to companion |
-| Native Module | `NativeModuleTouchBackend` | CDP evaluate to harness |
-| CLI | `CliTouchBackend` | Stub; idb/adb spawning not implemented |
+| Backend         | Class                         | Connection                             |
+| --------------- | ----------------------------- | -------------------------------------- |
+| XCTest          | `XCTestTouchBackend`          | WebSocket to companion                 |
+| Instrumentation | `InstrumentationTouchBackend` | HTTP to companion                      |
+| Native Module   | `NativeModuleTouchBackend`    | CDP evaluate to harness                |
+| CLI             | `CliTouchBackend`             | Stub; idb/adb spawning not implemented |
 
 ### Package Structure
 

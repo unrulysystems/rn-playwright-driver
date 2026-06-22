@@ -4,11 +4,11 @@ This document describes the stability of various APIs in rn-playwright-driver.
 
 ## Stability Levels
 
-| Level | Description |
-|-------|-------------|
-| **Stable** | Public API. Breaking changes follow semver. |
-| **Experimental** | May change in minor versions. Use with caution. |
-| **Internal** | Not for external use. May change without notice. |
+| Level            | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| **Stable**       | Public API. Breaking changes follow semver.      |
+| **Experimental** | May change in minor versions. Use with caution.  |
+| **Internal**     | Not for external use. May change without notice. |
 
 ## Public API (Stable)
 
@@ -19,52 +19,52 @@ The core `Device` interface is stable:
 ```typescript
 interface Device {
   // Connection
-  connect(): Promise<void>;
-  disconnect(): Promise<void>;
-  ping(): Promise<boolean>;
+  connect(): Promise<void>
+  disconnect(): Promise<void>
+  ping(): Promise<boolean>
 
   // Evaluation
-  evaluate<T>(expression: string): Promise<T>;
-  waitForFunction<T>(expression: string, options?): Promise<T>;
-  waitForTimeout(ms: number): Promise<void>;
+  evaluate<T>(expression: string): Promise<T>
+  waitForFunction<T>(expression: string, options?): Promise<T>
+  waitForTimeout(ms: number): Promise<void>
 
   // Locators
-  getByTestId(testId: string): Locator;
-  getByText(text: string, options?): Locator;
-  getByRole(role: string, options?): Locator;
+  getByTestId(testId: string): Locator
+  getByText(text: string, options?): Locator
+  getByRole(role: string, options?): Locator
 
   // Pointer
   pointer: {
-    tap(x: number, y: number, options?: TapOptions): Promise<void>;
-    doubleTap(x: number, y: number, options?: TapOptions): Promise<void>;
-    longPress(x: number, y: number, options?: LongPressOptions): Promise<void>;
-    down(x: number, y: number, options?: PointerEventOptions): Promise<void>;
-    move(x: number, y: number, options?: MoveOptions): Promise<void>;
-    up(options?: PointerEventOptions): Promise<void>;
-    drag(from: Point, to: Point, options?: DragOptions): Promise<void>;
-    swipe(options: SwipeOptions): Promise<void>;
-    dragPath(points: Point[], options?: DragPathOptions): Promise<void>;
-    movePath(points: Point[], options?: MovePathOptions): Promise<void>;
-    gesture(): GestureBuilder;
-    pinch(options: PinchOptions): Promise<void>;
-    rotate(options: RotateOptions): Promise<void>;
-    multiGesture(): MultiGestureBuilder;
-  };
+    tap(x: number, y: number, options?: TapOptions): Promise<void>
+    doubleTap(x: number, y: number, options?: TapOptions): Promise<void>
+    longPress(x: number, y: number, options?: LongPressOptions): Promise<void>
+    down(x: number, y: number, options?: PointerEventOptions): Promise<void>
+    move(x: number, y: number, options?: MoveOptions): Promise<void>
+    up(options?: PointerEventOptions): Promise<void>
+    drag(from: Point, to: Point, options?: DragOptions): Promise<void>
+    swipe(options: SwipeOptions): Promise<void>
+    dragPath(points: Point[], options?: DragPathOptions): Promise<void>
+    movePath(points: Point[], options?: MovePathOptions): Promise<void>
+    gesture(): GestureBuilder
+    pinch(options: PinchOptions): Promise<void>
+    rotate(options: RotateOptions): Promise<void>
+    multiGesture(): MultiGestureBuilder
+  }
 
   // Screenshots
-  screenshot(options?): Promise<Buffer>;
+  screenshot(options?): Promise<Buffer>
 
   // Lifecycle
-  openURL(url: string): Promise<void>;
-  reload(): Promise<void>;
-  background(): Promise<void>;
-  foreground(): Promise<void>;
+  openURL(url: string): Promise<void>
+  reload(): Promise<void>
+  background(): Promise<void>
+  foreground(): Promise<void>
 
   // Capabilities
-  capabilities(): Promise<Capabilities>;
+  capabilities(): Promise<Capabilities>
 
   // Platform
-  readonly platform: "ios" | "android";
+  readonly platform: 'ios' | 'android'
 }
 ```
 
@@ -74,12 +74,12 @@ The `Locator` interface is stable:
 
 ```typescript
 interface Locator {
-  tap(): Promise<void>;
-  type(text: string): Promise<void>;
-  waitFor(options?: WaitForOptions): Promise<void>;
-  isVisible(): Promise<boolean>;
-  bounds(): Promise<ElementBounds | null>;
-  screenshot(): Promise<Buffer>;
+  tap(): Promise<void>
+  type(text: string): Promise<void>
+  waitFor(options?: WaitForOptions): Promise<void>
+  isVisible(): Promise<boolean>
+  bounds(): Promise<ElementBounds | null>
+  screenshot(): Promise<Buffer>
 }
 ```
 
@@ -113,10 +113,10 @@ The `CDPClient` class is experimental. Auto-reconnect options may change:
 ```typescript
 // Experimental - may change in minor versions
 interface CDPClientOptions {
-  timeout?: number;
-  autoReconnect?: boolean;        // Experimental
-  maxReconnectAttempts?: number;  // Experimental
-  reconnectBackoffMs?: number;    // Experimental
+  timeout?: number
+  autoReconnect?: boolean // Experimental
+  maxReconnectAttempts?: number // Experimental
+  reconnectBackoffMs?: number // Experimental
 }
 ```
 
@@ -126,7 +126,7 @@ The `/harness/dev` entry point is experimental:
 
 ```typescript
 // Experimental - guard conditions may change
-import "@0xbigboss/rn-playwright-driver/harness/dev";
+import '@0xbigboss/rn-playwright-driver/harness/dev'
 ```
 
 ### Companion Backends
@@ -156,10 +156,10 @@ Direct access to native bridges should use the harness API:
 
 ```typescript
 // Use this (stable)
-await device.getByTestId("button").tap();
+await device.getByTestId('button').tap()
 
 // Not this (internal)
-globalThis.__RN_DRIVER__.viewTree.findByTestId("button");
+globalThis.__RN_DRIVER__.viewTree.findByTestId('button')
 ```
 
 ### LocatorImpl Class
@@ -168,12 +168,12 @@ The `LocatorImpl` class is internal. Use `createLocator`:
 
 ```typescript
 // Use this
-import { createLocator } from "@0xbigboss/rn-playwright-driver";
-const locator = createLocator(device, { type: "testId", value: "button" });
+import { createLocator } from '@0xbigboss/rn-playwright-driver'
+const locator = createLocator(device, { type: 'testId', value: 'button' })
 
 // Not this
-import { LocatorImpl } from "@0xbigboss/rn-playwright-driver";
-const locator = new LocatorImpl(device, selector);
+import { LocatorImpl } from '@0xbigboss/rn-playwright-driver'
+const locator = new LocatorImpl(device, selector)
 ```
 
 ## Upgrade Notes
@@ -181,6 +181,7 @@ const locator = new LocatorImpl(device, selector);
 ### v0.1.x → v0.2.x (Future)
 
 Planned changes:
+
 - `waitFor()` options may expand to include `strict` mode
 - CDP auto-reconnect may become stable
 - Native module naming may be finalized

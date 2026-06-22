@@ -1,40 +1,40 @@
 export type DebugTarget = {
-  id: string;
-  title: string;
-  webSocketDebuggerUrl: string;
-  vm?: string;
-  deviceId?: string;
-  deviceName?: string;
-  description?: string;
-};
+  id: string
+  title: string
+  webSocketDebuggerUrl: string
+  vm?: string
+  deviceId?: string
+  deviceName?: string
+  description?: string
+}
 
 export type TargetSelectionOptions = {
   /** Select target by device ID (e.g., "00008030-001234567890402E") */
-  deviceId?: string;
+  deviceId?: string
   /** Select target by device name (e.g., "iPhone 15 Pro") */
-  deviceName?: string;
+  deviceName?: string
   /** Select target by page index (default: 0 = first Hermes target) */
-  pageIndex?: number;
-};
+  pageIndex?: number
+}
 
 /**
  * Discover debug targets from Metro's /json endpoint.
  */
 export async function discoverTargets(metroUrl: string): Promise<DebugTarget[]> {
   // Node 18+ has global fetch
-  const response = await fetch(`${metroUrl}/json`);
+  const response = await fetch(`${metroUrl}/json`)
   if (!response.ok) {
-    throw new Error(`Failed to fetch debug targets: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to fetch debug targets: ${response.status} ${response.statusText}`)
   }
-  const targets = (await response.json()) as DebugTarget[];
+  const targets = (await response.json()) as DebugTarget[]
 
   // Filter to React Native runtime targets
   // Hermes: title contains "Hermes" or vm === "Hermes"
   // Bridgeless (RN 0.81+): description contains "React Native Bridgeless"
   return targets.filter(
     (t) =>
-      t.title?.includes("Hermes") || t.vm === "Hermes" || t.description?.includes("React Native"),
-  );
+      t.title?.includes('Hermes') || t.vm === 'Hermes' || t.description?.includes('React Native'),
+  )
 }
 
 /**
@@ -52,37 +52,37 @@ export function selectTarget(
   options: TargetSelectionOptions = {},
 ): DebugTarget {
   if (targets.length === 0) {
-    throw new Error("No Hermes debug targets found. Is the app running with Metro connected?");
+    throw new Error('No Hermes debug targets found. Is the app running with Metro connected?')
   }
 
   // Match by deviceId (exact)
   if (options.deviceId) {
-    const match = targets.find((t) => t.deviceId === options.deviceId);
+    const match = targets.find((t) => t.deviceId === options.deviceId)
     if (!match) {
-      const available = targets.map((t) => t.deviceId ?? "unknown").join(", ");
-      throw new Error(`No target with deviceId "${options.deviceId}". Available: ${available}`);
+      const available = targets.map((t) => t.deviceId ?? 'unknown').join(', ')
+      throw new Error(`No target with deviceId "${options.deviceId}". Available: ${available}`)
     }
-    return match;
+    return match
   }
 
   // Match by deviceName (substring, case-insensitive)
   if (options.deviceName) {
-    const needle = options.deviceName.toLowerCase();
+    const needle = options.deviceName.toLowerCase()
     const match = targets.find(
       (t) =>
         t.deviceName?.toLowerCase().includes(needle) || t.title?.toLowerCase().includes(needle),
-    );
+    )
     if (!match) {
-      const available = targets.map((t) => t.deviceName ?? t.title ?? "unknown").join(", ");
-      throw new Error(`No target matching "${options.deviceName}". Available: ${available}`);
+      const available = targets.map((t) => t.deviceName ?? t.title ?? 'unknown').join(', ')
+      throw new Error(`No target matching "${options.deviceName}". Available: ${available}`)
     }
-    return match;
+    return match
   }
 
   // Default: select by page index
-  const index = options.pageIndex ?? 0;
+  const index = options.pageIndex ?? 0
   if (index < 0 || index >= targets.length) {
-    throw new Error(`Invalid pageIndex ${index}. Found ${targets.length} target(s).`);
+    throw new Error(`Invalid pageIndex ${index}. Found ${targets.length} target(s).`)
   }
-  return targets[index];
+  return targets[index]
 }

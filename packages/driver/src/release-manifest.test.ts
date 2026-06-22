@@ -19,47 +19,47 @@
  * test suite runs in the shared gate, but it scans the entire `packages/` tree.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
 
-const SHIPPING_FIELDS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
+const SHIPPING_FIELDS = ['dependencies', 'peerDependencies', 'optionalDependencies'] as const
 
 // packages/driver/src/<this file> -> packages/
-const packagesDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../");
+const packagesDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../')
 
 interface Manifest {
-  name?: string;
-  private?: boolean;
-  dependencies?: Record<string, string>;
-  peerDependencies?: Record<string, string>;
-  optionalDependencies?: Record<string, string>;
+  name?: string
+  private?: boolean
+  dependencies?: Record<string, string>
+  peerDependencies?: Record<string, string>
+  optionalDependencies?: Record<string, string>
 }
 
 function publishableManifests(): Manifest[] {
   return readdirSync(packagesDir)
-    .map((name) => join(packagesDir, name, "package.json"))
+    .map((name) => join(packagesDir, name, 'package.json'))
     .filter((p) => existsSync(p))
-    .map((p) => JSON.parse(readFileSync(p, "utf8")) as Manifest)
-    .filter((pkg) => pkg.private !== true && typeof pkg.name === "string");
+    .map((p) => JSON.parse(readFileSync(p, 'utf8')) as Manifest)
+    .filter((pkg) => pkg.private !== true && typeof pkg.name === 'string')
 }
 
-describe("release manifest invariant", () => {
-  it("scans the publishable packages (guards against a no-op path bug)", () => {
+describe('release manifest invariant', () => {
+  it('scans the publishable packages (guards against a no-op path bug)', () => {
     // We have several publishable packages; if the scan finds ~none the path is wrong.
-    expect(publishableManifests().length).toBeGreaterThan(3);
-  });
+    expect(publishableManifests().length).toBeGreaterThan(3)
+  })
 
-  it("no publishable package ships a workspace: protocol dependency", () => {
-    const offenders: string[] = [];
+  it('no publishable package ships a workspace: protocol dependency', () => {
+    const offenders: string[] = []
     for (const pkg of publishableManifests()) {
       for (const field of SHIPPING_FIELDS) {
-        const deps = pkg[field];
-        if (!deps) continue;
+        const deps = pkg[field]
+        if (!deps) continue
         for (const [dep, spec] of Object.entries(deps)) {
-          if (spec.startsWith("workspace:")) {
-            offenders.push(`${pkg.name} → ${field}.${dep} = "${spec}"`);
+          if (spec.startsWith('workspace:')) {
+            offenders.push(`${pkg.name} → ${field}.${dep} = "${spec}"`)
           }
         }
       }
@@ -67,7 +67,7 @@ describe("release manifest invariant", () => {
     expect(
       offenders,
       `These ship an uninstallable "workspace:" spec via 'changeset publish' (npm). ` +
-        `Use a real range like ^x.y.z instead:\n${offenders.join("\n")}`,
-    ).toEqual([]);
-  });
-});
+        `Use a real range like ^x.y.z instead:\n${offenders.join('\n')}`,
+    ).toEqual([])
+  })
+})

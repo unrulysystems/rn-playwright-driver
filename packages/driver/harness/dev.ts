@@ -15,16 +15,12 @@
  *   import '@0xbigboss/rn-playwright-driver/harness';
  */
 
-declare const __DEV__: boolean | undefined;
-
 // Check for dev mode or explicit E2E flag
-const isDev = typeof __DEV__ !== "undefined" && __DEV__;
+const isDev = typeof __DEV__ !== 'undefined' && __DEV__
 const isE2E =
-  typeof globalThis !== "undefined" &&
-  (globalThis as unknown as { __E2E__?: boolean }).__E2E__ === true;
+  typeof globalThis !== 'undefined' &&
+  (globalThis as unknown as { __E2E__?: boolean }).__E2E__ === true
 
 if (isDev || isE2E) {
-  require("./index");
+  require('./index')
 }
-
-export {};

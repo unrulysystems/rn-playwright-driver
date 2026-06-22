@@ -1,9 +1,9 @@
 {
-	"platforms": ["apple", "android"],
-	"apple": {
-		"modules": ["RNDriverTouchInjectorModule"]
-	},
-	"android": {
-		"modules": ["expo.modules.rndrivertouch.RNDriverTouchInjectorModule"]
-	}
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["RNDriverTouchInjectorModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.rndrivertouch.RNDriverTouchInjectorModule"]
+  }
 }

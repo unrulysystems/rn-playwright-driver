@@ -26,10 +26,10 @@ adb shell am instrument -w com.your.test/com.rndriver.touchcompanion.RNDriverTou
 ```ts
 const device = createDevice({
   touch: {
-    mode: "auto",
-    instrumentation: { host: "127.0.0.1", port: 9999 },
+    mode: 'auto',
+    instrumentation: { host: '127.0.0.1', port: 9999 },
   },
-});
+})
 ```
 
 ## Protocol

@@ -1,5 +1,1 @@
-export type {
-	ElementBounds,
-	ErrorCode,
-	NativeResult,
-} from "@0xbigboss/rn-driver-shared-types";
+export type { ElementBounds, ErrorCode, NativeResult } from '@0xbigboss/rn-driver-shared-types'

@@ -17,14 +17,14 @@ Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs
 
 ## Packages
 
-| Package | Purpose |
-| --- | --- |
-| `@0xbigboss/rn-playwright-driver` | Driver + Playwright fixtures + harness |
-| `@0xbigboss/rn-driver-view-tree` | View tree queries (locators, bounds, visibility) |
-| `@0xbigboss/rn-driver-screenshot` | Screen/region capture |
-| `@0xbigboss/rn-driver-lifecycle` | App lifecycle helpers |
-| `@0xbigboss/rn-driver-touch` | App-level native touch injection |
-| `@0xbigboss/rn-playwright-driver-xctest-companion` | iOS XCTest touch companion reference implementation |
+| Package                                                     | Purpose                                                          |
+| ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| `@0xbigboss/rn-playwright-driver`                           | Driver + Playwright fixtures + harness                           |
+| `@0xbigboss/rn-driver-view-tree`                            | View tree queries (locators, bounds, visibility)                 |
+| `@0xbigboss/rn-driver-screenshot`                           | Screen/region capture                                            |
+| `@0xbigboss/rn-driver-lifecycle`                            | App lifecycle helpers                                            |
+| `@0xbigboss/rn-driver-touch`                                | App-level native touch injection                                 |
+| `@0xbigboss/rn-playwright-driver-xctest-companion`          | iOS XCTest touch companion reference implementation              |
 | `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion reference implementation |
 
 ## Requirements
@@ -56,7 +56,7 @@ bun add -d @playwright/test
 Import the harness once in your app entry:
 
 ```ts
-import "@0xbigboss/rn-playwright-driver/harness";
+import '@0xbigboss/rn-playwright-driver/harness'
 ```
 
 Then build/run the app so the native modules are installed:
@@ -77,22 +77,22 @@ Use the `/harness/dev` entry point which only installs when `__DEV__` is true or
 
 ```ts
 // In your app entry (e.g., App.tsx or index.ts)
-import "@0xbigboss/rn-playwright-driver/harness/dev";
+import '@0xbigboss/rn-playwright-driver/harness/dev'
 ```
 
 To enable in production E2E builds, set the flag before the import:
 
 ```ts
 // Set before import for prod E2E testing
-globalThis.__E2E__ = true;
-import "@0xbigboss/rn-playwright-driver/harness/dev";
+globalThis.__E2E__ = true
+import '@0xbigboss/rn-playwright-driver/harness/dev'
 ```
 
 ### Option B: Conditional import (explicit)
 
 ```ts
 if (__DEV__ || globalThis.__E2E__ === true) {
-  void import("@0xbigboss/rn-playwright-driver/harness");
+  void import('@0xbigboss/rn-playwright-driver/harness')
 }
 ```
 
@@ -100,8 +100,8 @@ if (__DEV__ || globalThis.__E2E__ === true) {
 
 ```ts
 // index.e2e.ts
-import "./index";
-import "@0xbigboss/rn-playwright-driver/harness";
+import './index'
+import '@0xbigboss/rn-playwright-driver/harness'
 ```
 
 Point your E2E build/profile at `index.e2e.ts` so production builds never include the harness.
@@ -111,36 +111,36 @@ Point your E2E build/profile at `index.e2e.ts` so production builds never includ
 Use the provided Playwright fixtures:
 
 ```ts
-import { test, expect } from "@0xbigboss/rn-playwright-driver/test";
+import { test, expect } from '@0xbigboss/rn-playwright-driver/test'
 
-test("can evaluate JS", async ({ device }) => {
-  const result = await device.evaluate<number>("1 + 2 + 3");
-  expect(result).toBe(6);
-});
+test('can evaluate JS', async ({ device }) => {
+  const result = await device.evaluate<number>('1 + 2 + 3')
+  expect(result).toBe(6)
+})
 
-test("can tap by testID", async ({ device }) => {
-  await device.getByTestId("increment-button").tap();
-});
+test('can tap by testID', async ({ device }) => {
+  await device.getByTestId('increment-button').tap()
+})
 
-test("wait for animation frame", async ({ device }) => {
-  await device.getByTestId("animate-button").tap();
-  await device.waitForRaf(3); // Wait 3 frames for animation
-  expect(await device.getByTestId("status").text()).toBe("done");
-});
+test('wait for animation frame', async ({ device }) => {
+  await device.getByTestId('animate-button').tap()
+  await device.waitForRaf(3) // Wait 3 frames for animation
+  expect(await device.getByTestId('status').text()).toBe('done')
+})
 
-test("swipe with path", async ({ device }) => {
+test('swipe with path', async ({ device }) => {
   await device.pointer.dragPath([
     { x: 100, y: 400 },
     { x: 200, y: 300 },
     { x: 300, y: 200 },
-  ]);
-});
+  ])
+})
 
-test("get window metrics", async ({ device }) => {
-  const metrics = await device.getWindowMetrics();
-  console.log("Screen size:", metrics.width, "x", metrics.height);
-  console.log("Pixel ratio:", metrics.pixelRatio);
-});
+test('get window metrics', async ({ device }) => {
+  const metrics = await device.getWindowMetrics()
+  console.log('Screen size:', metrics.width, 'x', metrics.height)
+  console.log('Pixel ratio:', metrics.pixelRatio)
+})
 ```
 
 ### Scrolling
@@ -149,20 +149,20 @@ Reach content below the fold with `locator.scrollIntoView()`, or scroll the
 content directly with `device.scroll()`.
 
 ```ts
-test("assert a below-the-fold chart", async ({ device }) => {
+test('assert a below-the-fold chart', async ({ device }) => {
   // Scrolls the content (bounded swipes) until the element is fully on screen.
-  const chart = device.getByTestId("revenue-chart");
-  await chart.scrollIntoView();
-  expect(await chart.isVisible()).toBe(true);
-  await chart.screenshot();
-});
+  const chart = device.getByTestId('revenue-chart')
+  await chart.scrollIntoView()
+  expect(await chart.isVisible()).toBe(true)
+  await chart.screenshot()
+})
 
-test("scroll without an element target", async ({ device }) => {
+test('scroll without an element target', async ({ device }) => {
   // Content-delta scroll, anchored at the viewport center. Sign matches the web
   // `scrollBy`: dy > 0 reveals content below, dx > 0 reveals content to the right.
-  await device.scroll({ dy: 400 }); // scroll down ~400 logical points
-  await device.scroll({ dy: -400 }); // scroll back up
-});
+  await device.scroll({ dy: 400 }) // scroll down ~400 logical points
+  await device.scroll({ dy: -400 }) // scroll back up
+})
 ```
 
 `scrollIntoView()` infers the direction from the element's measured bounds. For
@@ -170,7 +170,7 @@ not-yet-rendered (virtualized) content, pass `direction` to drive a blind scroll
 until it appears, and tune `maxScrolls`/`margin` as needed:
 
 ```ts
-await device.getByText("Load more").scrollIntoView({ direction: "down", maxScrolls: 20 });
+await device.getByText('Load more').scrollIntoView({ direction: 'down', maxScrolls: 20 })
 ```
 
 > Scroll gestures stay within a mid-screen safe band and use a low-momentum
@@ -182,12 +182,12 @@ await device.getByText("Load more").scrollIntoView({ direction: "down", maxScrol
 
 Environment variables for target selection and timeouts:
 
-| Env var | Description | Default |
-| --- | --- | --- |
-| `RN_METRO_URL` | Metro bundler URL | `http://localhost:8081` |
-| `RN_DEVICE_ID` | Device ID to match | _unset_ |
-| `RN_DEVICE_NAME` | Device name substring match | _unset_ |
-| `RN_TIMEOUT` | Request timeout (ms) | `30000` |
+| Env var          | Description                 | Default                 |
+| ---------------- | --------------------------- | ----------------------- |
+| `RN_METRO_URL`   | Metro bundler URL           | `http://localhost:8081` |
+| `RN_DEVICE_ID`   | Device ID to match          | _unset_                 |
+| `RN_DEVICE_NAME` | Device name substring match | _unset_                 |
+| `RN_TIMEOUT`     | Request timeout (ms)        | `30000`                 |
 
 ## Touch Backend Status
 
@@ -202,14 +202,14 @@ The current source default is intentionally conservative:
 Example companion preference:
 
 ```ts
-import { createDevice } from "@0xbigboss/rn-playwright-driver";
+import { createDevice } from '@0xbigboss/rn-playwright-driver'
 
 const device = createDevice({
   touch: {
-    order: ["xctest", "native-module"],
+    order: ['xctest', 'native-module'],
     xctest: { port: 9999 },
   },
-});
+})
 ```
 
 ## Running E2E Tests
@@ -230,6 +230,7 @@ bun run check
 ```
 
 Useful scripts (root):
+
 - `bun run build` – build all packages
 - `bun run lint` / `bun run typecheck` – quality checks
 - `bun run check` – typecheck + lint + knip + cpd

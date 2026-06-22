@@ -9,22 +9,22 @@ This guide covers advanced configuration and usage patterns for rn-playwright-dr
 When multiple devices are connected, use targeting options to select the correct one:
 
 ```typescript
-import { createDevice } from "@0xbigboss/rn-playwright-driver";
+import { createDevice } from '@0xbigboss/rn-playwright-driver'
 
 // Target by device ID
 const device = createDevice({
-  deviceId: "00008030-001234567890",
-});
+  deviceId: '00008030-001234567890',
+})
 
 // Target by device name (substring match)
 const device = createDevice({
-  deviceName: "iPhone 15",
-});
+  deviceName: 'iPhone 15',
+})
 
 // Target by app ID
 const device = createDevice({
-  appId: "com.myapp.example",
-});
+  appId: 'com.myapp.example',
+})
 ```
 
 ### Direct CDP Access
@@ -32,24 +32,24 @@ const device = createDevice({
 For advanced debugging, access the CDP client directly:
 
 ```typescript
-import { CDPClient, discoverTargets, selectTarget } from "@0xbigboss/rn-playwright-driver";
+import { CDPClient, discoverTargets, selectTarget } from '@0xbigboss/rn-playwright-driver'
 
 // Discover all targets
-const targets = await discoverTargets("http://localhost:8081");
-console.log("Available targets:", targets);
+const targets = await discoverTargets('http://localhost:8081')
+console.log('Available targets:', targets)
 
 // Select specific target
-const target = selectTarget(targets, { deviceName: "iPhone" });
+const target = selectTarget(targets, { deviceName: 'iPhone' })
 
 // Connect CDP client
-const cdp = new CDPClient({ timeout: 30000, autoReconnect: true });
+const cdp = new CDPClient({ timeout: 30000, autoReconnect: true })
 await cdp.connect(target.webSocketDebuggerUrl, {
   id: target.id,
-  url: target.url
-});
+  url: target.url,
+})
 
 // Low-level evaluate
-const result = await cdp.evaluate("require('react-native').Platform.OS");
+const result = await cdp.evaluate("require('react-native').Platform.OS")
 ```
 
 ### Auto-Reconnect
@@ -62,7 +62,7 @@ const cdp = new CDPClient({
   autoReconnect: true,
   maxReconnectAttempts: 3,
   reconnectBackoffMs: 1000, // Doubles each attempt
-});
+})
 ```
 
 ## Timeout Configuration
@@ -72,23 +72,20 @@ const cdp = new CDPClient({
 ```typescript
 const device = createDevice({
   timeout: 60000, // 60 second global timeout
-});
+})
 ```
 
 ### Per-Operation Timeouts
 
 ```typescript
 // waitFor timeout
-await device.getByTestId("slow-element").waitFor({
-  state: "visible",
-  timeout: 10000
-});
+await device.getByTestId('slow-element').waitFor({
+  state: 'visible',
+  timeout: 10000,
+})
 
 // waitForFunction timeout
-await device.waitForFunction(
-  "globalThis.appReady === true",
-  { timeout: 5000, polling: 100 }
-);
+await device.waitForFunction('globalThis.appReady === true', { timeout: 5000, polling: 100 })
 ```
 
 ## Wait States
@@ -97,16 +94,16 @@ The `waitFor` method supports four states:
 
 ```typescript
 // Wait for element to exist (attached to view tree)
-await locator.waitFor({ state: "attached" });
+await locator.waitFor({ state: 'attached' })
 
 // Wait for element to be visible (exists AND visible: true)
-await locator.waitFor({ state: "visible" }); // default
+await locator.waitFor({ state: 'visible' }) // default
 
 // Wait for element to be hidden (exists but visible: false)
-await locator.waitFor({ state: "hidden" });
+await locator.waitFor({ state: 'hidden' })
 
 // Wait for element to be removed (does NOT exist)
-await locator.waitFor({ state: "detached" });
+await locator.waitFor({ state: 'detached' })
 ```
 
 ## Capabilities Detection
@@ -114,24 +111,24 @@ await locator.waitFor({ state: "detached" });
 Check available features at runtime:
 
 ```typescript
-const caps = await device.capabilities();
+const caps = await device.capabilities()
 
 if (caps.viewTree) {
   // Locators are available
-  await device.getByTestId("button").tap();
+  await device.getByTestId('button').tap()
 } else {
   // Fall back to coordinate-based tapping
-  const bounds = await device.evaluate("getElementBounds('button')");
-  await device.pointer.tap(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  const bounds = await device.evaluate("getElementBounds('button')")
+  await device.pointer.tap(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
 }
 
 if (caps.screenshot) {
-  const screenshot = await device.screenshot();
+  const screenshot = await device.screenshot()
 }
 
 if (caps.lifecycle) {
-  await device.background();
-  await device.foreground();
+  await device.background()
+  await device.foreground()
 }
 ```
 
@@ -143,7 +140,7 @@ Use the dev entry point for production-safe builds:
 
 ```typescript
 // Only installs when __DEV__ or globalThis.__E2E__ is true
-import "@0xbigboss/rn-playwright-driver/harness/dev";
+import '@0xbigboss/rn-playwright-driver/harness/dev'
 ```
 
 ### Explicit E2E Mode
@@ -152,8 +149,8 @@ For production E2E testing:
 
 ```typescript
 // Set before import
-globalThis.__E2E__ = true;
-import "@0xbigboss/rn-playwright-driver/harness/dev";
+globalThis.__E2E__ = true
+import '@0xbigboss/rn-playwright-driver/harness/dev'
 ```
 
 ### Custom Touch Handler
@@ -166,13 +163,13 @@ Use `@0xbigboss/rn-driver-touch` and drive interactions via `device.pointer.*` i
 ### Locator Errors
 
 ```typescript
-import { LocatorError } from "@0xbigboss/rn-playwright-driver";
+import { LocatorError } from '@0xbigboss/rn-playwright-driver'
 
 try {
-  await device.getByTestId("missing").waitFor({ timeout: 1000 });
+  await device.getByTestId('missing').waitFor({ timeout: 1000 })
 } catch (e) {
   if (e instanceof LocatorError) {
-    console.log("Code:", e.code); // "NOT_FOUND", "TIMEOUT", etc.
+    console.log('Code:', e.code) // "NOT_FOUND", "TIMEOUT", etc.
   }
 }
 ```
@@ -189,13 +186,13 @@ Expression: globalThis.__RN_DRIVER__.viewTree.findByTestId("test")...
 ### Timeout Errors
 
 ```typescript
-import { TimeoutError } from "@0xbigboss/rn-playwright-driver";
+import { TimeoutError } from '@0xbigboss/rn-playwright-driver'
 
 try {
-  await device.waitForFunction("globalThis.ready", { timeout: 5000 });
+  await device.waitForFunction('globalThis.ready', { timeout: 5000 })
 } catch (e) {
   if (e instanceof TimeoutError) {
-    console.log("Timed out waiting for app");
+    console.log('Timed out waiting for app')
   }
 }
 ```
@@ -206,19 +203,19 @@ try {
 
 ```typescript
 // Tap at coordinates
-await device.pointer.tap(100, 200);
+await device.pointer.tap(100, 200)
 
 // Press and hold
-await device.pointer.down(100, 200);
-await device.waitForTimeout(500);
-await device.pointer.up();
+await device.pointer.down(100, 200)
+await device.waitForTimeout(500)
+await device.pointer.up()
 
 // Drag gesture
 await device.pointer.drag(
   { x: 100, y: 200 },
   { x: 300, y: 200 },
-  { steps: 10, holdStart: 16, holdEnd: 16 }
-);
+  { steps: 10, holdStart: 16, holdEnd: 16 },
+)
 ```
 
 ### Swipe Gestures
@@ -229,16 +226,16 @@ await device.pointer.swipe({
   from: { x: 300, y: 400 },
   to: { x: 50, y: 400 },
   duration: 300,
-  easing: "ease-out",
-});
+  easing: 'ease-out',
+})
 
 // Swipe up (scroll down)
 await device.pointer.swipe({
   from: { x: 200, y: 600 },
   to: { x: 200, y: 200 },
   duration: 300,
-  easing: "ease-out",
-});
+  easing: 'ease-out',
+})
 ```
 
 ## Screenshots
@@ -246,49 +243,49 @@ await device.pointer.swipe({
 ### Full Screen
 
 ```typescript
-const fullScreen = await device.screenshot();
-await fs.writeFile("screenshot.png", fullScreen);
+const fullScreen = await device.screenshot()
+await fs.writeFile('screenshot.png', fullScreen)
 ```
 
 ### Element Screenshot
 
 ```typescript
-const button = device.getByTestId("submit");
-const buttonScreenshot = await button.screenshot();
+const button = device.getByTestId('submit')
+const buttonScreenshot = await button.screenshot()
 ```
 
 ### Region Screenshot
 
 ```typescript
 const region = await device.screenshot({
-  clip: { x: 0, y: 100, width: 200, height: 100 }
-});
+  clip: { x: 0, y: 100, width: 200, height: 100 },
+})
 ```
 
 ## Deep Linking
 
 ```typescript
 // Open URL in app
-await device.openURL("myapp://profile/123");
+await device.openURL('myapp://profile/123')
 
 // Navigate to specific screen
-await device.openURL("myapp://settings/notifications");
+await device.openURL('myapp://settings/notifications')
 ```
 
 ## App Lifecycle
 
 ```typescript
 // Background the app
-await device.background();
+await device.background()
 
 // Wait for some time
-await device.waitForTimeout(5000);
+await device.waitForTimeout(5000)
 
 // Bring back to foreground
-await device.foreground();
+await device.foreground()
 
 // Reload JavaScript
-await device.reload();
+await device.reload()
 ```
 
 ## Core Primitives
@@ -298,15 +295,15 @@ await device.reload();
 Get current window dimensions and display properties. All values are in logical points (not physical pixels):
 
 ```typescript
-const metrics = await device.getWindowMetrics();
-console.log("Screen:", metrics.width, "x", metrics.height);
-console.log("Pixel ratio:", metrics.pixelRatio);
-console.log("Orientation:", metrics.orientation); // "portrait" | "landscape"
-console.log("Font scale:", metrics.fontScale);
+const metrics = await device.getWindowMetrics()
+console.log('Screen:', metrics.width, 'x', metrics.height)
+console.log('Pixel ratio:', metrics.pixelRatio)
+console.log('Orientation:', metrics.orientation) // "portrait" | "landscape"
+console.log('Font scale:', metrics.fontScale)
 
 // Safe area insets (if react-native-safe-area-context installed)
 if (metrics.safeAreaInsets) {
-  console.log("Top inset:", metrics.safeAreaInsets.top);
+  console.log('Top inset:', metrics.safeAreaInsets.top)
 }
 ```
 
@@ -316,16 +313,16 @@ Wait for animation frames to stabilize UI state before assertions:
 
 ```typescript
 // Get current frame count
-const frame = await device.getFrameCount();
+const frame = await device.getFrameCount()
 
 // Wait for a single animation frame
-await device.waitForRaf();
+await device.waitForRaf()
 
 // Wait for multiple frames (useful for animations)
-await device.waitForRaf(3);
+await device.waitForRaf(3)
 
 // Wait until frame count reaches a target
-await device.waitForFrameCount(frame + 10);
+await device.waitForFrameCount(frame + 10)
 ```
 
 ### Pointer Paths
@@ -334,19 +331,22 @@ Execute complex gestures along a path of points:
 
 ```typescript
 // Drag along a curved path (e.g., bezier curve waypoints)
-await device.pointer.dragPath([
-  { x: 100, y: 400 },
-  { x: 150, y: 300 },
-  { x: 200, y: 350 },
-  { x: 250, y: 200 },
-], { delay: 10 });
+await device.pointer.dragPath(
+  [
+    { x: 100, y: 400 },
+    { x: 150, y: 300 },
+    { x: 200, y: 350 },
+    { x: 250, y: 200 },
+  ],
+  { delay: 10 },
+)
 
 // Move without press (hover or track gesture)
 await device.pointer.movePath([
   { x: 100, y: 100 },
   { x: 200, y: 100 },
   { x: 200, y: 200 },
-]);
+])
 ```
 
 ### Touch Backend Info
@@ -354,11 +354,11 @@ await device.pointer.movePath([
 Get diagnostic information about the selected touch backend:
 
 ```typescript
-const info = await device.getTouchBackendInfo();
-console.log("Selected backend:", info.selected);
-console.log("Available backends:", info.available);
+const info = await device.getTouchBackendInfo()
+console.log('Selected backend:', info.selected)
+console.log('Available backends:', info.available)
 if (info.reason) {
-  console.log("Selection reason:", info.reason);
+  console.log('Selection reason:', info.reason)
 }
 ```
 
@@ -368,16 +368,16 @@ Trace driver events for debugging complex interactions:
 
 ```typescript
 // Start tracing (with optional console log capture)
-await device.startTracing({ includeConsole: true });
+await device.startTracing({ includeConsole: true })
 
 // Perform some actions
-await device.getByTestId("button").tap();
-await device.waitForRaf(2);
+await device.getByTestId('button').tap()
+await device.waitForRaf(2)
 
 // Stop and get traced events
-const { events } = await device.stopTracing();
+const { events } = await device.stopTracing()
 for (const event of events) {
-  console.log(`[${event.timestamp}] ${event.type}`, event.data);
+  console.log(`[${event.timestamp}] ${event.type}`, event.data)
 }
 ```
 
@@ -393,13 +393,13 @@ All coordinates throughout the driver are in **logical points** (not physical pi
 - All API returns use logical points: `Locator.bounds()`, `getWindowMetrics()`, pointer coordinates
 
 ```typescript
-const metrics = await device.getWindowMetrics();
-const logicalX = 100;
-const physicalX = logicalX * metrics.pixelRatio;
+const metrics = await device.getWindowMetrics()
+const logicalX = 100
+const physicalX = logicalX * metrics.pixelRatio
 
 // Locator bounds are also in logical points
-const button = device.getByTestId("submit");
-const bounds = await button.bounds();
-console.log("Button at:", bounds.x, bounds.y); // Logical points
-console.log("Button size:", bounds.width, bounds.height); // Logical points
+const button = device.getByTestId('submit')
+const bounds = await button.bounds()
+console.log('Button at:', bounds.x, bounds.y) // Logical points
+console.log('Button size:', bounds.width, bounds.height) // Logical points
 ```

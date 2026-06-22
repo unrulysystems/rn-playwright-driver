@@ -12,10 +12,10 @@ Run this XCTest-based WebSocket companion alongside your app to inject OS-level 
 ```ts
 const device = createDevice({
   touch: {
-    mode: "auto",
-    xctest: { host: "127.0.0.1", port: 9999 },
+    mode: 'auto',
+    xctest: { host: '127.0.0.1', port: 9999 },
   },
-});
+})
 ```
 
 ## Protocol

@@ -19,8 +19,8 @@ Repository overview for automated agents and contributors.
 
 **Core principle:** Optional integrations are separate packages to avoid polluting the dependency tree.
 
-| Package | Purpose | Dependencies |
-|---------|---------|--------------|
+| Package                           | Purpose                | Dependencies    |
+| --------------------------------- | ---------------------- | --------------- |
 | `@0xbigboss/rn-playwright-driver` | Core driver + fixtures | None (R3F-free) |
 
 The driver stays renderer-agnostic: it has no Three.js / R3F code. The former

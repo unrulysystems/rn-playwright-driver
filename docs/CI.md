@@ -200,12 +200,12 @@ jobs:
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `RN_METRO_URL` | Metro bundler URL | `http://localhost:8081` |
-| `RN_DEVICE_ID` | Device ID to match | _unset_ |
-| `RN_DEVICE_NAME` | Device name substring | _unset_ |
-| `RN_TIMEOUT` | Request timeout (ms) | `30000` |
+| Variable         | Description           | Default                 |
+| ---------------- | --------------------- | ----------------------- |
+| `RN_METRO_URL`   | Metro bundler URL     | `http://localhost:8081` |
+| `RN_DEVICE_ID`   | Device ID to match    | _unset_                 |
+| `RN_DEVICE_NAME` | Device name substring | _unset_                 |
+| `RN_TIMEOUT`     | Request timeout (ms)  | `30000`                 |
 
 ## Troubleshooting
 

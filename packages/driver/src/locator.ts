@@ -1,6 +1,6 @@
-import type { ElementInfo, NativeResult } from "@0xbigboss/rn-driver-shared-types";
-import { buildHarnessCall } from "./harness-expressions";
-import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from "./scroll";
+import type { ElementInfo, NativeResult } from '@0xbigboss/rn-driver-shared-types'
+import { buildHarnessCall } from './harness-expressions'
+import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from './scroll'
 import type {
   Capabilities,
   ElementBounds,
@@ -11,7 +11,7 @@ import type {
   WaitForOptions,
   WaitForState,
   WindowMetrics,
-} from "./types";
+} from './types'
 
 /**
  * Parent context for scoped queries.
@@ -19,63 +19,63 @@ import type {
  */
 export type ParentContext = {
   /** Parent element bounds for filtering */
-  bounds: ElementBounds;
-};
+  bounds: ElementBounds
+}
 
 /**
  * Selector types for locating elements.
  */
 export type LocatorSelector =
-  | { type: "testId"; value: string; index?: number; parent?: ParentContext }
-  | { type: "text"; value: string; exact: boolean; index?: number; parent?: ParentContext }
-  | { type: "role"; value: string; name?: string; index?: number; parent?: ParentContext };
+  | { type: 'testId'; value: string; index?: number; parent?: ParentContext }
+  | { type: 'text'; value: string; exact: boolean; index?: number; parent?: ParentContext }
+  | { type: 'role'; value: string; name?: string; index?: number; parent?: ParentContext }
 
 /**
  * Interface for device that supports evaluate() and pointer.
  * Avoids circular dependency with Device type.
  */
 interface Evaluator {
-  evaluate<T>(expression: string): Promise<T>;
+  evaluate<T>(expression: string): Promise<T>
   pointer: {
-    tap(x: number, y: number, options?: TapOptions): Promise<void>;
-  };
-  waitForTimeout(ms: number): Promise<void>;
-  capabilities(): Promise<Capabilities>;
+    tap(x: number, y: number, options?: TapOptions): Promise<void>
+  }
+  waitForTimeout(ms: number): Promise<void>
+  capabilities(): Promise<Capabilities>
   /** Window metrics, used to decide when an element is within the viewport. */
-  getWindowMetrics(): Promise<WindowMetrics>;
+  getWindowMetrics(): Promise<WindowMetrics>
   /** Content-delta scroll, used to bring elements into view. */
-  scroll(options: ScrollOptions): Promise<void>;
+  scroll(options: ScrollOptions): Promise<void>
   /** Platform for conditional behavior */
-  platform: "ios" | "android";
+  platform: 'ios' | 'android'
 }
 
 /**
  * Error thrown when a locator operation fails.
  */
 export class LocatorError extends Error {
-  readonly code: string;
+  readonly code: string
 
   constructor(message: string, code: string) {
-    super(message);
-    this.name = "LocatorError";
-    this.code = code;
+    super(message)
+    this.name = 'LocatorError'
+    this.code = code
   }
 }
 
-const DEFAULT_WAIT_TIMEOUT = 30_000;
-const DEFAULT_POLLING_INTERVAL = 100;
-const DEFAULT_MAX_SCROLLS = 10;
+const DEFAULT_WAIT_TIMEOUT = 30_000
+const DEFAULT_POLLING_INTERVAL = 100
+const DEFAULT_MAX_SCROLLS = 10
 // scrollIntoView settle: after a swipe, poll the element position this often,
 // up to this budget, until it stabilizes (ScrollView momentum settles).
-const SCROLL_SETTLE_POLL_INTERVAL = 100;
-const SCROLL_SETTLE_TIMEOUT = 2_000;
+const SCROLL_SETTLE_POLL_INTERVAL = 100
+const SCROLL_SETTLE_TIMEOUT = 2_000
 // Minimum scroll magnitude per scrollIntoView step, in logical points. A swipe
 // shorter than the platform touch slop (~10pt) is treated as a tap and does not
 // scroll at all, leaving the element stuck just short of fully visible. Flooring
 // the magnitude guarantees each step actually moves the content; overshooting a
 // small residual is harmless because the element only needs to land anywhere in
 // the (much larger) in-view band, and the loop re-measures.
-const MIN_SCROLL_STEP = 64;
+const MIN_SCROLL_STEP = 64
 
 /**
  * Locator implementation for finding and interacting with RN views.
@@ -83,12 +83,12 @@ const MIN_SCROLL_STEP = 64;
  */
 export class LocatorImpl implements Locator {
   /** @internal Device reference */
-  readonly device: Evaluator;
-  protected readonly selector: LocatorSelector;
+  readonly device: Evaluator
+  protected readonly selector: LocatorSelector
 
   constructor(device: Evaluator, selector: LocatorSelector) {
-    this.device = device;
-    this.selector = selector;
+    this.device = device
+    this.selector = selector
   }
 
   /**
@@ -97,21 +97,21 @@ export class LocatorImpl implements Locator {
    * Auto-waits for element to be visible and enabled.
    */
   async tap(): Promise<void> {
-    const info = await this.waitForActionable();
-    const capabilities = await this.device.capabilities();
+    const info = await this.waitForActionable()
+    const capabilities = await this.device.capabilities()
 
     if (!capabilities.touchNative) {
       throw new LocatorError(
-        "RNDriverTouchInjector native module not installed. Install @0xbigboss/rn-driver-touch and rebuild your app.",
-        "NOT_SUPPORTED",
-      );
+        'RNDriverTouchInjector native module not installed. Install @0xbigboss/rn-driver-touch and rebuild your app.',
+        'NOT_SUPPORTED',
+      )
     }
 
     const center = {
       x: info.bounds.x + info.bounds.width / 2,
       y: info.bounds.y + info.bounds.height / 2,
-    };
-    await this.device.pointer.tap(center.x, center.y);
+    }
+    await this.device.pointer.tap(center.x, center.y)
   }
 
   /**
@@ -137,10 +137,10 @@ export class LocatorImpl implements Locator {
     // 3. IME composition handling
     // This is complex platform-specific code not yet implemented.
     throw new LocatorError(
-      "Keyboard input requires RNDriverKeyboard native module (not yet implemented). " +
-        "Workaround: Use device.evaluate() to set TextInput text via setNativeProps.",
-      "NOT_SUPPORTED",
-    );
+      'Keyboard input requires RNDriverKeyboard native module (not yet implemented). ' +
+        'Workaround: Use device.evaluate() to set TextInput text via setNativeProps.',
+      'NOT_SUPPORTED',
+    )
   }
 
   /**
@@ -151,36 +151,36 @@ export class LocatorImpl implements Locator {
    * - "detached": element does NOT exist
    */
   async waitFor(options?: WaitForOptions): Promise<void> {
-    const state: WaitForState = options?.state ?? "visible";
-    const timeout = options?.timeout ?? DEFAULT_WAIT_TIMEOUT;
-    const startTime = Date.now();
+    const state: WaitForState = options?.state ?? 'visible'
+    const timeout = options?.timeout ?? DEFAULT_WAIT_TIMEOUT
+    const startTime = Date.now()
 
     while (Date.now() - startTime < timeout) {
-      const result = await this.query();
+      const result = await this.query()
 
       // Fail fast on non-retryable errors (except NOT_FOUND which is expected for "detached")
       if (
         !result.success &&
-        result.code !== "NOT_FOUND" &&
-        (result.code === "NOT_SUPPORTED" ||
-          result.code === "INTERNAL" ||
-          result.code === "MULTIPLE_FOUND")
+        result.code !== 'NOT_FOUND' &&
+        (result.code === 'NOT_SUPPORTED' ||
+          result.code === 'INTERNAL' ||
+          result.code === 'MULTIPLE_FOUND')
       ) {
-        throw new LocatorError(result.error, result.code);
+        throw new LocatorError(result.error, result.code)
       }
 
       // Check if the desired state is reached
       if (this.matchesState(result, state)) {
-        return;
+        return
       }
 
-      await this.device.waitForTimeout(DEFAULT_POLLING_INTERVAL);
+      await this.device.waitForTimeout(DEFAULT_POLLING_INTERVAL)
     }
 
     throw new LocatorError(
       `waitFor(state="${state}") timed out after ${timeout}ms for ${this.toString()}`,
-      "TIMEOUT",
-    );
+      'TIMEOUT',
+    )
   }
 
   /**
@@ -188,21 +188,21 @@ export class LocatorImpl implements Locator {
    */
   private matchesState(result: NativeResult<ElementInfo>, state: WaitForState): boolean {
     switch (state) {
-      case "attached":
+      case 'attached':
         // Element exists (query succeeded)
-        return result.success;
-      case "visible":
+        return result.success
+      case 'visible':
         // Element exists AND is visible
-        return result.success && result.data.visible;
-      case "hidden":
+        return result.success && result.data.visible
+      case 'hidden':
         // Element exists but is NOT visible
-        return result.success && !result.data.visible;
-      case "detached":
+        return result.success && !result.data.visible
+      case 'detached':
         // Element does NOT exist
-        return !result.success && result.code === "NOT_FOUND";
+        return !result.success && result.code === 'NOT_FOUND'
       default: {
-        const _exhaustive: never = state;
-        throw new Error(`Unknown state: ${_exhaustive}`);
+        const _exhaustive: never = state
+        throw new Error(`Unknown state: ${_exhaustive}`)
       }
     }
   }
@@ -212,16 +212,16 @@ export class LocatorImpl implements Locator {
    * Throws if view-tree module is not installed.
    */
   async isVisible(): Promise<boolean> {
-    const result = await this.query();
+    const result = await this.query()
     if (!result.success) {
       // Throw on NOT_SUPPORTED to surface missing module error
-      if (result.code === "NOT_SUPPORTED") {
-        throw new LocatorError(result.error, result.code);
+      if (result.code === 'NOT_SUPPORTED') {
+        throw new LocatorError(result.error, result.code)
       }
       // NOT_FOUND means element doesn't exist, so not visible
-      return false;
+      return false
     }
-    return result.data.visible;
+    return result.data.visible
   }
 
   /**
@@ -230,15 +230,15 @@ export class LocatorImpl implements Locator {
    * Throws if view-tree module is not installed.
    */
   async bounds(): Promise<ElementBounds | null> {
-    const result = await this.query();
+    const result = await this.query()
     if (!result.success) {
       // Throw on NOT_SUPPORTED to surface missing module error
-      if (result.code === "NOT_SUPPORTED") {
-        throw new LocatorError(result.error, result.code);
+      if (result.code === 'NOT_SUPPORTED') {
+        throw new LocatorError(result.error, result.code)
       }
-      return null;
+      return null
     }
-    return result.data.bounds;
+    return result.data.bounds
   }
 
   /**
@@ -246,19 +246,19 @@ export class LocatorImpl implements Locator {
    * Uses native captureElement when available, falls back to region capture.
    */
   async screenshot(): Promise<Buffer> {
-    const info = await this.resolve();
+    const info = await this.resolve()
 
     // Use captureElement which orchestrates viewTree + screenshot in harness
     const result = await this.device.evaluate<NativeResult<string>>(
-      buildHarnessCall("screenshot.captureElement", JSON.stringify(info.handle)),
-    );
+      buildHarnessCall('screenshot.captureElement', JSON.stringify(info.handle)),
+    )
 
     if (!result.success) {
-      throw new LocatorError(result.error, result.code);
+      throw new LocatorError(result.error, result.code)
     }
 
     // Decode base64 to Buffer
-    return Buffer.from(result.data, "base64");
+    return Buffer.from(result.data, 'base64')
   }
 
   /**
@@ -277,52 +277,52 @@ export class LocatorImpl implements Locator {
    * the underlying query immediately.
    */
   async scrollIntoView(options?: ScrollIntoViewOptions): Promise<void> {
-    const maxScrolls = options?.maxScrolls ?? DEFAULT_MAX_SCROLLS;
-    const margin = options?.margin ?? 0;
-    const blindDirection = options?.direction ?? "down";
+    const maxScrolls = options?.maxScrolls ?? DEFAULT_MAX_SCROLLS
+    const margin = options?.margin ?? 0
+    const blindDirection = options?.direction ?? 'down'
     // Fetched once: the viewport is assumed stable for the duration of a scroll
     // (orientation changes mid-scroll are not a real automation scenario), and
     // re-querying per iteration would add a CDP round-trip to every step.
-    const metrics = await this.device.getWindowMetrics();
+    const metrics = await this.device.getWindowMetrics()
 
     // Leading-edge position recorded before the previous scroll, per axis, so we
     // can detect when a scroll made no progress (scroll container at its limit).
-    let last: { axis: "vertical" | "horizontal"; position: number } | null = null;
+    let last: { axis: 'vertical' | 'horizontal'; position: number } | null = null
 
     for (let attempt = 0; ; attempt++) {
-      const result = await this.query();
+      const result = await this.query()
 
       if (!result.success) {
         // Non-retryable query errors surface immediately, like tap()/waitFor().
         if (
-          result.code === "NOT_SUPPORTED" ||
-          result.code === "INTERNAL" ||
-          result.code === "MULTIPLE_FOUND"
+          result.code === 'NOT_SUPPORTED' ||
+          result.code === 'INTERNAL' ||
+          result.code === 'MULTIPLE_FOUND'
         ) {
-          throw new LocatorError(result.error, result.code);
+          throw new LocatorError(result.error, result.code)
         }
         // Not measurable yet (NOT_FOUND/NOT_VISIBLE/NOT_ENABLED): blind-scroll.
         if (attempt >= maxScrolls) {
           throw new LocatorError(
             `scrollIntoView: ${this.toString()} not found after ${maxScrolls} scroll(s)`,
-            "NOT_FOUND",
-          );
+            'NOT_FOUND',
+          )
         }
-        await this.device.scroll(scrollForDirection(blindDirection, metrics));
-        last = null; // position is unknown while unmeasurable
-        continue;
+        await this.device.scroll(scrollForDirection(blindDirection, metrics))
+        last = null // position is unknown while unmeasurable
+        continue
       }
 
-      const step = computeScrollIntoViewStep(result.data.bounds, metrics, margin);
+      const step = computeScrollIntoViewStep(result.data.bounds, metrics, margin)
       if (step.inView) {
-        return;
+        return
       }
 
       if (attempt >= maxScrolls) {
         throw new LocatorError(
           `scrollIntoView: ${this.toString()} could not be brought fully into view after ${maxScrolls} scroll(s)`,
-          "TIMEOUT",
-        );
+          'TIMEOUT',
+        )
       }
 
       // Boundary detection: if the previous scroll on this axis did not move the
@@ -334,23 +334,23 @@ export class LocatorImpl implements Locator {
       ) {
         throw new LocatorError(
           `scrollIntoView: reached scroll boundary before ${this.toString()} was fully visible`,
-          "TIMEOUT",
-        );
+          'TIMEOUT',
+        )
       }
-      last = { axis: step.axis, position: step.position };
+      last = { axis: step.axis, position: step.position }
 
       // Floor the magnitude so the swipe clears the touch-slop threshold and
       // actually scrolls; preserve the direction.
-      const magnitude = Math.max(Math.abs(step.delta), MIN_SCROLL_STEP);
-      const signed = step.delta < 0 ? -magnitude : magnitude;
+      const magnitude = Math.max(Math.abs(step.delta), MIN_SCROLL_STEP)
+      const signed = step.delta < 0 ? -magnitude : magnitude
       const scrollOptions: ScrollOptions =
-        step.axis === "vertical" ? { dy: signed } : { dx: signed };
-      await this.device.scroll(scrollOptions);
+        step.axis === 'vertical' ? { dy: signed } : { dx: signed }
+      await this.device.scroll(scrollOptions)
       // The swipe finishes before the ScrollView settles (RN momentum continues
       // after pointer-up). Wait for the element position to stop changing before
       // the next measurement, otherwise the boundary detector reads a stale,
       // unchanged position and false-fires "reached scroll boundary".
-      await this.settleAfterScroll(step.axis);
+      await this.settleAfterScroll(step.axis)
     }
   }
 
@@ -359,21 +359,21 @@ export class LocatorImpl implements Locator {
    * (the scroll has settled) or the settle budget elapses. Bounded; returns
    * early if the element stops being measurable.
    */
-  private async settleAfterScroll(axis: "vertical" | "horizontal"): Promise<void> {
-    const deadline = Date.now() + SCROLL_SETTLE_TIMEOUT;
-    let previous: number | null = null;
+  private async settleAfterScroll(axis: 'vertical' | 'horizontal'): Promise<void> {
+    const deadline = Date.now() + SCROLL_SETTLE_TIMEOUT
+    let previous: number | null = null
 
     while (Date.now() < deadline) {
-      await this.device.waitForTimeout(SCROLL_SETTLE_POLL_INTERVAL);
-      const result = await this.query();
+      await this.device.waitForTimeout(SCROLL_SETTLE_POLL_INTERVAL)
+      const result = await this.query()
       if (!result.success) {
-        return;
+        return
       }
-      const position = axis === "vertical" ? result.data.bounds.y : result.data.bounds.x;
+      const position = axis === 'vertical' ? result.data.bounds.y : result.data.bounds.x
       if (previous !== null && isSamePosition(position, previous)) {
-        return;
+        return
       }
-      previous = position;
+      previous = position
     }
   }
 
@@ -381,17 +381,17 @@ export class LocatorImpl implements Locator {
    * Returns a string representation of the locator for debugging.
    */
   toString(): string {
-    const indexStr = this.selector.index !== undefined ? `.nth(${this.selector.index})` : "";
+    const indexStr = this.selector.index !== undefined ? `.nth(${this.selector.index})` : ''
     switch (this.selector.type) {
-      case "testId":
-        return `Locator(testId="${this.selector.value}")${indexStr}`;
-      case "text":
-        return `Locator(text="${this.selector.value}", exact=${this.selector.exact})${indexStr}`;
-      case "role":
-        return `Locator(role="${this.selector.value}"${this.selector.name ? `, name="${this.selector.name}"` : ""})${indexStr}`;
+      case 'testId':
+        return `Locator(testId="${this.selector.value}")${indexStr}`
+      case 'text':
+        return `Locator(text="${this.selector.value}", exact=${this.selector.exact})${indexStr}`
+      case 'role':
+        return `Locator(role="${this.selector.value}"${this.selector.name ? `, name="${this.selector.name}"` : ''})${indexStr}`
       default: {
-        const _exhaustive: never = this.selector;
-        throw new Error(`Unknown selector type: ${_exhaustive}`);
+        const _exhaustive: never = this.selector
+        throw new Error(`Unknown selector type: ${_exhaustive}`)
       }
     }
   }
@@ -407,7 +407,7 @@ export class LocatorImpl implements Locator {
    */
   getByTestId(testId: string): Locator {
     // Return a ScopedLocator that will resolve parent bounds lazily
-    return new ScopedLocatorImpl(this.device, { type: "testId", value: testId }, this);
+    return new ScopedLocatorImpl(this.device, { type: 'testId', value: testId }, this)
   }
 
   /**
@@ -417,9 +417,9 @@ export class LocatorImpl implements Locator {
   getByText(text: string, options?: { exact?: boolean }): Locator {
     return new ScopedLocatorImpl(
       this.device,
-      { type: "text", value: text, exact: options?.exact ?? false },
+      { type: 'text', value: text, exact: options?.exact ?? false },
       this,
-    );
+    )
   }
 
   /**
@@ -427,73 +427,73 @@ export class LocatorImpl implements Locator {
    * Scoped queries filter results to elements within this element's bounds.
    */
   getByRole(role: string, options?: { name?: string }): Locator {
-    return new ScopedLocatorImpl(this.device, buildRoleSelector(role, options), this);
+    return new ScopedLocatorImpl(this.device, buildRoleSelector(role, options), this)
   }
 
   /**
    * Return the nth matching element (0-indexed).
    */
   nth(index: number): Locator {
-    return new LocatorImpl(this.device, { ...this.selector, index });
+    return new LocatorImpl(this.device, { ...this.selector, index })
   }
 
   /**
    * Return the first matching element.
    */
   first(): Locator {
-    return this.nth(0);
+    return this.nth(0)
   }
 
   /**
    * Return the last matching element.
    */
   last(): Locator {
-    return this.nth(-1);
+    return this.nth(-1)
   }
 
   /**
    * Resolve the element, throwing if not found.
    */
   private async resolve(): Promise<ElementInfo> {
-    const result = await this.query();
+    const result = await this.query()
     if (!result.success) {
-      throw new LocatorError(result.error, result.code);
+      throw new LocatorError(result.error, result.code)
     }
-    return result.data;
+    return result.data
   }
 
   /**
    * Wait for element to be visible and enabled, returning latest element info.
    */
   private async waitForActionable(): Promise<ElementInfo> {
-    const timeout = DEFAULT_WAIT_TIMEOUT;
-    const startTime = Date.now();
+    const timeout = DEFAULT_WAIT_TIMEOUT
+    const startTime = Date.now()
 
     while (Date.now() - startTime < timeout) {
-      const result = await this.query();
+      const result = await this.query()
 
       if (!result.success) {
         if (
-          result.code === "NOT_SUPPORTED" ||
-          result.code === "INTERNAL" ||
-          result.code === "MULTIPLE_FOUND"
+          result.code === 'NOT_SUPPORTED' ||
+          result.code === 'INTERNAL' ||
+          result.code === 'MULTIPLE_FOUND'
         ) {
-          throw new LocatorError(result.error, result.code);
+          throw new LocatorError(result.error, result.code)
         }
 
         // NOT_FOUND/NOT_VISIBLE/NOT_ENABLED should retry
-        await this.device.waitForTimeout(DEFAULT_POLLING_INTERVAL);
-        continue;
+        await this.device.waitForTimeout(DEFAULT_POLLING_INTERVAL)
+        continue
       }
 
       if (result.data.visible && result.data.enabled) {
-        return result.data;
+        return result.data
       }
 
-      await this.device.waitForTimeout(DEFAULT_POLLING_INTERVAL);
+      await this.device.waitForTimeout(DEFAULT_POLLING_INTERVAL)
     }
 
-    throw new LocatorError(`tap() timed out after ${timeout}ms for ${this.toString()}`, "TIMEOUT");
+    throw new LocatorError(`tap() timed out after ${timeout}ms for ${this.toString()}`, 'TIMEOUT')
   }
 
   /**
@@ -502,24 +502,24 @@ export class LocatorImpl implements Locator {
   protected isWithinParent(child: ElementBounds, parent: ElementBounds): boolean {
     // Child's top-left must be at or after parent's top-left
     // Child's bottom-right must be at or before parent's bottom-right
-    const childRight = child.x + child.width;
-    const childBottom = child.y + child.height;
-    const parentRight = parent.x + parent.width;
-    const parentBottom = parent.y + parent.height;
+    const childRight = child.x + child.width
+    const childBottom = child.y + child.height
+    const parentRight = parent.x + parent.width
+    const parentBottom = parent.y + parent.height
 
     return (
       child.x >= parent.x &&
       child.y >= parent.y &&
       childRight <= parentRight &&
       childBottom <= parentBottom
-    );
+    )
   }
 
   /**
    * Filter elements to those within parent bounds.
    */
   protected filterByParent(elements: ElementInfo[], parent: ParentContext): ElementInfo[] {
-    return elements.filter((el) => this.isWithinParent(el.bounds, parent.bounds));
+    return elements.filter((el) => this.isWithinParent(el.bounds, parent.bounds))
   }
 
   /**
@@ -528,43 +528,43 @@ export class LocatorImpl implements Locator {
    * Filters by parent bounds when parent context is present.
    */
   protected async query(): Promise<NativeResult<ElementInfo>> {
-    const index = this.selector.index;
-    const parent = this.selector.parent;
+    const index = this.selector.index
+    const parent = this.selector.parent
 
     // If parent context is present, always use findAllBy* and filter
     if (parent !== undefined) {
-      const result = await this.evaluateAllElements();
+      const result = await this.evaluateAllElements()
 
       if (!result.success) {
-        return result as NativeResult<ElementInfo>;
+        return result as NativeResult<ElementInfo>
       }
 
       // Filter to elements within parent bounds
-      const filtered = this.filterByParent(result.data, parent);
+      const filtered = this.filterByParent(result.data, parent)
       return this.selectElementFromList(filtered, index, {
-        emptySuffix: " within parent",
-        boundsSuffix: " in parent",
-      });
+        emptySuffix: ' within parent',
+        boundsSuffix: ' in parent',
+      })
     }
 
     // No parent context - use original logic
     // If no index specified, use single-element query
     if (index === undefined) {
-      const expr = this.buildSingleQueryExpression();
-      return this.device.evaluate<NativeResult<ElementInfo>>(expr);
+      const expr = this.buildSingleQueryExpression()
+      return this.device.evaluate<NativeResult<ElementInfo>>(expr)
     }
 
     // Use findAllBy* and select by index
-    const result = await this.evaluateAllElements();
+    const result = await this.evaluateAllElements()
 
     if (!result.success) {
-      return result as NativeResult<ElementInfo>;
+      return result as NativeResult<ElementInfo>
     }
 
     return this.selectElementFromList(result.data, index, {
-      emptySuffix: "",
-      boundsSuffix: "",
-    });
+      emptySuffix: '',
+      boundsSuffix: '',
+    })
   }
 
   /**
@@ -572,48 +572,48 @@ export class LocatorImpl implements Locator {
    * Returns the full element info including text, enabled state, etc.
    */
   async getElementInfo(): Promise<NativeResult<ElementInfo>> {
-    return this.query();
+    return this.query()
   }
 
   /**
    * Build expression for single-element query.
    */
   protected buildSingleQueryExpression(): string {
-    return this.buildQueryExpression("single");
+    return this.buildQueryExpression('single')
   }
 
   /**
    * Build expression for multi-element query.
    */
   protected buildAllQueryExpression(): string {
-    return this.buildQueryExpression("all");
+    return this.buildQueryExpression('all')
   }
 
-  private buildQueryExpression(kind: "single" | "all"): string {
-    const prefix = kind === "single" ? "findBy" : "findAllBy";
+  private buildQueryExpression(kind: 'single' | 'all'): string {
+    const prefix = kind === 'single' ? 'findBy' : 'findAllBy'
 
     switch (this.selector.type) {
-      case "testId":
-        return buildHarnessCall(`viewTree.${prefix}TestId`, JSON.stringify(this.selector.value));
-      case "text":
+      case 'testId':
+        return buildHarnessCall(`viewTree.${prefix}TestId`, JSON.stringify(this.selector.value))
+      case 'text':
         return buildHarnessCall(
           `viewTree.${prefix}Text`,
           `${JSON.stringify(this.selector.value)}, ${this.selector.exact}`,
-        );
-      case "role": {
+        )
+      case 'role': {
         const nameArg =
-          this.selector.name !== undefined ? JSON.stringify(this.selector.name) : "undefined";
+          this.selector.name !== undefined ? JSON.stringify(this.selector.name) : 'undefined'
         return buildHarnessCall(
           `viewTree.${prefix}Role`,
           `${JSON.stringify(this.selector.value)}, ${nameArg}`,
-        );
+        )
       }
     }
   }
 
   protected async evaluateAllElements(): Promise<NativeResult<ElementInfo[]>> {
-    const expr = this.buildAllQueryExpression();
-    return this.device.evaluate<NativeResult<ElementInfo[]>>(expr);
+    const expr = this.buildAllQueryExpression()
+    return this.device.evaluate<NativeResult<ElementInfo[]>>(expr)
   }
 
   protected selectElementFromList(
@@ -625,22 +625,22 @@ export class LocatorImpl implements Locator {
       return {
         success: false,
         error: `No elements found${context.emptySuffix} for ${this.toString()}`,
-        code: "NOT_FOUND",
-      };
+        code: 'NOT_FOUND',
+      }
     }
 
-    const targetIndex = index ?? 0;
-    const actualIndex = targetIndex < 0 ? elements.length + targetIndex : targetIndex;
+    const targetIndex = index ?? 0
+    const actualIndex = targetIndex < 0 ? elements.length + targetIndex : targetIndex
 
     if (actualIndex < 0 || actualIndex >= elements.length) {
       return {
         success: false,
         error: `Index ${targetIndex} out of bounds (found ${elements.length} elements${context.boundsSuffix})`,
-        code: "NOT_FOUND",
-      };
+        code: 'NOT_FOUND',
+      }
     }
 
-    return { success: true, data: elements[actualIndex] };
+    return { success: true, data: elements[actualIndex] }
   }
 }
 
@@ -649,12 +649,12 @@ export class LocatorImpl implements Locator {
  * Used by chaining methods to filter child queries within parent bounds.
  */
 class ScopedLocatorImpl extends LocatorImpl {
-  private readonly parentLocator: LocatorImpl;
-  private cachedParentContext: ParentContext | null = null;
+  private readonly parentLocator: LocatorImpl
+  private cachedParentContext: ParentContext | null = null
 
   constructor(device: Evaluator, selector: LocatorSelector, parentLocator: LocatorImpl) {
-    super(device, selector);
-    this.parentLocator = parentLocator;
+    super(device, selector)
+    this.parentLocator = parentLocator
   }
 
   /**
@@ -665,9 +665,9 @@ class ScopedLocatorImpl extends LocatorImpl {
     // Resolve parent context - re-resolve each time if not found previously
     // This allows waitFor to retry if parent appears later
     if (this.cachedParentContext === null) {
-      const parentResult = await this.parentLocator.getElementInfo();
+      const parentResult = await this.parentLocator.getElementInfo()
       if (parentResult.success) {
-        this.cachedParentContext = { bounds: parentResult.data.bounds };
+        this.cachedParentContext = { bounds: parentResult.data.bounds }
       } else {
         // Propagate original error code - only NOT_FOUND allows retry,
         // MULTIPLE_FOUND/NOT_SUPPORTED/etc. surface actionable errors immediately
@@ -675,47 +675,47 @@ class ScopedLocatorImpl extends LocatorImpl {
           success: false,
           error: `Parent element error for scoped query ${this.toString()}: ${parentResult.error}`,
           code: parentResult.code,
-        };
+        }
       }
     }
     // Narrow to non-null for TypeScript (guaranteed by check above)
-    const parentContext = this.cachedParentContext;
+    const parentContext = this.cachedParentContext
 
     // Query all elements and filter by parent bounds
-    const expr = this.buildAllQueryExpression();
-    const result = await this.device.evaluate<NativeResult<ElementInfo[]>>(expr);
+    const expr = this.buildAllQueryExpression()
+    const result = await this.device.evaluate<NativeResult<ElementInfo[]>>(expr)
 
     if (!result.success) {
-      return result as NativeResult<ElementInfo>;
+      return result as NativeResult<ElementInfo>
     }
 
     // Filter to elements within parent bounds
-    const filtered = this.filterByParent(result.data, parentContext);
+    const filtered = this.filterByParent(result.data, parentContext)
     return this.selectElementFromList(filtered, this.selector.index, {
-      emptySuffix: " within parent",
-      boundsSuffix: " in parent",
-    });
+      emptySuffix: ' within parent',
+      boundsSuffix: ' in parent',
+    })
   }
 
   /**
    * Return the nth matching element within the parent scope.
    */
   override nth(index: number): Locator {
-    return new ScopedLocatorImpl(this.device, { ...this.selector, index }, this.parentLocator);
+    return new ScopedLocatorImpl(this.device, { ...this.selector, index }, this.parentLocator)
   }
 
   /**
    * Return the first matching element within the parent scope.
    */
   override first(): Locator {
-    return this.nth(0);
+    return this.nth(0)
   }
 
   /**
    * Return the last matching element within the parent scope.
    */
   override last(): Locator {
-    return this.nth(-1);
+    return this.nth(-1)
   }
 }
 
@@ -723,18 +723,18 @@ class ScopedLocatorImpl extends LocatorImpl {
  * Create a locator for the given device and selector.
  */
 export function createLocator(device: Evaluator, selector: LocatorSelector): Locator {
-  return new LocatorImpl(device, selector);
+  return new LocatorImpl(device, selector)
 }
 
 export function buildRoleSelector(role: string, options?: { name?: string }): LocatorSelector {
-  const selector: LocatorSelector = { type: "role", value: role };
+  const selector: LocatorSelector = { type: 'role', value: role }
   if (options?.name !== undefined) {
-    selector.name = options.name;
+    selector.name = options.name
   }
-  return selector;
+  return selector
 }
 
 /**
  * Re-export Locator type for external use.
  */
-export type { Locator };
+export type { Locator }

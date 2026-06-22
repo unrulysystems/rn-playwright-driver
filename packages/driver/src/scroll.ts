@@ -5,7 +5,7 @@ import type {
   ScrollOptions,
   SwipeOptions,
   WindowMetrics,
-} from "./types";
+} from './types'
 
 /**
  * Default gesture duration for a scroll, in ms.
@@ -16,7 +16,7 @@ import type {
  * resulting scroll offset track the requested delta far more closely than a
  * fast flick would.
  */
-const DEFAULT_SCROLL_DURATION = 400;
+const DEFAULT_SCROLL_DURATION = 400
 
 /**
  * Default easing for a scroll gesture.
@@ -24,7 +24,7 @@ const DEFAULT_SCROLL_DURATION = 400;
  * `ease-out` decelerates toward the release point → low release velocity → the
  * RN ScrollView barely flings, so the content settles near the requested delta.
  */
-const DEFAULT_SCROLL_EASING: Easing = "ease-out";
+const DEFAULT_SCROLL_EASING: Easing = 'ease-out'
 
 /**
  * Fraction of the usable (safe-area-adjusted) span trimmed from each edge to
@@ -35,10 +35,10 @@ const DEFAULT_SCROLL_EASING: Easing = "ease-out";
  * only a mid-screen swipe moved it). Keeping the whole gesture inside the middle
  * ~80% of the safe span avoids those collisions.
  */
-const EDGE_GUTTER_FRACTION = 0.1;
+const EDGE_GUTTER_FRACTION = 0.1
 
 function clamp(value: number, lo: number, hi: number): number {
-  return Math.min(Math.max(value, lo), hi);
+  return Math.min(Math.max(value, lo), hi)
 }
 
 /**
@@ -62,26 +62,26 @@ function solveAxis(
   lo: number,
   hi: number,
 ): { from: number; to: number } {
-  const span = hi - lo;
+  const span = hi - lo
   // A single swipe cannot exceed the on-screen band; clamp magnitude, keep sign.
-  const d = clamp(delta, -span, span);
+  const d = clamp(delta, -span, span)
 
-  let from = clamp(anchor, lo, hi);
-  let to = from - d;
+  let from = clamp(anchor, lo, hi)
+  let to = from - d
 
   // Shift the whole segment back inside the band if `to` overflowed. Because
   // |d| <= span, fixing the overflowing end always brings the other end in too.
   if (to < lo) {
-    const shift = lo - to;
-    from += shift;
-    to += shift;
+    const shift = lo - to
+    from += shift
+    to += shift
   } else if (to > hi) {
-    const shift = hi - to;
-    from += shift;
-    to += shift;
+    const shift = hi - to
+    from += shift
+    to += shift
   }
 
-  return { from, to };
+  return { from, to }
 }
 
 /**
@@ -94,11 +94,11 @@ function safeBand(
   insetStart: number,
   insetEnd: number,
 ): { lo: number; hi: number } {
-  const usableStart = start + insetStart;
-  const usableEnd = end - insetEnd;
-  const usable = Math.max(0, usableEnd - usableStart);
-  const gutter = usable * EDGE_GUTTER_FRACTION;
-  return { lo: usableStart + gutter, hi: usableEnd - gutter };
+  const usableStart = start + insetStart
+  const usableEnd = end - insetEnd
+  const usable = Math.max(0, usableEnd - usableStart)
+  const gutter = usable * EDGE_GUTTER_FRACTION
+  return { lo: usableStart + gutter, hi: usableEnd - gutter }
 }
 
 /**
@@ -117,32 +117,32 @@ function safeBand(
  *   requested delta rather than flinging past it.
  */
 export function computeScrollGesture(metrics: WindowMetrics, options: ScrollOptions): SwipeOptions {
-  const dx = options.dx ?? 0;
-  const dy = options.dy ?? 0;
-  const insets = metrics.safeAreaInsets;
+  const dx = options.dx ?? 0
+  const dy = options.dy ?? 0
+  const insets = metrics.safeAreaInsets
 
-  const bandX = safeBand(0, metrics.width, insets?.left ?? 0, insets?.right ?? 0);
-  const bandY = safeBand(0, metrics.height, insets?.top ?? 0, insets?.bottom ?? 0);
+  const bandX = safeBand(0, metrics.width, insets?.left ?? 0, insets?.right ?? 0)
+  const bandY = safeBand(0, metrics.height, insets?.top ?? 0, insets?.bottom ?? 0)
 
-  const anchorX = options.x ?? metrics.width / 2;
-  const anchorY = options.y ?? metrics.height / 2;
+  const anchorX = options.x ?? metrics.width / 2
+  const anchorY = options.y ?? metrics.height / 2
 
-  const axisX = solveAxis(anchorX, dx, bandX.lo, bandX.hi);
-  const axisY = solveAxis(anchorY, dy, bandY.lo, bandY.hi);
+  const axisX = solveAxis(anchorX, dx, bandX.lo, bandX.hi)
+  const axisY = solveAxis(anchorY, dy, bandY.lo, bandY.hi)
 
-  const from: Point = { x: axisX.from, y: axisY.from };
-  const to: Point = { x: axisX.to, y: axisY.to };
+  const from: Point = { x: axisX.from, y: axisY.from }
+  const to: Point = { x: axisX.to, y: axisY.to }
 
   const swipe: SwipeOptions = {
     from,
     to,
     duration: options.duration ?? DEFAULT_SCROLL_DURATION,
     easing: options.easing ?? DEFAULT_SCROLL_EASING,
-  };
-  if (options.steps !== undefined) swipe.steps = options.steps;
-  if (options.holdStart !== undefined) swipe.holdStart = options.holdStart;
-  if (options.holdEnd !== undefined) swipe.holdEnd = options.holdEnd;
-  return swipe;
+  }
+  if (options.steps !== undefined) swipe.steps = options.steps
+  if (options.holdStart !== undefined) swipe.holdStart = options.holdStart
+  if (options.holdEnd !== undefined) swipe.holdEnd = options.holdEnd
+  return swipe
 }
 
 /**
@@ -150,19 +150,19 @@ export function computeScrollGesture(metrics: WindowMetrics, options: ScrollOpti
  * "did the last scroll move it" comparisons. Guards against jitter from
  * floating-point density conversions in the native bounds.
  */
-const FIT_EPSILON = 0.5;
+const FIT_EPSILON = 0.5
 
 /** One step of a `scrollIntoView` loop, derived purely from measured bounds. */
 export type ScrollIntoViewStep = {
   /** The element is fully inside the margin-inset viewport; stop scrolling. */
-  inView: boolean;
+  inView: boolean
   /** Axis to scroll along this step (the one needing the larger correction). */
-  axis: "vertical" | "horizontal";
+  axis: 'vertical' | 'horizontal'
   /** Content delta ({@link ScrollOptions} sign) to apply along `axis`. */
-  delta: number;
+  delta: number
   /** Element leading-edge coordinate along `axis`, used for boundary detection. */
-  position: number;
-};
+  position: number
+}
 
 /**
  * Content delta needed to bring one axis of an element into the margin-inset
@@ -174,14 +174,14 @@ export type ScrollIntoViewStep = {
  * aligned to the box start instead.
  */
 function fitAxis(start: number, size: number, viewport: number, margin: number): number {
-  const lo = margin;
-  const hi = viewport - margin;
-  const box = hi - lo;
-  const end = start + size;
-  if (size >= box) return start - lo; // too big to fit → align leading edge to box start
-  if (start < lo) return start - lo; // before the box → scroll back (negative)
-  if (end > hi) return end - hi; // past the box → scroll forward (positive)
-  return 0;
+  const lo = margin
+  const hi = viewport - margin
+  const box = hi - lo
+  const end = start + size
+  if (size >= box) return start - lo // too big to fit → align leading edge to box start
+  if (start < lo) return start - lo // before the box → scroll back (negative)
+  if (end > hi) return end - hi // past the box → scroll forward (positive)
+  return 0
 }
 
 /**
@@ -208,27 +208,27 @@ export function computeScrollIntoViewStep(
   metrics: WindowMetrics,
   margin: number,
 ): ScrollIntoViewStep {
-  const insets = metrics.safeAreaInsets;
-  const top = insets?.top ?? 0;
-  const bottom = insets?.bottom ?? 0;
-  const left = insets?.left ?? 0;
-  const right = insets?.right ?? 0;
+  const insets = metrics.safeAreaInsets
+  const top = insets?.top ?? 0
+  const bottom = insets?.bottom ?? 0
+  const left = insets?.left ?? 0
+  const right = insets?.right ?? 0
 
-  const dy = fitAxis(bounds.y - top, bounds.height, metrics.height - top - bottom, margin);
-  const dx = fitAxis(bounds.x - left, bounds.width, metrics.width - left - right, margin);
-  const inView = Math.abs(dx) < FIT_EPSILON && Math.abs(dy) < FIT_EPSILON;
-  const vertical = Math.abs(dy) >= Math.abs(dx);
+  const dy = fitAxis(bounds.y - top, bounds.height, metrics.height - top - bottom, margin)
+  const dx = fitAxis(bounds.x - left, bounds.width, metrics.width - left - right, margin)
+  const inView = Math.abs(dx) < FIT_EPSILON && Math.abs(dy) < FIT_EPSILON
+  const vertical = Math.abs(dy) >= Math.abs(dx)
   return {
     inView,
-    axis: vertical ? "vertical" : "horizontal",
+    axis: vertical ? 'vertical' : 'horizontal',
     delta: vertical ? dy : dx,
     position: vertical ? bounds.y : bounds.x,
-  };
+  }
 }
 
 /** True when two axis positions are equal within the fit tolerance. */
 export function isSamePosition(a: number, b: number): boolean {
-  return Math.abs(a - b) < FIT_EPSILON;
+  return Math.abs(a - b) < FIT_EPSILON
 }
 
 /**
@@ -238,21 +238,21 @@ export function isSamePosition(a: number, b: number): boolean {
  * clamps it to the on-screen safe band.
  */
 export function scrollForDirection(
-  direction: "up" | "down" | "left" | "right",
+  direction: 'up' | 'down' | 'left' | 'right',
   metrics: WindowMetrics,
 ): ScrollOptions {
   switch (direction) {
-    case "down":
-      return { dy: metrics.height };
-    case "up":
-      return { dy: -metrics.height };
-    case "right":
-      return { dx: metrics.width };
-    case "left":
-      return { dx: -metrics.width };
+    case 'down':
+      return { dy: metrics.height }
+    case 'up':
+      return { dy: -metrics.height }
+    case 'right':
+      return { dx: metrics.width }
+    case 'left':
+      return { dx: -metrics.width }
     default: {
-      const _exhaustive: never = direction;
-      throw new Error(`Unknown scroll direction: ${_exhaustive}`);
+      const _exhaustive: never = direction
+      throw new Error(`Unknown scroll direction: ${_exhaustive}`)
     }
   }
 }
