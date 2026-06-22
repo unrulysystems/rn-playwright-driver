@@ -12,7 +12,7 @@
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "test": "bun run --filter '@0xbigboss/*' test",
-    "typecheck": "bun run --filter '@0xbigboss/*' typecheck && bun run --filter '@0xbigboss/rn-playwright-driver' build && bun run --filter 'examples-*' typecheck",
+    "typecheck": "bun run --filter '@0xbigboss/*' typecheck && bun run --filter 'examples-*' typecheck",
     "knip": "bun run --filter '@0xbigboss/rn-playwright-driver' knip && bun run --filter 'examples-*' knip",
     "cpd": "bun run --filter '@0xbigboss/rn-playwright-driver' cpd && bun run --filter 'examples-*' cpd",
     "check": "bun run typecheck && bun run lint && bun run format:check",
