@@ -28,6 +28,9 @@ playwright-report/
 # Local Claude state
 .claude/
 
+# Local rl loop state
+.rl/
+
 # Nix / direnv
 .direnv/
 result

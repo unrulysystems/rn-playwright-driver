@@ -32,6 +32,27 @@ Scenic depends on this driver; this driver does not depend on Scenic.
 
 See `docs/NATIVE-MODULES-ARCHITECTURE.md` for full architecture details.
 
+## Build tooling
+
+The driver builds with **tsup** (`packages/driver/tsup.config.ts`), not the
+`0xbigboss/typescript-template` default (zshy). This is a deliberate, ratified
+deviation (#18 Phase 3). The driver's `package.json#exports` mixes BUILT and
+SOURCE subpaths:
+
+- `.` and `./test` are BUILT (`dist/`, dual ESM/CJS + types);
+- `./harness`, `./harness/dev`, and the `rn-inspect` bin ship as `.ts` SOURCE so
+  React Native's Metro bundles them in-app — a Node-targeted compile breaks
+  `__DEV__` and the dynamic `require('react-native')`.
+
+zshy generates `exports` wholesale from its `zshy.exports` field and drops any
+subpath it does not build (verified: it dropped `./harness` + `./harness/dev`),
+with no preserve-exports escape hatch. It cannot express "build `.`/`./test`
+while keeping `/harness` as source", so tsup stays. For the same reason the repo
+keeps per-package `tsgo --noEmit` typechecking rather than `tsgo -b` project
+references (composite refs would force the harness to emit declarations). The
+rest of the template — oxc lint/format, strict `tsconfig.base.json`, nix — is
+adopted.
+
 ## Read-first files
 
 - `README.md`
