@@ -1,6 +1,6 @@
 {
   "name": "@0xbigboss/rn-playwright-driver",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Playwright-compatible E2E test driver for React Native",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
