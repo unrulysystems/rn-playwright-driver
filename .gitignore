@@ -27,3 +27,8 @@ playwright-report/
 
 # Local Claude state
 .claude/
+
+# Nix / direnv
+.direnv/
+result
+result-*
