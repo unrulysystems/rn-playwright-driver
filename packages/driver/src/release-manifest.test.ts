@@ -20,7 +20,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
@@ -91,13 +91,17 @@ interface DriverManifest extends Manifest {
   files?: string[]
 }
 
-/** Directory entries of the driver's published `files` (e.g. bin, dist, harness). */
+/**
+ * Directory entries of the driver's published `files` (e.g. bin, dist, harness).
+ * Derived from the DECLARED files by extension (dir entries have none), NOT by
+ * `existsSync` — `dist/` is a gitignored build artifact absent on a clean checkout
+ * and in CI's pre-build test job, so an existence check would wrongly drop it and
+ * flag the bin's `../dist/...` import as unpublished. The tarball is built before
+ * pack, so a declared dir IS published regardless of local build state.
+ */
 function publishedDirs(): string[] {
   const pkg = JSON.parse(readFileSync(join(driverRoot, 'package.json'), 'utf8')) as DriverManifest
-  return (pkg.files ?? []).filter((entry) => {
-    const full = join(driverRoot, entry)
-    return existsSync(full) && statSync(full).isDirectory()
-  })
+  return (pkg.files ?? []).filter((entry) => extname(entry) === '')
 }
 
 /** Recursively list `.ts` sources under `dir` (excluding `.d.ts`). */
@@ -118,22 +122,40 @@ function listTsSources(dir: string): string[] {
 }
 
 /**
- * Relative specifiers imported/re-exported in VALUE position (statement-level
- * `import type` / `export type` excluded). A mixed
- * `import { value, type X } from '...'` is value-bearing and IS included.
+ * Relative specifiers that create a RUNTIME dependency on another file, in any of
+ * the shapes that survive bundling:
+ *   - `import ... from '<rel>'` / `export ... from '<rel>'` (value-bearing; a mixed
+ *     `import { value, type X } from '...'` IS included; statement-level
+ *     `import type`/`export type` is excluded — Metro/tsup elide it)
+ *   - side-effect `import '<rel>'` (no bindings, no `from`)
+ *   - `require('<rel>')` (harness/dev.ts uses this)
+ * Covering all three closes the hole where a published `require('../src/...')` or
+ * bare `import '../src/...'` would evade the boundary and break the tarball.
  */
 function relativeValueSpecifiers(source: string): string[] {
   const specs: string[] = []
-  const re = /(?:import|export)\s+(type\s+)?[^'"]*?from\s+['"](\.[^'"]+)['"]/g
-  let match: RegExpExecArray | null
-  while ((match = re.exec(source)) !== null) {
-    if (match[1]) {
-      continue // statement-level `type` — elided, never resolved at runtime
-    }
-    const spec = match[2]
+  const push = (spec: string | undefined): void => {
     if (spec) {
       specs.push(spec)
     }
+  }
+  // import/export ... from '<rel>' — excluding statement-level type-only.
+  const fromRe = /(?:import|export)\s+(type\s+)?[^'"]*?from\s+['"](\.[^'"]+)['"]/g
+  // side-effect import '<rel>' (a quote immediately after `import`, no bindings).
+  const sideEffectRe = /import\s+['"](\.[^'"]+)['"]/g
+  // require('<rel>')
+  const requireRe = /\brequire\s*\(\s*['"](\.[^'"]+)['"]\s*\)/g
+  let match: RegExpExecArray | null
+  while ((match = fromRe.exec(source)) !== null) {
+    if (!match[1]) {
+      push(match[2]) // skip statement-level `type` — elided, never resolved at runtime
+    }
+  }
+  while ((match = sideEffectRe.exec(source)) !== null) {
+    push(match[1])
+  }
+  while ((match = requireRe.exec(source)) !== null) {
+    push(match[1])
   }
   return specs
 }
