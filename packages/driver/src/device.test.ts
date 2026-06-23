@@ -362,6 +362,19 @@ describe('RNDevice runtime events', () => {
     expect(seen).toEqual([{ type: 'warning', text: 'hello 7', args: ['hello', 7], timestamp: 5 }])
   })
 
+  it('drops console events when no console listener is registered (no work, no throw)', () => {
+    // No device.on('console', ...) here. A late listener still sees only events
+    // fired after it subscribes — console is never buffered.
+    expect(() =>
+      fireCdpEvent('Runtime.consoleAPICalled', { type: 'log', args: [{ value: 'noisy' }] }),
+    ).not.toThrow()
+
+    const seen: ConsoleMessage[] = []
+    device.on('console', (m) => seen.push(m))
+    fireCdpEvent('Runtime.consoleAPICalled', { type: 'log', args: [{ value: 'after' }] })
+    expect(seen).toHaveLength(1)
+  })
+
   it('forwards exception events to on("pageerror") listeners', () => {
     const seen: PageError[] = []
     device.on('pageerror', (e) => seen.push(e))

@@ -10,7 +10,6 @@ import { createTouchBackend, type TouchBackend } from './touch'
 import { waitForStable, type WaitForStableOptions } from './wait-for-stable'
 import type {
   Capabilities,
-  ConsoleMessage,
   Device,
   DeviceEventMap,
   DeviceOptions,
@@ -185,8 +184,13 @@ export class RNDevice implements Device {
   private registerRuntimeEventForwarders(): void {
     this._eventForwarderCleanups.push(
       this.cdp.onEvent('Runtime.consoleAPICalled', (params) => {
-        const message: ConsoleMessage = parseConsoleEvent(params)
-        this.emit('console', message)
+        // Console has no internal buffer (unlike exceptions) — if nobody is
+        // listening there is no consumer, so skip the per-event arg-mapping parse
+        // for noisy app logs.
+        if (!this._listeners.get('console')?.size) {
+          return
+        }
+        this.emit('console', parseConsoleEvent(params))
       }),
       this.cdp.onEvent('Runtime.exceptionThrown', (params) => {
         const error = parseExceptionEvent(params)

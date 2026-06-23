@@ -196,7 +196,9 @@ export class Pointer {
    * exact waypoints - useful for complex gestures like bezier curves.
    */
   async dragPath(points: Point[], options?: DragPathOptions): Promise<void> {
-    const [first, ...rest] = points
+    // Index from 1 rather than `[first, ...rest]` so a long custom gesture path
+    // does not pay an O(n) tail-array allocation before dispatching.
+    const first = points[0]
     if (!first) {
       return
     }
@@ -210,7 +212,11 @@ export class Pointer {
       await this.timeoutProvider.waitForTimeout(holdStart)
     }
 
-    for (const point of rest) {
+    for (let i = 1; i < points.length; i++) {
+      const point = points[i]
+      if (!point) {
+        continue
+      }
       await this.sendMove(point.x, point.y)
       if (delay > 0) {
         await this.timeoutProvider.waitForTimeout(delay)
