@@ -76,6 +76,10 @@ The `Locator` interface is stable:
 interface Locator {
   tap(): Promise<void>
   type(text: string): Promise<void>
+  // Sets a text input's value in one shot. Resolves the target in-app by testID
+  // only — a plain getByTestId(...) locator; nth()/scoped/role/text throw
+  // NOT_SUPPORTED rather than filling the wrong input.
+  fill(text: string): Promise<void>
   waitFor(options?: WaitForOptions): Promise<void>
   isVisible(): Promise<boolean>
   bounds(): Promise<ElementBounds | null>

@@ -799,17 +799,19 @@ All packages live in a single repository:
 
 - Easier coordination between driver and native modules
 - Atomic updates across packages
-- Shared tooling (biome, tsgo, lefthook)
+- Shared tooling (oxc — oxlint/oxfmt, tsgo, lefthook)
 - Single version bump for breaking changes
 
-### 2. JS Harness for Touch (No Native Touch Injection)
+### 2. Native Touch Injection (No JS Harness Fallback)
 
-Touch simulation continues to use the Phase 2 JS harness approach:
+Touch synthesis uses native backends, selected by `TouchBackendType`
+(`xctest | instrumentation | native-module | cli`; default order resolves to
+`native-module`). The Phase-2 JS harness touch fallback has been removed (see the
+release-surface note above) — there is no JS touch-handler routing.
 
-- Already works reliably
-- Simpler than native touch synthesis (UITouch, MotionEvent)
-- Native touch injection (no JS touch handler routing)
-- Native touch injection can be added later if needed
+- OS-level injection exercises the real gesture pipeline, not synthetic React events
+- `cli` is a typed placeholder until idb/adb execution is implemented
+- The backend is overridable via `createDevice({ touch: { mode: 'force', backend } })`
 
 ### 3. Random IDs for Element Handles
 
@@ -956,7 +958,6 @@ The driver supports multiple touch injection backends, organized in tiers by cap
 | 1    | XCTest (iOS) / Instrumentation (Android) | Kernel (IOHIDEvent / UiAutomation) | ✅        | ❌ Local | Companion process    |
 | 2    | Native Module (RNDriverTouchInjector)    | App (UIKit / MotionEvent)          | ❌        | ✅       | Native module in app |
 | 3    | CLI (idb / adb)                          | Kernel                             | ✅        | ❌ Local | Tools installed      |
-| 4    | JS Harness                               | Synthetic (React events)           | ❌        | ✅       | Harness import only  |
 
 ### Backend Selection
 

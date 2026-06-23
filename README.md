@@ -233,7 +233,7 @@ Useful scripts (root):
 
 - `bun run build` – build all packages
 - `bun run lint` / `bun run typecheck` – quality checks
-- `bun run check` – typecheck + lint + knip + cpd
+- `bun run check` – typecheck + lint + format:check + test
 
 ## Development Notes
 
