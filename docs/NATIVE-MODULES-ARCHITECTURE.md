@@ -962,7 +962,7 @@ The driver supports multiple touch injection backends, organized in tiers by cap
 ### Backend Selection
 
 ```typescript
-type TouchBackendType = 'xctest' | 'instrumentation' | 'native-module' | 'cli' | 'harness'
+type TouchBackendType = 'xctest' | 'instrumentation' | 'native-module' | 'cli'
 
 type TouchBackendConfig = {
   /** Selection mode (default: "auto") */
@@ -988,7 +988,6 @@ type TouchBackendConfig = {
   }
   nativeModule?: { enabled?: boolean }
   cli?: { enabled?: boolean }
-  harness?: { enabled?: boolean }
 }
 ```
 
@@ -996,8 +995,8 @@ type TouchBackendConfig = {
 
 The driver tries backends in platform-specific order until one successfully initializes:
 
-- **iOS**: `xctest` → `native-module` → `cli` → `harness`
-- **Android**: `instrumentation` → `native-module` → `cli` → `harness`
+- **iOS**: `xctest` → `native-module` → `cli`
+- **Android**: `instrumentation` → `native-module` → `cli`
 
 For each backend:
 

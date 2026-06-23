@@ -27,10 +27,18 @@ test.describe('Locator.fill', () => {
     await expectLocator(device.getByTestId('name-value')).toHaveText('Ada Lovelace')
   })
 
-  test('fills an uncontrolled TextInput without throwing', async ({ device }) => {
-    // Uncontrolled inputs have no onChangeText; fill() must still resolve them
-    // (by component identity) and setNativeProps the value.
-    await device.getByTestId('bio-input').fill('hello world')
+  test('resolves and fills an uncontrolled TextInput', async ({ device }) => {
+    // Uncontrolled inputs have no onChangeText; fill() must still RESOLVE them (by
+    // component identity) and setNativeProps the value. NOTE: an uncontrolled
+    // input has no React-state mirror, so its native value is not assertable
+    // headlessly — the value-change coverage is the CONTROLLED tests above (which
+    // read the name-value mirror). This case guards that an uncontrolled input is
+    // resolved (NOT rejected as not-a-text-input) and fill dispatches without
+    // error; verify the on-screen value manually in the attended device session.
+    const bio = device.getByTestId('bio-input')
+    await bio.fill('hello world')
+    // It must still be the same resolvable, visible input after filling.
+    await expectLocator(bio).toBeVisible()
   })
 
   test('replaces existing value rather than appending', async ({ device }) => {
