@@ -370,8 +370,14 @@ export type Locator = {
    * just setNativeProps). Auto-waits for the element to be actionable. No native
    * keyboard module required.
    *
+   * LIMITATION: resolves its target IN-APP by testID only — supports a plain
+   * `getByTestId(...)` locator. `nth()`/scoped/role/text locators are NOT yet
+   * supported and throw NOT_SUPPORTED (rather than silently filling the first
+   * testID match). Give the input a unique testID and fill that.
+   *
+   * @throws LocatorError "NOT_SUPPORTED" if the locator is not a plain testId, or
+   *   if the harness cannot resolve the input.
    * @throws LocatorError "NOT_A_TEXT_INPUT" if the element is not a text input.
-   * @throws LocatorError "NOT_SUPPORTED" if the harness cannot resolve the input.
    */
   fill(text: string): Promise<void>
   /**

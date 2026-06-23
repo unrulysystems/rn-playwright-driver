@@ -417,4 +417,40 @@ describe('Locator.fill', () => {
 
     await expect(locator.fill('x')).rejects.toMatchObject({ code: 'NOT_SUPPORTED' })
   })
+
+  // The harness resolves fill targets by testID only. A non-plain-testId locator
+  // would pass the driver-side actionable wait and then have the harness fill the
+  // FIRST testID match — a different, wrong element. These guard against that by
+  // rejecting BEFORE any dispatch (no `.fill(` call reaches the harness).
+  it('rejects a text locator before dispatching', async () => {
+    const { device, calls } = fillDevice({ success: true, data: {} })
+    const locator = createLocator(device, { type: 'text', value: 'Email', exact: false })
+
+    await expect(locator.fill('x')).rejects.toMatchObject({ code: 'NOT_SUPPORTED' })
+    expect(calls.some((c) => c.includes('.fill('))).toBe(false)
+  })
+
+  it('rejects a role locator before dispatching', async () => {
+    const { device, calls } = fillDevice({ success: true, data: {} })
+    const locator = createLocator(device, { type: 'role', value: 'textbox' })
+
+    await expect(locator.fill('x')).rejects.toMatchObject({ code: 'NOT_SUPPORTED' })
+    expect(calls.some((c) => c.includes('.fill('))).toBe(false)
+  })
+
+  it('rejects an nth() testId locator before dispatching (no silent wrong-target)', async () => {
+    const { device, calls } = fillDevice({ success: true, data: {} })
+    const locator = createLocator(device, { type: 'testId', value: 'field' }).nth(1)
+
+    await expect(locator.fill('x')).rejects.toMatchObject({ code: 'NOT_SUPPORTED' })
+    expect(calls.some((c) => c.includes('.fill('))).toBe(false)
+  })
+
+  it('rejects a scoped (within-parent) testId locator before dispatching', async () => {
+    const { device, calls } = fillDevice({ success: true, data: {} })
+    const scoped = createLocator(device, { type: 'testId', value: 'form' }).getByTestId('field')
+
+    await expect(scoped.fill('x')).rejects.toMatchObject({ code: 'NOT_SUPPORTED' })
+    expect(calls.some((c) => c.includes('.fill('))).toBe(false)
+  })
 })

@@ -1,5 +1,7 @@
 import type { ElementInfo, NativeResult } from '@0xbigboss/rn-driver-shared-types'
-import type { FillDispatch } from './fill'
+// Type-only import of the driver↔harness wire contract. tsup/esbuild elides
+// type-only imports, so the built dist gains NO runtime dependency on harness/.
+import type { FillDispatch } from '../harness/fill'
 import { buildHarnessCall } from './harness-expressions'
 import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from './scroll'
 import { waitForStable } from './wait-for-stable'
@@ -146,15 +148,59 @@ export class LocatorImpl implements Locator {
   }
 
   /**
+   * fill() resolves its target IN-APP via a testID-only fiber match — the harness
+   * does NOT run the full locator query pipeline. So fill() supports ONLY a plain
+   * `getByTestId(...)` locator. A `nth()`/scoped/role/text locator would pass the
+   * driver-side actionable wait (which DOES honor those) and then have the harness
+   * fill the FIRST testID match — a different, wrong element — or fail late. Reject
+   * those up front, before waiting, with an actionable error. Overridden by
+   * ScopedLocatorImpl (always unsupported).
+   *
+   * @throws LocatorError "NOT_SUPPORTED" when the locator is not a plain testId.
+   */
+  protected assertFillableSelector(): void {
+    if (this.selector.type !== 'testId') {
+      throw new LocatorError(
+        `fill() currently resolves only a plain testId locator; a ${this.selector.type} selector ` +
+          `is not yet supported in-app (the harness matches on testID). ` +
+          `Give the input a unique testID and use getByTestId(...).fill().`,
+        'NOT_SUPPORTED',
+      )
+    }
+    if (this.selector.index !== undefined) {
+      throw new LocatorError(
+        `fill() does not support nth()/first()/last(): the harness fills the first testID match, ` +
+          `not the indexed one. Give the target a unique testID and fill that.`,
+        'NOT_SUPPORTED',
+      )
+    }
+    if (this.selector.parent !== undefined) {
+      throw new LocatorError(
+        `fill() does not support a scoped (within-parent) locator: the harness matches testID ` +
+          `globally. Give the target a unique testID and fill that.`,
+        'NOT_SUPPORTED',
+      )
+    }
+  }
+
+  /**
    * Set a text input's value in one shot. Auto-waits for the element to be
    * actionable, then delegates to the in-app harness, which resolves the
    * TextInput's React component and fires a synthetic change so controlled inputs
-   * update React state (see fill.ts). No native keyboard module required.
+   * update React state (see harness/fill.ts). No native keyboard module required.
    *
+   * LIMITATION: supports only a plain `getByTestId(...)` locator (see
+   * {@link assertFillableSelector}). nth()/scoped/role/text locators throw
+   * NOT_SUPPORTED rather than silently filling the wrong input.
+   *
+   * @throws LocatorError "NOT_SUPPORTED" if the locator is not a plain testId, or
+   *   if the harness cannot resolve the input.
    * @throws LocatorError "NOT_A_TEXT_INPUT" if the element is not a text input.
-   * @throws LocatorError "NOT_SUPPORTED" if the harness cannot resolve the input.
    */
   async fill(text: string): Promise<void> {
+    // Reject unsupported locator shapes BEFORE waiting so we never wait on one
+    // element and then fill another (the silent wrong-target hazard).
+    this.assertFillableSelector()
     // Auto-wait for the element to be actionable (exists + visible) before filling.
     await this.waitForActionable()
     // The synthetic-change dispatch must happen in-app (the harness resolves the
@@ -726,6 +772,18 @@ class ScopedLocatorImpl extends LocatorImpl {
       emptySuffix: ' within parent',
       boundsSuffix: ' in parent',
     })
+  }
+
+  /**
+   * A scoped locator is inherently within-parent, which the testID-only harness
+   * fill path cannot honor — always reject, regardless of selector shape.
+   */
+  protected override assertFillableSelector(): void {
+    throw new LocatorError(
+      `fill() does not support a scoped (within-parent) locator: the harness matches testID ` +
+        `globally. Give the target a unique testID and use a top-level getByTestId(...).fill().`,
+      'NOT_SUPPORTED',
+    )
   }
 
   /**

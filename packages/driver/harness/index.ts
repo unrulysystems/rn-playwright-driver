@@ -22,7 +22,15 @@ import type {
   TracingOptions,
   WindowMetrics,
 } from './shared-types'
-import { applyFill, type FillableNode, type FillDispatch, type FillSelector } from '../src/fill'
+import {
+  applyFill,
+  findFiberByTestId,
+  type FiberNode,
+  fiberToFillable,
+  type FillableNode,
+  type FillDispatch,
+  type FillSelector,
+} from './fill'
 
 export type {
   ElementBounds,
@@ -236,65 +244,6 @@ function notSupportedResult<T>(feature: string): NativeResult<T> {
 type DevtoolsHook = {
   renderers?: Map<number, unknown>
   getFiberRoots?: (rendererId: number) => Set<{ current?: FiberNode | null }>
-}
-
-/** The slice of a React fiber we traverse — all optional, so we fail closed. */
-type FiberNode = {
-  memoizedProps?: Record<string, unknown> | null
-  stateNode?: { setNativeProps?: (props: { text: string }) => void } | null
-  child?: FiberNode | null
-  sibling?: FiberNode | null
-}
-
-function isTextInputProps(props: Record<string, unknown>): boolean {
-  // Discriminate on onChangeText: it is RN-TextInput-specific, whereas onChange
-  // is shared by pickers/sliders/custom controls. Matching onChange here would
-  // let fill() resolve a non-text-input that happens to share the testID. We
-  // still FIRE onChange in applyFill when present, but it is not the gate.
-  return typeof props.onChangeText === 'function'
-}
-
-/** Iterative DFS over child/sibling links for a text input with `testId`. */
-function findFiberByTestId(root: FiberNode | null, testId: string): FiberNode | null {
-  const stack: FiberNode[] = root ? [root] : []
-  while (stack.length > 0) {
-    const fiber = stack.pop()
-    if (!fiber) {
-      continue
-    }
-    const props = fiber.memoizedProps
-    if (props && props.testID === testId && isTextInputProps(props)) {
-      return fiber
-    }
-    // Push sibling first so pop() visits the child subtree first — natural
-    // document order, which disambiguates if a testID somehow appears twice.
-    if (fiber.sibling) {
-      stack.push(fiber.sibling)
-    }
-    if (fiber.child) {
-      stack.push(fiber.child)
-    }
-  }
-  return null
-}
-
-function fiberToFillable(fiber: FiberNode): FillableNode {
-  const props = fiber.memoizedProps ?? {}
-  const onChangeText = props.onChangeText
-  const onChange = props.onChange
-  const setNativeProps = fiber.stateNode?.setNativeProps
-  return {
-    isTextInput: true,
-    ...(typeof onChangeText === 'function'
-      ? { onChangeText: onChangeText as (text: string) => void }
-      : {}),
-    ...(typeof onChange === 'function'
-      ? { onChange: onChange as (event: { nativeEvent: { text: string } }) => void }
-      : {}),
-    ...(typeof setNativeProps === 'function'
-      ? { setNativeProps: setNativeProps.bind(fiber.stateNode) }
-      : {}),
-  }
 }
 
 /**
