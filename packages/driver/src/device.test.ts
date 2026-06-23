@@ -461,4 +461,24 @@ describe('RNDevice failOnUncaughtException', () => {
 
     await expect(device.evaluate('1')).resolves.toBe('ok')
   })
+
+  it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {
+    vi.clearAllMocks()
+    const device = new RNDevice({ timeout: 1000, failOnUncaughtException: true })
+    mockEvaluateFn.mockResolvedValue('ok')
+    await device.connect()
+
+    // Drain happens one-per-operation; without a cap, a storm between operations
+    // grows the buffer without bound. Fire far more than the cap.
+    for (let i = 0; i < 500; i++) {
+      fireCdpEvent('Runtime.exceptionThrown', {
+        exceptionDetails: { exception: { description: `Error: storm ${i}` } },
+      })
+    }
+
+    const buffer = (device as unknown as { _uncaughtExceptions: PageError[] })._uncaughtExceptions
+    expect(buffer.length).toBeLessThanOrEqual(64)
+    // The OLDEST is retained (first failure is the most diagnostic).
+    expect(buffer[0]?.message).toBe('Error: storm 0')
+  })
 })

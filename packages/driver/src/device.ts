@@ -72,7 +72,12 @@ export class RNDevice implements Device {
   // unsubscribe key; payloads are cast at the typed on()/emit() boundary.
   private readonly _listeners = new Map<string, Set<(payload: unknown) => void>>()
   // Uncaught app exceptions captured since the last failOnUncaughtException check.
+  // Bounded: throwIfUncaughtException drains one per operation, so an exception
+  // storm between operations would otherwise grow without limit. We keep the
+  // OLDEST (FIFO — the first failure is the most diagnostic) and drop newer ones
+  // once full.
   private readonly _uncaughtExceptions: PageError[] = []
+  private static readonly MAX_BUFFERED_EXCEPTIONS = 64
   // Teardown for the CDP event forwarders registered in connect().
   private _eventForwarderCleanups: Array<() => void> = []
 
@@ -195,10 +200,15 @@ export class RNDevice implements Device {
       this.cdp.onEvent('Runtime.exceptionThrown', (params) => {
         const error = parseExceptionEvent(params)
         // Only buffer when failOnUncaughtException will consume it; otherwise the
-        // buffer is never drained (throwIfUncaughtException returns early) and
-        // grows unbounded for the lifetime of the connection. Listeners still get
-        // every exception via the unconditional emit below.
-        if (this.options.failOnUncaughtException) {
+        // buffer is never drained (throwIfUncaughtException returns early). Even
+        // when enabled, cap the buffer so an exception storm between operations
+        // cannot grow memory without bound — keep the oldest (first failure is the
+        // most diagnostic), drop the overflow. Listeners still get every exception
+        // via the unconditional emit below.
+        if (
+          this.options.failOnUncaughtException &&
+          this._uncaughtExceptions.length < RNDevice.MAX_BUFFERED_EXCEPTIONS
+        ) {
           this._uncaughtExceptions.push(error)
         }
         this.emit('pageerror', error)
