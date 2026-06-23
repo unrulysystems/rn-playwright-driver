@@ -145,22 +145,42 @@ describe('driver published-source import boundary', () => {
 
   it('no published harness/bin source value-imports an unpublished path', () => {
     const dirs = publishedDirs()
+    const scanned: string[] = []
+    const checked: { file: string; spec: string }[] = []
     const offenders: string[] = []
 
     for (const dirName of ['harness', 'bin']) {
       for (const file of listTsSources(join(driverRoot, dirName))) {
+        const fileRel = relative(driverRoot, file)
+        scanned.push(fileRel)
         for (const spec of relativeValueSpecifiers(readFileSync(file, 'utf8'))) {
+          checked.push({ file: fileRel, spec })
           const targetRel = relative(driverRoot, resolve(dirname(file), spec))
           const firstSegment = targetRel.split(/[/\\]/)[0]
           if (!firstSegment || !dirs.includes(firstSegment)) {
             offenders.push(
-              `${relative(driverRoot, file)} → "${spec}" resolves to "${targetRel}", ` +
+              `${fileRel} → "${spec}" resolves to "${targetRel}", ` +
                 `outside the published dirs ${JSON.stringify(dirs)}`,
             )
           }
         }
       }
     }
+
+    // FAIL-CLOSED: an empty scan or a parser that matched nothing would make the
+    // offenders check pass VACUOUSLY (false confidence — the exact trap this gate
+    // exists to prevent). Assert the gate actually ran over the known published
+    // source AND parsed its real (multi-line) value imports before trusting a
+    // clean result. If the path moves or relativeValueSpecifiers regresses, these
+    // fail rather than silently green.
+    expect(scanned, 'no published harness/bin .ts sources scanned — path regression').toContain(
+      'harness/index.ts',
+    )
+    const harnessImports = checked.filter((c) => c.file === 'harness/index.ts')
+    expect(
+      harnessImports.length,
+      'parsed no relative value import in harness/index.ts — import-matcher regression',
+    ).toBeGreaterThan(0)
 
     expect(
       offenders,
