@@ -35,3 +35,8 @@ playwright-report/
 .direnv/
 result
 result-*
+
+# Local secrets — never commit (defense in depth; .envrc does not auto-load these)
+.env
+.env.local
+.envrc.private

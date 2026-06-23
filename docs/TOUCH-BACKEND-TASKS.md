@@ -209,14 +209,15 @@ bun run test:e2e
 const device = createDevice({
   touch: {
     mode: 'force',
-    backend: 'xctest', // or "instrumentation", "harness", etc.
+    // TouchBackendType: "xctest" | "instrumentation" | "native-module" | "cli"
+    backend: 'xctest',
   },
 })
 ```
 
-### Default (Harness)
+### Default (native-module)
 
 ```bash
 cd example
-bun run test:e2e  # Falls back to JS harness if no companion is running
+bun run test:e2e  # Default backend order resolves to native-module
 ```

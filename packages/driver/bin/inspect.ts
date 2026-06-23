@@ -143,7 +143,7 @@ async function main(): Promise<void> {
         if (!caps.viewTree) {
           console.log(
             '\nNote: viewTree capability not available. ' +
-              'Install @0xbigboss/rn-playwright-view-tree in your app.',
+              'Install @0xbigboss/rn-driver-view-tree in your app.',
           )
         } else {
           console.log('\nTo query elements, use a selector:')
