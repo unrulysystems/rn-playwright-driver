@@ -31,6 +31,13 @@ jobs:
         run: |
           bun run --filter '@0xbigboss/rn-playwright-driver' build
 
+      # Run the test suite before publishing — the release-manifest invariant
+      # (no workspace: specs shipped; published harness/bin only imports published
+      # paths) lives in vitest. A broken @0xbigboss/rn-playwright-driver@0.4.0
+      # already shipped once; this gate must run on the publish path, not only CI.
+      - name: Run tests
+        run: bun run test
+
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1

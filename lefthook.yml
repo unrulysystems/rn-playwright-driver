@@ -9,11 +9,13 @@ pre-commit:
       run: bun run typecheck
     lint:
       glob: '*.{js,ts,cjs,mjs,jsx,tsx}'
-      run: npx oxlint --fix {staged_files}
+      # Local bin, not `npx` — npx can fetch+execute registry code outside bun.lock
+      # if node_modules is missing, during a commit that inherits the repo shell env.
+      run: node_modules/.bin/oxlint --fix {staged_files}
       stage_fixed: true
     format:
       glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc}'
-      run: npx oxfmt --write {staged_files}
+      run: node_modules/.bin/oxfmt --write {staged_files}
       stage_fixed: true
     cpd:
       glob: '*.{ts,tsx}'
@@ -26,10 +28,10 @@ pre-push:
       run: bun run typecheck
     lint:
       glob: '*.{js,ts,cjs,mjs,jsx,tsx}'
-      run: npx oxlint {push_files}
+      run: node_modules/.bin/oxlint {push_files}
     format:
       glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc}'
-      run: npx oxfmt --check {push_files}
+      run: node_modules/.bin/oxfmt --check {push_files}
     knip:
       glob: '*.{ts,tsx,json}'
       run: bun run knip

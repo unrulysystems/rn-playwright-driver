@@ -15,7 +15,7 @@
     "typecheck": "bun run --filter '@0xbigboss/*' typecheck && bun run --filter 'examples-*' typecheck",
     "knip": "bun run --filter '@0xbigboss/rn-playwright-driver' knip && bun run --filter 'examples-*' knip",
     "cpd": "bun run --filter '@0xbigboss/rn-playwright-driver' cpd && bun run --filter 'examples-*' cpd",
-    "check": "bun run typecheck && bun run lint && bun run format:check",
+    "check": "bun run typecheck && bun run lint && bun run format:check && bun run test",
     "prepare": "lefthook install"
   },
   "devDependencies": {
