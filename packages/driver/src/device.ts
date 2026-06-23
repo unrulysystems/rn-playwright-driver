@@ -190,8 +190,13 @@ export class RNDevice implements Device {
       }),
       this.cdp.onEvent('Runtime.exceptionThrown', (params) => {
         const error = parseExceptionEvent(params)
-        // Buffer for failOnUncaughtException; the next op surfaces it.
-        this._uncaughtExceptions.push(error)
+        // Only buffer when failOnUncaughtException will consume it; otherwise the
+        // buffer is never drained (throwIfUncaughtException returns early) and
+        // grows unbounded for the lifetime of the connection. Listeners still get
+        // every exception via the unconditional emit below.
+        if (this.options.failOnUncaughtException) {
+          this._uncaughtExceptions.push(error)
+        }
         this.emit('pageerror', error)
       }),
     )

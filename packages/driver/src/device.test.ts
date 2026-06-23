@@ -395,6 +395,24 @@ describe('RNDevice runtime events', () => {
 
     await expect(device.evaluate('1')).resolves.toBeUndefined()
   })
+
+  it('does not buffer exceptions when failOnUncaughtException is off (no unbounded growth)', () => {
+    const seen: PageError[] = []
+    device.on('pageerror', (e) => seen.push(e))
+
+    for (let i = 0; i < 50; i++) {
+      fireCdpEvent('Runtime.exceptionThrown', {
+        exceptionDetails: { exception: { description: `Error: ${i}` } },
+      })
+    }
+
+    // Listeners still receive every exception...
+    expect(seen).toHaveLength(50)
+    // ...but nothing accumulates in the fail-fast buffer. With the option off it is
+    // never drained, so buffering would grow without bound for the connection.
+    const buffer = (device as unknown as { _uncaughtExceptions: PageError[] })._uncaughtExceptions
+    expect(buffer).toHaveLength(0)
+  })
 })
 
 describe('RNDevice failOnUncaughtException', () => {
