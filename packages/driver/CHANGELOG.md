@@ -1,4 +1,10 @@
-# @0xbigboss/rn-playwright-driver
+# @unrulysystems/rn-playwright-driver
+
+## 0.5.1
+
+### Patch Changes
+
+- Add the `./package.json` subpath to the package `exports` map so tooling that reads the manifest (e.g. `require('@unrulysystems/rn-playwright-driver/package.json')`) resolves instead of throwing `ERR_PACKAGE_PATH_NOT_EXPORTED`.
 
 ## 0.5.0
 

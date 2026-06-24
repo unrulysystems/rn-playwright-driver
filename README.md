@@ -1,6 +1,9 @@
 # rn-playwright-driver
 
-Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs in Node.js, connects to the app’s Hermes runtime via Metro’s debug endpoint, and drives your app through a JS harness plus optional native modules.
+[![npm](https://img.shields.io/npm/v/@unrulysystems/rn-playwright-driver)](https://www.npmjs.com/package/@unrulysystems/rn-playwright-driver)
+[![license](https://img.shields.io/npm/l/@unrulysystems/rn-playwright-driver)](LICENSE)
+
+Drive a React Native app from a Playwright test the same way you'd drive a web page. `rn-playwright-driver` runs in Node.js, attaches to the app's **Hermes** runtime over the Chrome DevTools Protocol (through Metro's debug endpoint), and exposes a `device` handle — `evaluate`, locators, pointer/touch, screenshots, and lifecycle — via a JS harness plus optional native modules.
 
 ## What this provides
 
@@ -281,11 +284,18 @@ See `docs/NATIVE-MODULES-ARCHITECTURE.md` for full details.
 
 ## Documentation
 
+- [RN / Hermes CDP Playbook](docs/RN-HERMES-CDP-PLAYBOOK.md) - the hard-won constraints of driving React Native over CDP
 - [CI Setup](docs/CI.md) - iOS Simulator, Android Emulator, GitHub Actions
 - [Advanced Usage](docs/ADVANCED.md) - CDP targeting, timeouts, capabilities
 - [API Stability](docs/API-STABILITY.md) - Stability levels, upgrade notes
 - [Native Modules Architecture](docs/NATIVE-MODULES-ARCHITECTURE.md) - Internal design
 
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup
+and the dev workflow, [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community
+expectations, and [SECURITY.md](SECURITY.md) to report a vulnerability privately.
+
 ## License
 
-MIT
+[MIT](LICENSE) © Unruly Systems LLC
