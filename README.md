@@ -6,6 +6,7 @@ Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs
 
 - **Device API**: `evaluate`, `waitForFunction`, `pointer`, `screenshot`, `openURL`, etc.
 - **Locators**: `getByTestId`, `getByText`, `getByRole` (requires view-tree module).
+- **Text input**: `locator.fill(text)` sets a value and fires a synthetic change so controlled inputs commit to React state (no native keyboard module).
 - **Core Primitives**: `getWindowMetrics`, `waitForRaf`, `getFrameCount`, pointer paths, event tracing.
 - **JS Harness**: `global.__RN_DRIVER__` installed in the app to bridge driver calls.
 - **Native Modules (optional)**:
@@ -177,6 +178,26 @@ await device.getByText('Load more').scrollIntoView({ direction: 'down', maxScrol
 > motion, so the scrolled offset approximates the requested delta. The magnitude
 > of a single `device.scroll()` is therefore bounded by the on-screen swipe
 > distance; `scrollIntoView()` loops as many gestures as needed.
+
+### Filling text inputs
+
+Set a text input's value with `locator.fill(text)`. It replaces the current
+value in one shot (not a key-by-key `type()`), mirrors it onto the native view,
+and fires a synthetic change so **controlled** inputs commit to React state — no
+native keyboard module required. It auto-waits for the input to be actionable.
+
+```ts
+test('fill a form field', async ({ device }) => {
+  await device.getByTestId('name-input').fill('Ada Lovelace')
+  // A controlled input's mirrored value reflects the committed React state.
+  expect(await device.getByTestId('name-value').text()).toBe('Ada Lovelace')
+})
+```
+
+> `fill()` resolves its target by **testID only** — pass a plain
+> `getByTestId(...)`. `nth()`, scoped, `getByRole()`, and `getByText()` locators
+> throw `NOT_SUPPORTED` rather than silently filling the wrong input, so give the
+> field a unique testID. A non–text-input element throws `NOT_A_TEXT_INPUT`.
 
 ## Configuration
 
