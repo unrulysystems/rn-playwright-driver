@@ -1,5 +1,5 @@
 /**
- * Example E2E test for the counter app using @0xbigboss/rn-playwright-driver.
+ * Example E2E test for the counter app using @unrulysystems/rn-playwright-driver.
  *
  * NOTE: These tests require:
  * 1. The RN app running with Metro (bun start)
@@ -9,7 +9,7 @@
  * Run with: bun run test:e2e
  */
 
-import { expect, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 import { countEvents, expectEventsAtLeast, tracePointerDrag, withTracing } from '../utils/tracing'
 
 type NativeResult<T> = { success: true; data: T } | { success: false; error: string; code?: string }

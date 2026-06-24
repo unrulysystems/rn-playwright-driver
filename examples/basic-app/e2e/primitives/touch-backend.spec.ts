@@ -4,7 +4,7 @@
  * Tests touch backend detection and selection reporting.
  */
 
-import { expect, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 
 test.describe('Touch Backend Info', () => {
   test('getTouchBackendInfo() returns backend info object', async ({ device }) => {

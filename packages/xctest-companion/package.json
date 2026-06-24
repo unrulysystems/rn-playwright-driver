@@ -1,5 +1,5 @@
 {
-  "name": "@0xbigboss/rn-playwright-driver-xctest-companion",
+  "name": "@unrulysystems/rn-playwright-driver-xctest-companion",
   "version": "0.1.0",
   "private": true,
   "description": "XCTest WebSocket companion for RN Playwright driver touch injection",

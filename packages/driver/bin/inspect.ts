@@ -26,7 +26,11 @@
  */
 
 import { parseArgs } from 'node:util'
-import type { ElementBounds, ElementInfo, NativeResult } from '@0xbigboss/rn-driver-shared-types'
+import type {
+  ElementBounds,
+  ElementInfo,
+  NativeResult,
+} from '@unrulysystems/rn-driver-shared-types'
 // Import from dist (built output) since src is not shipped in the package
 import { createDevice, type RNDeviceOptions } from '../dist/index.mjs'
 
@@ -143,7 +147,7 @@ async function main(): Promise<void> {
         if (!caps.viewTree) {
           console.log(
             '\nNote: viewTree capability not available. ' +
-              'Install @0xbigboss/rn-driver-view-tree in your app.',
+              'Install @unrulysystems/rn-driver-view-tree in your app.',
           )
         } else {
           console.log('\nTo query elements, use a selector:')

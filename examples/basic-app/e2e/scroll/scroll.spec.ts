@@ -12,7 +12,7 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { expect, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 
 // Durable evidence: where the below-fold screenshot lands. cwd is the package
 // root when Playwright runs.

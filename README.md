@@ -18,15 +18,15 @@ Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs
 
 ## Packages
 
-| Package                                                     | Purpose                                                          |
-| ----------------------------------------------------------- | ---------------------------------------------------------------- |
-| `@0xbigboss/rn-playwright-driver`                           | Driver + Playwright fixtures + harness                           |
-| `@0xbigboss/rn-driver-view-tree`                            | View tree queries (locators, bounds, visibility)                 |
-| `@0xbigboss/rn-driver-screenshot`                           | Screen/region capture                                            |
-| `@0xbigboss/rn-driver-lifecycle`                            | App lifecycle helpers                                            |
-| `@0xbigboss/rn-driver-touch`                                | App-level native touch injection                                 |
-| `@0xbigboss/rn-playwright-driver-xctest-companion`          | iOS XCTest touch companion reference implementation              |
-| `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion reference implementation |
+| Package                                                         | Purpose                                                          |
+| --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `@unrulysystems/rn-playwright-driver`                           | Driver + Playwright fixtures + harness                           |
+| `@unrulysystems/rn-driver-view-tree`                            | View tree queries (locators, bounds, visibility)                 |
+| `@unrulysystems/rn-driver-screenshot`                           | Screen/region capture                                            |
+| `@unrulysystems/rn-driver-lifecycle`                            | App lifecycle helpers                                            |
+| `@unrulysystems/rn-driver-touch`                                | App-level native touch injection                                 |
+| `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS XCTest touch companion reference implementation              |
+| `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion reference implementation |
 
 ## Requirements
 
@@ -39,11 +39,11 @@ Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs
 Install driver and native modules in your app:
 
 ```bash
-bun add @0xbigboss/rn-playwright-driver \
-  @0xbigboss/rn-driver-view-tree \
-  @0xbigboss/rn-driver-screenshot \
-  @0xbigboss/rn-driver-lifecycle \
-  @0xbigboss/rn-driver-touch
+bun add @unrulysystems/rn-playwright-driver \
+  @unrulysystems/rn-driver-view-tree \
+  @unrulysystems/rn-driver-screenshot \
+  @unrulysystems/rn-driver-lifecycle \
+  @unrulysystems/rn-driver-touch
 ```
 
 Install Playwright in your test workspace:
@@ -57,7 +57,7 @@ bun add -d @playwright/test
 Import the harness once in your app entry:
 
 ```ts
-import '@0xbigboss/rn-playwright-driver/harness'
+import '@unrulysystems/rn-playwright-driver/harness'
 ```
 
 Then build/run the app so the native modules are installed:
@@ -78,7 +78,7 @@ Use the `/harness/dev` entry point which only installs when `__DEV__` is true or
 
 ```ts
 // In your app entry (e.g., App.tsx or index.ts)
-import '@0xbigboss/rn-playwright-driver/harness/dev'
+import '@unrulysystems/rn-playwright-driver/harness/dev'
 ```
 
 To enable in production E2E builds, set the flag before the import:
@@ -86,14 +86,14 @@ To enable in production E2E builds, set the flag before the import:
 ```ts
 // Set before import for prod E2E testing
 globalThis.__E2E__ = true
-import '@0xbigboss/rn-playwright-driver/harness/dev'
+import '@unrulysystems/rn-playwright-driver/harness/dev'
 ```
 
 ### Option B: Conditional import (explicit)
 
 ```ts
 if (__DEV__ || globalThis.__E2E__ === true) {
-  void import('@0xbigboss/rn-playwright-driver/harness')
+  void import('@unrulysystems/rn-playwright-driver/harness')
 }
 ```
 
@@ -102,7 +102,7 @@ if (__DEV__ || globalThis.__E2E__ === true) {
 ```ts
 // index.e2e.ts
 import './index'
-import '@0xbigboss/rn-playwright-driver/harness'
+import '@unrulysystems/rn-playwright-driver/harness'
 ```
 
 Point your E2E build/profile at `index.e2e.ts` so production builds never include the harness.
@@ -112,7 +112,7 @@ Point your E2E build/profile at `index.e2e.ts` so production builds never includ
 Use the provided Playwright fixtures:
 
 ```ts
-import { test, expect } from '@0xbigboss/rn-playwright-driver/test'
+import { test, expect } from '@unrulysystems/rn-playwright-driver/test'
 
 test('can evaluate JS', async ({ device }) => {
   const result = await device.evaluate<number>('1 + 2 + 3')
@@ -215,7 +215,7 @@ Environment variables for target selection and timeouts:
 The current source default is intentionally conservative:
 
 - `auto` mode tries `native-module` only on iOS and Android.
-- `native-module` requires `@0xbigboss/rn-driver-touch` in the tested app and `globalThis.__RN_DRIVER__.capabilities.touchNative === true`.
+- `native-module` requires `@unrulysystems/rn-driver-touch` in the tested app and `globalThis.__RN_DRIVER__.capabilities.touchNative === true`.
 - `xctest` and `instrumentation` clients are implemented but opt-in through `DeviceOptions.touch.order` or `DeviceOptions.touch.backend`; their companion packages are reference integrations, not automatic launchers.
 - `cli` exists as a typed backend stub and currently throws `NOT_SUPPORTED`.
 - There is no JS harness touch fallback backend in the current release surface.
@@ -223,7 +223,7 @@ The current source default is intentionally conservative:
 Example companion preference:
 
 ```ts
-import { createDevice } from '@0xbigboss/rn-playwright-driver'
+import { createDevice } from '@unrulysystems/rn-playwright-driver'
 
 const device = createDevice({
   touch: {
@@ -266,7 +266,7 @@ High-level flow:
 
 ```
 Playwright test (Node)
-  └─ @0xbigboss/rn-playwright-driver (CDP client)
+  └─ @unrulysystems/rn-playwright-driver (CDP client)
        └─ Hermes Runtime via Metro /json
             └─ global.__RN_DRIVER__ harness
                  └─ Expo native modules (view-tree, screenshot, lifecycle, touch)

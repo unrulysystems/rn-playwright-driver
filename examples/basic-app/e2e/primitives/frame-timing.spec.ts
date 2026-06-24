@@ -5,7 +5,7 @@
  * for animation synchronization.
  */
 
-import { expect, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 
 test.describe('Frame Timing', () => {
   test('getFrameCount() returns a number', async ({ device }) => {

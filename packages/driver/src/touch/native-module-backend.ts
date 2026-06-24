@@ -70,7 +70,7 @@ export class NativeModuleTouchBackend implements TouchBackend {
     if (!hasModule) {
       throw new TouchBackendUnavailableError(
         this.name,
-        'RNDriverTouchInjector native module not found in app. Install @0xbigboss/rn-driver-touch and rebuild.',
+        'RNDriverTouchInjector native module not found in app. Install @unrulysystems/rn-driver-touch and rebuild.',
       )
     }
   }

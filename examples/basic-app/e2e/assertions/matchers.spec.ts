@@ -9,7 +9,7 @@
  * 3. Native modules installed (view-tree, screenshot, lifecycle)
  */
 
-import { expect, expectLocator, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, expectLocator, test } from '@unrulysystems/rn-playwright-driver/test'
 
 test.describe('Locator Assertions', () => {
   test('toBeVisible waits for element to appear', async ({ device }) => {

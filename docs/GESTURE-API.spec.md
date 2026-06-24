@@ -17,7 +17,7 @@ Consumers should pin to exact versions during alpha and review changelogs before
 
 ## Summary
 
-A unified, timing-aware gesture API for `@0xbigboss/rn-playwright-driver` that provides Playwright compatibility while extending support for React Native and Three.js/R3F applications.
+A unified, timing-aware gesture API for `@unrulysystems/rn-playwright-driver` that provides Playwright compatibility while extending support for React Native and Three.js/R3F applications.
 
 ## Motivation
 

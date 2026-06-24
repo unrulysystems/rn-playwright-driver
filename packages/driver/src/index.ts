@@ -1,4 +1,4 @@
-// Main entry point for @0xbigboss/rn-playwright-driver
+// Main entry point for @unrulysystems/rn-playwright-driver
 
 export type { CDPClientOptions } from './cdp/client'
 // --- CDP (advanced usage) ---

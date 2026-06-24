@@ -107,7 +107,7 @@ describe('createTouchBackend', () => {
     ).rejects.toMatchObject({
       backend: 'native-module',
       message:
-        'No touch backend available. Install @0xbigboss/rn-driver-touch or configure XCTest/Instrumentation.',
+        'No touch backend available. Install @unrulysystems/rn-driver-touch or configure XCTest/Instrumentation.',
     })
   })
 })

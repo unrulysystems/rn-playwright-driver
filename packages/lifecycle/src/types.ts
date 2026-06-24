@@ -3,4 +3,4 @@
  */
 export type AppState = 'active' | 'background' | 'inactive'
 
-export type { ErrorCode, NativeResult } from '@0xbigboss/rn-driver-shared-types'
+export type { ErrorCode, NativeResult } from '@unrulysystems/rn-driver-shared-types'

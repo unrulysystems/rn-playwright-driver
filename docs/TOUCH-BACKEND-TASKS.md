@@ -20,7 +20,7 @@ Detailed implementation tasks for touch injection backends. See `NATIVE-MODULES-
 
 ## Current Defaults
 
-`createTouchBackend()` currently defaults to `["native-module"]` on both iOS and Android. This means `device.connect()` fails fast when `@0xbigboss/rn-driver-touch` is absent from the tested app instead of silently falling back to a less capable path.
+`createTouchBackend()` currently defaults to `["native-module"]` on both iOS and Android. This means `device.connect()` fails fast when `@unrulysystems/rn-driver-touch` is absent from the tested app instead of silently falling back to a less capable path.
 
 Use explicit configuration for companion runs:
 

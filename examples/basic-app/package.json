@@ -15,11 +15,11 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
-    "@0xbigboss/rn-driver-lifecycle": "workspace:*",
-    "@0xbigboss/rn-driver-screenshot": "workspace:*",
-    "@0xbigboss/rn-driver-touch": "workspace:*",
-    "@0xbigboss/rn-driver-view-tree": "workspace:*",
-    "@0xbigboss/rn-playwright-driver": "workspace:*",
+    "@unrulysystems/rn-driver-lifecycle": "workspace:*",
+    "@unrulysystems/rn-driver-screenshot": "workspace:*",
+    "@unrulysystems/rn-driver-touch": "workspace:*",
+    "@unrulysystems/rn-driver-view-tree": "workspace:*",
+    "@unrulysystems/rn-playwright-driver": "workspace:*",
     "expo": "~54.0.30",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",

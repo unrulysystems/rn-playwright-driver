@@ -2,7 +2,7 @@
  * RN Driver Harness - Install in your React Native app
  *
  * Usage:
- *   import '@0xbigboss/rn-playwright-driver/harness';
+ *   import '@unrulysystems/rn-playwright-driver/harness';
  *
  * This creates global.__RN_DRIVER__ with native module bridges,
  * tracing, and utility helpers.
@@ -13,7 +13,7 @@ import type {
   ElementHandle,
   ElementInfo,
   NativeResult,
-} from '@0xbigboss/rn-driver-shared-types'
+} from '@unrulysystems/rn-driver-shared-types'
 import type {
   AppState,
   Capabilities,
@@ -38,7 +38,7 @@ export type {
   ElementInfo,
   ErrorCode,
   NativeResult,
-} from '@0xbigboss/rn-driver-shared-types'
+} from '@unrulysystems/rn-driver-shared-types'
 export type {
   AppState,
   Capabilities,
@@ -210,17 +210,17 @@ function tryRequireNativeModule<T>(moduleName: string): T | null {
  */
 const MODULE_INSTALL_INSTRUCTIONS: Record<string, string> = {
   RNDriverViewTree:
-    'RNDriverViewTree module not installed. Install @0xbigboss/rn-driver-view-tree and rebuild your app.',
+    'RNDriverViewTree module not installed. Install @unrulysystems/rn-driver-view-tree and rebuild your app.',
   'RNDriverViewTree.tap':
-    'RNDriverViewTree.tap not available. Update @0xbigboss/rn-driver-view-tree and rebuild your app.',
+    'RNDriverViewTree.tap not available. Update @unrulysystems/rn-driver-view-tree and rebuild your app.',
   RNDriverScreenshot:
-    'RNDriverScreenshot module not installed. Install @0xbigboss/rn-driver-screenshot and rebuild your app.',
+    'RNDriverScreenshot module not installed. Install @unrulysystems/rn-driver-screenshot and rebuild your app.',
   'RNDriverScreenshot.captureElement':
-    'RNDriverScreenshot.captureElement not available. Update @0xbigboss/rn-driver-screenshot and rebuild your app.',
+    'RNDriverScreenshot.captureElement not available. Update @unrulysystems/rn-driver-screenshot and rebuild your app.',
   RNDriverLifecycle:
-    'RNDriverLifecycle module not installed. Install @0xbigboss/rn-driver-lifecycle and rebuild your app.',
+    'RNDriverLifecycle module not installed. Install @unrulysystems/rn-driver-lifecycle and rebuild your app.',
   RNDriverTouchInjector:
-    'RNDriverTouchInjector module not installed. Install @0xbigboss/rn-driver-touch and rebuild your app.',
+    'RNDriverTouchInjector module not installed. Install @unrulysystems/rn-driver-touch and rebuild your app.',
 }
 
 const HARNESS_API_VERSION = 1

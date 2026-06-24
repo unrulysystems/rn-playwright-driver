@@ -1,5 +1,5 @@
 {
-  "name": "@0xbigboss/rn-driver-touch",
+  "name": "@unrulysystems/rn-driver-touch",
   "version": "0.2.0",
   "description": "Native touch injection module for rn-playwright-driver",
   "keywords": [
@@ -7,16 +7,19 @@
     "expo-module",
     "react-native"
   ],
-  "homepage": "https://github.com/0xbigboss/rn-playwright-driver#readme",
+  "homepage": "https://github.com/unrulysystems/rn-playwright-driver#readme",
   "license": "MIT",
   "author": "0xbigboss",
   "repository": {
     "type": "git",
-    "url": "https://github.com/0xbigboss/rn-playwright-driver",
+    "url": "https://github.com/unrulysystems/rn-playwright-driver",
     "directory": "packages/rn-driver-touch"
   },
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "build": "echo 'Native module - no JS build needed'",
     "clean": "echo 'Native module - no JS build artifacts'",

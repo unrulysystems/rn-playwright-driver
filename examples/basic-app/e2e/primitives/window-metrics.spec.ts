@@ -5,7 +5,7 @@
  * font scale, and orientation.
  */
 
-import { expect, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 
 test.describe('Window Metrics', () => {
   test('getWindowMetrics() returns complete metrics object', async ({ device }) => {

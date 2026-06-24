@@ -9,7 +9,7 @@ This guide covers advanced configuration and usage patterns for rn-playwright-dr
 When multiple devices are connected, use targeting options to select the correct one:
 
 ```typescript
-import { createDevice } from '@0xbigboss/rn-playwright-driver'
+import { createDevice } from '@unrulysystems/rn-playwright-driver'
 
 // Target by device ID
 const device = createDevice({
@@ -32,7 +32,7 @@ const device = createDevice({
 For advanced debugging, access the CDP client directly:
 
 ```typescript
-import { CDPClient, discoverTargets, selectTarget } from '@0xbigboss/rn-playwright-driver'
+import { CDPClient, discoverTargets, selectTarget } from '@unrulysystems/rn-playwright-driver'
 
 // Discover all targets
 const targets = await discoverTargets('http://localhost:8081')
@@ -140,7 +140,7 @@ Use the dev entry point for production-safe builds:
 
 ```typescript
 // Only installs when __DEV__ or globalThis.__E2E__ is true
-import '@0xbigboss/rn-playwright-driver/harness/dev'
+import '@unrulysystems/rn-playwright-driver/harness/dev'
 ```
 
 ### Explicit E2E Mode
@@ -150,20 +150,20 @@ For production E2E testing:
 ```typescript
 // Set before import
 globalThis.__E2E__ = true
-import '@0xbigboss/rn-playwright-driver/harness/dev'
+import '@unrulysystems/rn-playwright-driver/harness/dev'
 ```
 
 ### Custom Touch Handler
 
 JS touch handler registration has been removed in favor of native touch injection.
-Use `@0xbigboss/rn-driver-touch` and drive interactions via `device.pointer.*` in tests.
+Use `@unrulysystems/rn-driver-touch` and drive interactions via `device.pointer.*` in tests.
 
 ## Error Handling
 
 ### Locator Errors
 
 ```typescript
-import { LocatorError } from '@0xbigboss/rn-playwright-driver'
+import { LocatorError } from '@unrulysystems/rn-playwright-driver'
 
 try {
   await device.getByTestId('missing').waitFor({ timeout: 1000 })
@@ -186,7 +186,7 @@ Expression: globalThis.__RN_DRIVER__.viewTree.findByTestId("test")...
 ### Timeout Errors
 
 ```typescript
-import { TimeoutError } from '@0xbigboss/rn-playwright-driver'
+import { TimeoutError } from '@unrulysystems/rn-playwright-driver'
 
 try {
   await device.waitForFunction('globalThis.ready', { timeout: 5000 })

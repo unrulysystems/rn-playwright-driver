@@ -1,6 +1,6 @@
 # XCTest Touch Companion
 
-Run this XCTest-based WebSocket companion alongside your app to inject OS-level touches. This mirrors idb-style input but is driven by `@0xbigboss/rn-playwright-driver` over a WebSocket channel.
+Run this XCTest-based WebSocket companion alongside your app to inject OS-level touches. This mirrors idb-style input but is driven by `@unrulysystems/rn-playwright-driver` over a WebSocket channel.
 
 ## Usage
 

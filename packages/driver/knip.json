@@ -3,7 +3,7 @@
   "project": ["src/**/*.ts", "harness/**/*.ts"],
   "ignore": ["dist/**"],
   "ignoreDependencies": [
-    "@0xbigboss/rn-driver-shared-types",
+    "@unrulysystems/rn-driver-shared-types",
     "expo-modules-core",
     "react-native",
     "react-native-safe-area-context"

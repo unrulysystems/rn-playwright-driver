@@ -4,10 +4,10 @@
     "strict": true,
     "paths": {
       "*": ["./*"],
-      "@0xbigboss/rn-playwright-driver": ["../../packages/driver/src/index.ts"],
-      "@0xbigboss/rn-playwright-driver/test": ["../../packages/driver/src/test.ts"],
-      "@0xbigboss/rn-playwright-driver/harness": ["../../packages/driver/harness/index.ts"],
-      "@0xbigboss/rn-playwright-driver/harness/dev": ["../../packages/driver/harness/dev.ts"]
+      "@unrulysystems/rn-playwright-driver": ["../../packages/driver/src/index.ts"],
+      "@unrulysystems/rn-playwright-driver/test": ["../../packages/driver/src/test.ts"],
+      "@unrulysystems/rn-playwright-driver/harness": ["../../packages/driver/harness/index.ts"],
+      "@unrulysystems/rn-playwright-driver/harness/dev": ["../../packages/driver/harness/dev.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"]

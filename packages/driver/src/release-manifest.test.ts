@@ -10,7 +10,7 @@
  * including bun, it delegates to `npm publish`. npm does NOT rewrite the
  * `workspace:` protocol, so a `"workspace:*"` spec ships verbatim in the
  * tarball and the package becomes uninstallable (`npm install` →
- * EUNSUPPORTEDPROTOCOL). This shipped a broken `@0xbigboss/rn-playwright-driver@0.4.0`
+ * EUNSUPPORTEDPROTOCOL). This shipped a broken `@unrulysystems/rn-playwright-driver@0.4.0`
  * once. Internal shipping deps must use real semver ranges (e.g. `^0.1.0`); bun
  * still links them to the local workspace by name. devDependencies are exempt —
  * consumers of a published package never install them.

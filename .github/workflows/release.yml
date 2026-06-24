@@ -14,7 +14,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      id-token: write
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,11 +29,19 @@ jobs:
 
       - name: Build packages
         run: |
-          bun run --filter '@0xbigboss/rn-playwright-driver' build
+          bun run --filter '@unrulysystems/rn-playwright-driver' build
+
+      # Auth for the unrulysystems-org GitHub Packages npm registry. Uses the
+      # built-in GITHUB_TOKEN (packages: write) — no external NPM_TOKEN needed,
+      # since the @unrulysystems scope is owned by the same org as this repo.
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@unrulysystems:registry=https://npm.pkg.github.com" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
 
       # Run the test suite before publishing — the release-manifest invariant
       # (no workspace: specs shipped; published harness/bin only imports published
-      # paths) lives in vitest. A broken @0xbigboss/rn-playwright-driver@0.4.0
+      # paths) lives in vitest. A broken @unrulysystems/rn-playwright-driver@0.4.0
       # already shipped once; this gate must run on the publish path, not only CI.
       - name: Run tests
         run: bun run test
@@ -48,7 +56,6 @@ jobs:
           commit: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Releases
         if: steps.changesets.outputs.published == 'true'
@@ -64,7 +71,7 @@ jobs:
                   repo: context.repo.repo,
                   tag_name: tagName,
                   name: tagName,
-                  body: `## ${pkg.name}@${pkg.version}\n\nSee [CHANGELOG](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/packages/${pkg.name.replace('@0xbigboss/', '').replace('rn-playwright-', '').replace('rn-driver-', '')}/CHANGELOG.md) for details.`,
+                  body: `## ${pkg.name}@${pkg.version}\n\nSee [CHANGELOG](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/packages/${pkg.name.replace(/^@[^/]+\//, '').replace('rn-playwright-', '').replace('rn-driver-', '')}/CHANGELOG.md) for details.`,
                   draft: false,
                   prerelease: false,
                 });

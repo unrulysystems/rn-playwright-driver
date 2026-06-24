@@ -4,7 +4,7 @@ export type {
   ElementInfo,
   ErrorCode,
   NativeResult,
-} from '@0xbigboss/rn-driver-shared-types'
+} from '@unrulysystems/rn-driver-shared-types'
 
 /**
  * Options for text-based queries.

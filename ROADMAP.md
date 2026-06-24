@@ -24,7 +24,7 @@ await expect(locator).toBeDisabled()
 
 - [x] Create `packages/driver/src/expect.ts` with matcher implementations
 - [x] Add polling/retry logic with configurable timeout
-- [x] Export from `@0xbigboss/rn-playwright-driver/test`
+- [x] Export from `@unrulysystems/rn-playwright-driver/test`
 
 ### Keyboard Input
 

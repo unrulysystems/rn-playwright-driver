@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { ElementInfo, NativeResult } from '@0xbigboss/rn-driver-shared-types'
+import type { ElementInfo, NativeResult } from '@unrulysystems/rn-driver-shared-types'
 import pixelmatch from 'pixelmatch'
 import { PNG } from 'pngjs'
 import type { LocatorImpl } from './locator'
@@ -413,7 +413,7 @@ function createLocatorAssertions(locator: Locator): LocatorAssertions {
  *
  * @example
  * ```typescript
- * import { expect } from '@0xbigboss/rn-playwright-driver/test';
+ * import { expect } from '@unrulysystems/rn-playwright-driver/test';
  *
  * // Assert visibility with auto-retry
  * await expect(locator).toBeVisible();

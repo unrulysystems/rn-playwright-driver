@@ -6,7 +6,7 @@
  * NOTE: Pointer tracing requires RNDriverTouchInjector to be installed.
  */
 
-import { expect, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 import {
   countEvents,
   expectEventsAtLeast,

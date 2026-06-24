@@ -92,7 +92,7 @@ export async function createTouchBackend(
     'native-module',
     attemptSummary.length > 0
       ? `No touch backend available. Attempts: ${attemptSummary}`
-      : 'No touch backend available. Install @0xbigboss/rn-driver-touch or configure XCTest/Instrumentation.',
+      : 'No touch backend available. Install @unrulysystems/rn-driver-touch or configure XCTest/Instrumentation.',
   )
 }
 

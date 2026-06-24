@@ -5,7 +5,7 @@
  * available native modules and harness features.
  */
 
-import { expect, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 
 test.describe('Device Capabilities', () => {
   test('capabilities() returns capability object', async ({ device }) => {

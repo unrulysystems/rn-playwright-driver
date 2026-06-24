@@ -1,5 +1,5 @@
-import type { Device, DriverEvent } from '@0xbigboss/rn-playwright-driver'
-import { expect } from '@0xbigboss/rn-playwright-driver/test'
+import type { Device, DriverEvent } from '@unrulysystems/rn-playwright-driver'
+import { expect } from '@unrulysystems/rn-playwright-driver/test'
 
 export type TraceResult = { events: DriverEvent[] }
 

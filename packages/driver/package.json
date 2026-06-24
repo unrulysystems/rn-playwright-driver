@@ -1,5 +1,5 @@
 {
-  "name": "@0xbigboss/rn-playwright-driver",
+  "name": "@unrulysystems/rn-playwright-driver",
   "version": "0.5.0",
   "description": "Playwright-compatible E2E test driver for React Native",
   "keywords": [
@@ -14,7 +14,7 @@
   "author": "0xbigboss",
   "repository": {
     "type": "git",
-    "url": "https://github.com/0xbigboss/rn-playwright-driver",
+    "url": "https://github.com/unrulysystems/rn-playwright-driver",
     "directory": "packages/driver"
   },
   "bin": {
@@ -51,6 +51,9 @@
       "require": "./dist/test.js"
     }
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -61,7 +64,7 @@
     "cpd": "jscpd ."
   },
   "dependencies": {
-    "@0xbigboss/rn-driver-shared-types": "^0.1.0",
+    "@unrulysystems/rn-driver-shared-types": "^0.1.0",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "ws": "^8.18.3"

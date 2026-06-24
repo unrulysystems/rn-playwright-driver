@@ -16,11 +16,11 @@
       "name": "examples-basic-app",
       "version": "1.0.0",
       "dependencies": {
-        "@0xbigboss/rn-driver-lifecycle": "workspace:*",
-        "@0xbigboss/rn-driver-screenshot": "workspace:*",
-        "@0xbigboss/rn-driver-touch": "workspace:*",
-        "@0xbigboss/rn-driver-view-tree": "workspace:*",
-        "@0xbigboss/rn-playwright-driver": "workspace:*",
+        "@unrulysystems/rn-driver-lifecycle": "workspace:*",
+        "@unrulysystems/rn-driver-screenshot": "workspace:*",
+        "@unrulysystems/rn-driver-touch": "workspace:*",
+        "@unrulysystems/rn-driver-view-tree": "workspace:*",
+        "@unrulysystems/rn-playwright-driver": "workspace:*",
         "expo": "~54.0.30",
         "expo-status-bar": "~3.0.9",
         "react": "19.1.0",
@@ -38,13 +38,13 @@
       },
     },
     "packages/driver": {
-      "name": "@0xbigboss/rn-playwright-driver",
+      "name": "@unrulysystems/rn-playwright-driver",
       "version": "0.5.0",
       "bin": {
         "rn-inspect": "./bin/inspect.ts",
       },
       "dependencies": {
-        "@0xbigboss/rn-driver-shared-types": "^0.1.0",
+        "@unrulysystems/rn-driver-shared-types": "^0.1.0",
         "pixelmatch": "^7.1.0",
         "pngjs": "^7.0.0",
         "ws": "^8.18.3",
@@ -72,14 +72,14 @@
       ],
     },
     "packages/instrumentation-companion": {
-      "name": "@0xbigboss/rn-playwright-driver-instrumentation-companion",
+      "name": "@unrulysystems/rn-playwright-driver-instrumentation-companion",
       "version": "0.1.0",
     },
     "packages/lifecycle": {
-      "name": "@0xbigboss/rn-driver-lifecycle",
+      "name": "@unrulysystems/rn-driver-lifecycle",
       "version": "0.1.0",
       "dependencies": {
-        "@0xbigboss/rn-driver-shared-types": "^0.1.0",
+        "@unrulysystems/rn-driver-shared-types": "^0.1.0",
       },
       "devDependencies": {
         "@typescript/native-preview": "^7.0.0-dev.20251227.1",
@@ -95,7 +95,7 @@
       },
     },
     "packages/rn-driver-touch": {
-      "name": "@0xbigboss/rn-driver-touch",
+      "name": "@unrulysystems/rn-driver-touch",
       "version": "0.2.0",
       "devDependencies": {
         "@typescript/native-preview": "^7.0.0-dev.20251227.1",
@@ -111,10 +111,10 @@
       },
     },
     "packages/screenshot": {
-      "name": "@0xbigboss/rn-driver-screenshot",
+      "name": "@unrulysystems/rn-driver-screenshot",
       "version": "0.1.0",
       "dependencies": {
-        "@0xbigboss/rn-driver-shared-types": "^0.1.0",
+        "@unrulysystems/rn-driver-shared-types": "^0.1.0",
       },
       "devDependencies": {
         "@typescript/native-preview": "^7.0.0-dev.20251227.1",
@@ -130,7 +130,7 @@
       },
     },
     "packages/shared-types": {
-      "name": "@0xbigboss/rn-driver-shared-types",
+      "name": "@unrulysystems/rn-driver-shared-types",
       "version": "0.1.0",
       "devDependencies": {
         "@typescript/native-preview": "^7.0.0-dev.20251227.1",
@@ -138,10 +138,10 @@
       },
     },
     "packages/view-tree": {
-      "name": "@0xbigboss/rn-driver-view-tree",
+      "name": "@unrulysystems/rn-driver-view-tree",
       "version": "0.1.0",
       "dependencies": {
-        "@0xbigboss/rn-driver-shared-types": "^0.1.0",
+        "@unrulysystems/rn-driver-shared-types": "^0.1.0",
       },
       "devDependencies": {
         "@typescript/native-preview": "^7.0.0-dev.20251227.1",
@@ -157,28 +157,12 @@
       },
     },
     "packages/xctest-companion": {
-      "name": "@0xbigboss/rn-playwright-driver-xctest-companion",
+      "name": "@unrulysystems/rn-playwright-driver-xctest-companion",
       "version": "0.1.0",
     },
   },
   "packages": {
     "@0no-co/graphql.web": ["@0no-co/graphql.web@1.2.0", "", { "peerDependencies": { "graphql": "^14.0.0 || ^15.0.0 || ^16.0.0" }, "optionalPeers": ["graphql"] }, "sha512-/1iHy9TTr63gE1YcR5idjx8UREz1s0kFhydf3bBLCXyqjhkIc6igAzTOx3zPifCwFR87tsh/4Pa9cNts6d2otw=="],
-
-    "@0xbigboss/rn-driver-lifecycle": ["@0xbigboss/rn-driver-lifecycle@workspace:packages/lifecycle"],
-
-    "@0xbigboss/rn-driver-screenshot": ["@0xbigboss/rn-driver-screenshot@workspace:packages/screenshot"],
-
-    "@0xbigboss/rn-driver-shared-types": ["@0xbigboss/rn-driver-shared-types@workspace:packages/shared-types"],
-
-    "@0xbigboss/rn-driver-touch": ["@0xbigboss/rn-driver-touch@workspace:packages/rn-driver-touch"],
-
-    "@0xbigboss/rn-driver-view-tree": ["@0xbigboss/rn-driver-view-tree@workspace:packages/view-tree"],
-
-    "@0xbigboss/rn-playwright-driver": ["@0xbigboss/rn-playwright-driver@workspace:packages/driver"],
-
-    "@0xbigboss/rn-playwright-driver-instrumentation-companion": ["@0xbigboss/rn-playwright-driver-instrumentation-companion@workspace:packages/instrumentation-companion"],
-
-    "@0xbigboss/rn-playwright-driver-xctest-companion": ["@0xbigboss/rn-playwright-driver-xctest-companion@workspace:packages/xctest-companion"],
 
     "@babel/cli": ["@babel/cli@7.28.3", "", { "dependencies": { "@jridgewell/trace-mapping": "^0.3.28", "commander": "^6.2.0", "convert-source-map": "^2.0.0", "fs-readdir-recursive": "^1.1.0", "glob": "^7.2.0", "make-dir": "^2.1.0", "slash": "^2.0.0" }, "optionalDependencies": { "@nicolo-ribaudo/chokidar-2": "2.1.8-no-fsevents.3", "chokidar": "^3.6.0" }, "peerDependencies": { "@babel/core": "^7.0.0-0" }, "bin": { "babel": "./bin/babel.js", "babel-external-helpers": "./bin/babel-external-helpers.js" } }, "sha512-n1RU5vuCX0CsaqaXm9I0KUCNKNQMy5epmzl/xdSSm70bSqhg9GWhgeosypyQLc0bK24+Xpk1WGzZlI9pJtkZdg=="],
 
@@ -961,6 +945,22 @@
     "@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20251227.1", "", { "os": "win32", "cpu": "x64" }, "sha512-tKrIbMXoKeC+3DDiO6JgGg3BoPvTCHU50YwUBSmX8upcYbE3iBVf/OcsbN0rOaYMV8MtjeQ/zgDOfjm3m8HZ5g=="],
 
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.0", "", {}, "sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g=="],
+
+    "@unrulysystems/rn-driver-lifecycle": ["@unrulysystems/rn-driver-lifecycle@workspace:packages/lifecycle"],
+
+    "@unrulysystems/rn-driver-screenshot": ["@unrulysystems/rn-driver-screenshot@workspace:packages/screenshot"],
+
+    "@unrulysystems/rn-driver-shared-types": ["@unrulysystems/rn-driver-shared-types@workspace:packages/shared-types"],
+
+    "@unrulysystems/rn-driver-touch": ["@unrulysystems/rn-driver-touch@workspace:packages/rn-driver-touch"],
+
+    "@unrulysystems/rn-driver-view-tree": ["@unrulysystems/rn-driver-view-tree@workspace:packages/view-tree"],
+
+    "@unrulysystems/rn-playwright-driver": ["@unrulysystems/rn-playwright-driver@workspace:packages/driver"],
+
+    "@unrulysystems/rn-playwright-driver-instrumentation-companion": ["@unrulysystems/rn-playwright-driver-instrumentation-companion@workspace:packages/instrumentation-companion"],
+
+    "@unrulysystems/rn-playwright-driver-xctest-companion": ["@unrulysystems/rn-playwright-driver-xctest-companion@workspace:packages/xctest-companion"],
 
     "@urql/core": ["@urql/core@5.2.0", "", { "dependencies": { "@0no-co/graphql.web": "^1.0.13", "wonka": "^6.3.2" } }, "sha512-/n0ieD0mvvDnVAXEQgX/7qJiVcvYvNkOHeBvkwtylfjydar123caCXcl58PXFY11oU1oquJocVXHxLAbtv4x1A=="],
 

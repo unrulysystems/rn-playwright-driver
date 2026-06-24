@@ -19,12 +19,12 @@ Repository overview for automated agents and contributors.
 
 **Core principle:** Optional integrations are separate packages to avoid polluting the dependency tree.
 
-| Package                           | Purpose                | Dependencies    |
-| --------------------------------- | ---------------------- | --------------- |
-| `@0xbigboss/rn-playwright-driver` | Core driver + fixtures | None (R3F-free) |
+| Package                               | Purpose                | Dependencies    |
+| ------------------------------------- | ---------------------- | --------------- |
+| `@unrulysystems/rn-playwright-driver` | Core driver + fixtures | None (R3F-free) |
 
 The driver stays renderer-agnostic: it has no Three.js / R3F code. The former
-`@0xbigboss/rn-driver-r3f` (`TestBridge`, hit-testing, `dispatchPointer`, locators)
+`@unrulysystems/rn-driver-r3f` (`TestBridge`, hit-testing, `dispatchPointer`, locators)
 was absorbed into the Scenic monorepo as `@unrulysystems/scenic-three` (the
 `<ScenicBridge>` auto-traversal install) + `@unrulysystems/scenic-native` (the
 `device.scenic` assertion layer over this driver's `device.evaluate` transport).
@@ -74,5 +74,5 @@ bun run test:e2e
 ## Constraints
 
 - Hermes CDP is required; Metro `/json` must be reachable.
-- The harness must be imported in the app: `@0xbigboss/rn-playwright-driver/harness`.
+- The harness must be imported in the app: `@unrulysystems/rn-playwright-driver/harness`.
 - Native modules live in the app; the driver package contains no native code.

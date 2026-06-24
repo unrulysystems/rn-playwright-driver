@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the complete architecture for Phase 3 native modules in `@0xbigboss/rn-playwright-driver`. The design prioritizes:
+This document describes the complete architecture for Phase 3 native modules in `@unrulysystems/rn-playwright-driver`. The design prioritizes:
 
 1. **Consistency** - Uniform API patterns across iOS and Android
 2. **Cohesion** - Modules work together through shared types and conventions
@@ -23,16 +23,16 @@ This document describes the complete architecture for Phase 3 native modules in 
 
 ### Packages
 
-| Package                                                     | Purpose                                       | Status                                 |
-| ----------------------------------------------------------- | --------------------------------------------- | -------------------------------------- |
-| `@0xbigboss/rn-playwright-driver`                           | Test driver (no native code)                  | ✅ Complete                            |
-| `@0xbigboss/rn-driver-shared-types`                         | Shared types across driver and native modules | ✅ Complete                            |
-| `@0xbigboss/rn-driver-view-tree`                            | Element queries, bounds, visibility           | ✅ Complete                            |
-| `@0xbigboss/rn-driver-screenshot`                           | Screen/element capture                        | ✅ Complete                            |
-| `@0xbigboss/rn-driver-lifecycle`                            | App state control                             | 🔶 Partial                             |
-| `@0xbigboss/rn-playwright-driver-xctest-companion`          | iOS OS-level touch injection                  | ✅ Reference impl (manual integration) |
-| `@0xbigboss/rn-playwright-driver-instrumentation-companion` | Android OS-level touch injection              | ✅ Reference impl (manual integration) |
-| `@0xbigboss/rn-driver-touch`                                | In-app touch synthesis                        | ✅ Implemented, DEBUG/E2E-oriented     |
+| Package                                                         | Purpose                                       | Status                                 |
+| --------------------------------------------------------------- | --------------------------------------------- | -------------------------------------- |
+| `@unrulysystems/rn-playwright-driver`                           | Test driver (no native code)                  | ✅ Complete                            |
+| `@unrulysystems/rn-driver-shared-types`                         | Shared types across driver and native modules | ✅ Complete                            |
+| `@unrulysystems/rn-driver-view-tree`                            | Element queries, bounds, visibility           | ✅ Complete                            |
+| `@unrulysystems/rn-driver-screenshot`                           | Screen/element capture                        | ✅ Complete                            |
+| `@unrulysystems/rn-driver-lifecycle`                            | App state control                             | 🔶 Partial                             |
+| `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS OS-level touch injection                  | ✅ Reference impl (manual integration) |
+| `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android OS-level touch injection              | ✅ Reference impl (manual integration) |
+| `@unrulysystems/rn-driver-touch`                                | In-app touch synthesis                        | ✅ Implemented, DEBUG/E2E-oriented     |
 
 ### Current Touch Backend Priority
 
@@ -55,7 +55,7 @@ The old JS harness touch fallback and R3F touch-handler routing are no longer pa
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │  Playwright Test Runner                                              │   │
 │  │  ┌─────────────────────────────────────────────────────────────┐    │   │
-│  │  │  @0xbigboss/rn-playwright-driver                            │    │   │
+│  │  │  @unrulysystems/rn-playwright-driver                            │    │   │
 │  │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │    │   │
 │  │  │  │  Device  │  │ Locator  │  │ Pointer  │  │ Assert   │    │    │   │
 │  │  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘    │    │   │
@@ -111,7 +111,7 @@ The old JS harness touch fallback and R3F touch-handler routing are no longer pa
 
 ### 1. Driver Remains Remote
 
-The driver package (`@0xbigboss/rn-playwright-driver`) contains **no native code**. It communicates with the app via CDP only. This means:
+The driver package (`@unrulysystems/rn-playwright-driver`) contains **no native code**. It communicates with the app via CDP only. This means:
 
 - Driver can run in any Node.js environment
 - No native build required for the test runner
@@ -625,7 +625,7 @@ All packages live in a single repository for easier coordination and atomic upda
 ```
 rn-playwright-driver/                      # Monorepo root
 ├── packages/
-│   ├── driver/                            # @0xbigboss/rn-playwright-driver
+│   ├── driver/                            # @unrulysystems/rn-playwright-driver
 │   │   ├── src/
 │   │   │   ├── cdp/
 │   │   │   ├── device.ts
@@ -636,12 +636,12 @@ rn-playwright-driver/                      # Monorepo root
 │   │   │   └── index.ts                   # Extended for Phase 3
 │   │   └── package.json
 │   │
-│   ├── shared-types/                      # @0xbigboss/rn-driver-shared-types
+│   ├── shared-types/                      # @unrulysystems/rn-driver-shared-types
 │   │   ├── src/
 │   │   │   └── index.ts
 │   │   └── package.json
 │   │
-│   ├── view-tree/                         # @0xbigboss/rn-driver-view-tree
+│   ├── view-tree/                         # @unrulysystems/rn-driver-view-tree
 │   │   ├── ios/
 │   │   │   └── RNDriverViewTreeModule.swift
 │   │   ├── android/
@@ -653,7 +653,7 @@ rn-playwright-driver/                      # Monorepo root
 │   │   ├── expo-module.config.json
 │   │   └── package.json
 │   │
-│   ├── screenshot/                        # @0xbigboss/rn-driver-screenshot
+│   ├── screenshot/                        # @unrulysystems/rn-driver-screenshot
 │   │   ├── ios/
 │   │   │   └── RNDriverScreenshotModule.swift
 │   │   ├── android/
@@ -664,7 +664,7 @@ rn-playwright-driver/                      # Monorepo root
 │   │   ├── expo-module.config.json
 │   │   └── package.json
 │   │
-│   └── lifecycle/                         # @0xbigboss/rn-driver-lifecycle
+│   └── lifecycle/                         # @unrulysystems/rn-driver-lifecycle
 │       ├── ios/
 │       │   └── RNDriverLifecycleModule.swift
 │       ├── android/
@@ -1013,7 +1013,7 @@ In `"force"` mode, only the specified backend is tried and errors are thrown imm
 
 **Purpose**: In-app touch synthesis using platform APIs.
 
-**Package**: `@0xbigboss/rn-driver-touch`
+**Package**: `@unrulysystems/rn-driver-touch`
 
 #### API
 
@@ -1104,7 +1104,7 @@ fun synthesizeTap(x: Float, y: Float) {
 
 **Purpose**: OS-level touch injection via XCUITest framework.
 
-**Package**: `@0xbigboss/rn-playwright-driver-xctest-companion`
+**Package**: `@unrulysystems/rn-playwright-driver-xctest-companion`
 
 The XCTest companion runs as a separate XCTest bundle that:
 
@@ -1178,7 +1178,7 @@ Once integrated into your test target, run your UI test scheme to start the comp
 
 **Purpose**: OS-level touch injection via UiAutomation framework.
 
-**Package**: `@0xbigboss/rn-playwright-driver-instrumentation-companion`
+**Package**: `@unrulysystems/rn-playwright-driver-instrumentation-companion`
 
 The Instrumentation companion runs as a test APK that:
 
@@ -1309,18 +1309,18 @@ packages/
 │           ├── cli-backend.ts          # idb/adb CLI wrapper
 │           └── index.ts                # Factory + exports
 │
-├── rn-driver-touch/                     # @0xbigboss/rn-driver-touch
+├── rn-driver-touch/                     # @unrulysystems/rn-driver-touch
 │   ├── ios/
 │   │   └── RNDriverTouchInjectorModule.swift
 │   ├── android/
 │   │   └── .../RNDriverTouchInjectorModule.kt
 │   └── package.json
 │
-├── xctest-companion/                   # @0xbigboss/rn-playwright-driver-xctest-companion
+├── xctest-companion/                   # @unrulysystems/rn-playwright-driver-xctest-companion
 │   ├── ios/RNDriverTouchCompanion.swift
 │   └── README.md
 │
-└── instrumentation-companion/          # @0xbigboss/rn-playwright-driver-instrumentation-companion
+└── instrumentation-companion/          # @unrulysystems/rn-playwright-driver-instrumentation-companion
     ├── android/.../RNDriverTouchCompanion.kt
     └── README.md
 ```

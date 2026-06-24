@@ -6,7 +6,7 @@
  * NOTE: These tests require RNDriverTouchInjector to be installed.
  */
 
-import { expect, expectLocator, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, expectLocator, test } from '@unrulysystems/rn-playwright-driver/test'
 
 test.describe('Gesture Interactions', () => {
   test('swipe performs smooth gesture', async ({ device }) => {

@@ -1,4 +1,4 @@
-import type { ElementInfo, NativeResult } from '@0xbigboss/rn-driver-shared-types'
+import type { ElementInfo, NativeResult } from '@unrulysystems/rn-driver-shared-types'
 // Type-only import of the driver↔harness wire contract. tsup/esbuild elides
 // type-only imports, so the built dist gains NO runtime dependency on harness/.
 import type { FillDispatch } from '../harness/fill'
@@ -106,7 +106,7 @@ export class LocatorImpl implements Locator {
 
     if (!capabilities.touchNative) {
       throw new LocatorError(
-        'RNDriverTouchInjector native module not installed. Install @0xbigboss/rn-driver-touch and rebuild your app.',
+        'RNDriverTouchInjector native module not installed. Install @unrulysystems/rn-driver-touch and rebuild your app.',
         'NOT_SUPPORTED',
       )
     }

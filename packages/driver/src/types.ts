@@ -1,4 +1,4 @@
-import type { ElementBounds } from '@0xbigboss/rn-driver-shared-types'
+import type { ElementBounds } from '@unrulysystems/rn-driver-shared-types'
 import type {
   Capabilities,
   DriverEvent,
@@ -8,7 +8,7 @@ import type {
 import type { TargetSelectionOptions } from './cdp/discovery'
 import type { WaitForStableOptions } from './wait-for-stable'
 
-export type { ElementBounds } from '@0xbigboss/rn-driver-shared-types'
+export type { ElementBounds } from '@unrulysystems/rn-driver-shared-types'
 export type {
   Capabilities,
   DriverEvent,
@@ -335,7 +335,7 @@ export type TouchBackendConfig = {
     connectTimeoutMs?: number
     requestTimeoutMs?: number
   }
-  /** Enable native-module backend (requires RNDriverTouchInjector / @0xbigboss/rn-driver-touch) */
+  /** Enable native-module backend (requires RNDriverTouchInjector / @unrulysystems/rn-driver-touch) */
   nativeModule?: {
     enabled?: boolean
   }

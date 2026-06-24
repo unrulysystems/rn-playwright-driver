@@ -2,7 +2,7 @@
  * RN Driver Harness - Dev/E2E-only Entry Point
  *
  * Usage:
- *   import '@0xbigboss/rn-playwright-driver/harness/dev';
+ *   import '@unrulysystems/rn-playwright-driver/harness/dev';
  *
  * This conditionally installs the harness only when:
  * - __DEV__ is true (React Native dev mode), OR
@@ -12,7 +12,7 @@
  * the harness in production builds.
  *
  * For always-on harness (e.g., internal testing builds), use:
- *   import '@0xbigboss/rn-playwright-driver/harness';
+ *   import '@unrulysystems/rn-playwright-driver/harness';
  */
 
 // Check for dev mode or explicit E2E flag

@@ -130,7 +130,7 @@ The `/harness/dev` entry point is experimental:
 
 ```typescript
 // Experimental - guard conditions may change
-import '@0xbigboss/rn-playwright-driver/harness/dev'
+import '@unrulysystems/rn-playwright-driver/harness/dev'
 ```
 
 ### Companion Backends
@@ -172,11 +172,11 @@ The `LocatorImpl` class is internal. Use `createLocator`:
 
 ```typescript
 // Use this
-import { createLocator } from '@0xbigboss/rn-playwright-driver'
+import { createLocator } from '@unrulysystems/rn-playwright-driver'
 const locator = createLocator(device, { type: 'testId', value: 'button' })
 
 // Not this
-import { LocatorImpl } from '@0xbigboss/rn-playwright-driver'
+import { LocatorImpl } from '@unrulysystems/rn-playwright-driver'
 const locator = new LocatorImpl(device, selector)
 ```
 

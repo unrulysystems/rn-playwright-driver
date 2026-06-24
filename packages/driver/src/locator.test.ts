@@ -8,7 +8,7 @@
  * without a real device.
  */
 
-import type { ElementInfo, NativeResult } from '@0xbigboss/rn-driver-shared-types'
+import type { ElementInfo, NativeResult } from '@unrulysystems/rn-driver-shared-types'
 import { describe, expect, it } from 'vitest'
 import { createLocator, type Locator } from './locator'
 import type { Capabilities, ScrollOptions, WindowMetrics } from './types'

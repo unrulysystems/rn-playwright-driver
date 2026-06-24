@@ -39,7 +39,7 @@ export type RNWorkerFixtures = {
  * - RN_TIMEOUT: Request timeout in ms (default: 30000)
  * Usage in test files:
  * ```ts
- * import { test, expect } from '@0xbigboss/rn-playwright-driver/test';
+ * import { test, expect } from '@unrulysystems/rn-playwright-driver/test';
  *
  * test('app loads', async ({ device }) => {
  *   const result = await device.evaluate<number>('1 + 1');
@@ -106,7 +106,7 @@ export type {
  *
  * @example
  * ```ts
- * import { test, expectLocator } from '@0xbigboss/rn-playwright-driver/test';
+ * import { test, expectLocator } from '@unrulysystems/rn-playwright-driver/test';
  *
  * test('button is visible', async ({ device }) => {
  *   const button = device.getByTestId('submit-button');

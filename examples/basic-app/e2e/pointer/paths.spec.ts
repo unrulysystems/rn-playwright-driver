@@ -6,7 +6,7 @@
  * NOTE: These tests require RNDriverTouchInjector to be installed.
  */
 
-import { expect, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 import { expectEventsAtLeast, withTracing } from '../utils/tracing'
 
 const ZIGZAG_PATH = [

@@ -3,11 +3,11 @@
   "project": ["**/*.{ts,tsx}"],
   "ignore": ["node_modules/**", ".expo/**"],
   "ignoreDependencies": [
-    "@0xbigboss/rn-playwright-driver",
-    "@0xbigboss/rn-driver-touch",
-    "@0xbigboss/rn-driver-view-tree",
-    "@0xbigboss/rn-driver-screenshot",
-    "@0xbigboss/rn-driver-lifecycle",
+    "@unrulysystems/rn-playwright-driver",
+    "@unrulysystems/rn-driver-touch",
+    "@unrulysystems/rn-driver-view-tree",
+    "@unrulysystems/rn-driver-screenshot",
+    "@unrulysystems/rn-driver-lifecycle",
     "expo-updates",
     "expo-system-ui"
   ]

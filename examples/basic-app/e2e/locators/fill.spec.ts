@@ -15,7 +15,7 @@
  * "name-value" Text), testID "bio-input" (uncontrolled).
  */
 
-import { expect, expectLocator, test } from '@0xbigboss/rn-playwright-driver/test'
+import { expect, expectLocator, test } from '@unrulysystems/rn-playwright-driver/test'
 
 test.describe('Locator.fill', () => {
   test('fills a controlled TextInput and commits to React state', async ({ device }) => {

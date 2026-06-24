@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add a small set of **framework-agnostic** primitives to `@0xbigboss/rn-playwright-driver` that improve reliability and diagnostics for all React Native E2E testing. These primitives avoid any library-specific logic (no Scenic/R3F in core) and focus on universal building blocks: metrics, deterministic timing, robust pointer paths, standardized locator behavior, backend diagnostics, and action tracing.
+Add a small set of **framework-agnostic** primitives to `@unrulysystems/rn-playwright-driver` that improve reliability and diagnostics for all React Native E2E testing. These primitives avoid any library-specific logic (no Scenic/R3F in core) and focus on universal building blocks: metrics, deterministic timing, robust pointer paths, standardized locator behavior, backend diagnostics, and action tracing.
 
 ## Goals
 

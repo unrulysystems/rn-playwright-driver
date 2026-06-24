@@ -58,7 +58,7 @@ describe('NativeModuleTouchBackend', () => {
     await expect(backend.init()).rejects.toThrow(TouchBackendUnavailableError)
     await expect(backend.init()).rejects.toMatchObject({
       backend: 'native-module',
-      message: expect.stringContaining('@0xbigboss/rn-driver-touch'),
+      message: expect.stringContaining('@unrulysystems/rn-driver-touch'),
     })
   })
 
