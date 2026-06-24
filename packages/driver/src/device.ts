@@ -99,10 +99,14 @@ export class RNDevice implements Device {
     const targets = await discoverTargets(metroUrl)
     const target = selectTarget(targets, this.options)
 
-    await this.cdp.connect(target.webSocketDebuggerUrl)
-
-    // Forward console + exception events now that Runtime is enabled.
+    // Register the console + exception forwarders BEFORE connecting. cdp.connect()
+    // sends Runtime.enable internally, after which the runtime starts emitting
+    // events; subscribing afterwards drops anything fired in that window (a console
+    // log or an uncaught exception). onEvent only populates a handler map — no
+    // socket required — so registering first is always safe and closes the gap.
     this.registerRuntimeEventForwarders()
+
+    await this.cdp.connect(target.webSocketDebuggerUrl)
 
     // Detect platform from target info or via JS
     this._platform = await this.detectPlatform(target)
@@ -187,6 +191,13 @@ export class RNDevice implements Device {
    * the returned CDP unsubscribers are torn down on disconnect.
    */
   private registerRuntimeEventForwarders(): void {
+    // Idempotent: the forwarders persist on the CDP client across reconnects, so a
+    // re-entrant connect() (e.g. a retry after a failed attempt registered them but
+    // never disconnected) must not double-subscribe. disconnect() clears the list,
+    // so the next connect() re-registers cleanly.
+    if (this._eventForwarderCleanups.length > 0) {
+      return
+    }
     this._eventForwarderCleanups.push(
       this.cdp.onEvent('Runtime.consoleAPICalled', (params) => {
         // Console has no internal buffer (unlike exceptions) — if nobody is

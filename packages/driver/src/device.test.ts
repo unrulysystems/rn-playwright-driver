@@ -7,9 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RNDevice, TimeoutError, UncaughtExceptionError } from './device'
 import type { ConsoleMessage, PageError } from './types'
 
-// Store mock evaluate + onEvent for tests to access
+// Store mock evaluate + onEvent + connect for tests to access
 let mockEvaluateFn: ReturnType<typeof vi.fn>
 let mockOnEventFn: ReturnType<typeof vi.fn>
+let mockConnectFn: ReturnType<typeof vi.fn>
 
 // Mock the CDP client with a class
 vi.mock('./cdp/client', () => {
@@ -24,6 +25,7 @@ vi.mock('./cdp/client', () => {
       constructor() {
         mockEvaluateFn = this.evaluate
         mockOnEventFn = this.onEvent
+        mockConnectFn = this.connect
       }
     },
   }
@@ -347,6 +349,19 @@ describe('RNDevice runtime events', () => {
     device = new RNDevice({ timeout: 1000 })
     mockEvaluateFn.mockResolvedValue(undefined)
     await device.connect()
+  })
+
+  it('registers runtime event forwarders before connecting (closes the connect-window gap)', () => {
+    // beforeEach already drove device.connect(). The forwarders (onEvent) must be
+    // subscribed BEFORE cdp.connect() — which sends Runtime.enable — or any event
+    // the runtime emits in that window is delivered with no handler and dropped.
+    // See client-connect-window.test.ts for the mechanism proof. invocationCallOrder
+    // is a global monotonic counter, so a lower value means "called earlier".
+    expect(mockConnectFn.mock.invocationCallOrder.length).toBeGreaterThan(0)
+    expect(mockOnEventFn.mock.invocationCallOrder.length).toBeGreaterThan(0)
+    const connectOrder = mockConnectFn.mock.invocationCallOrder[0] as number
+    const firstForwarderOrder = Math.min(...mockOnEventFn.mock.invocationCallOrder)
+    expect(firstForwarderOrder).toBeLessThan(connectOrder)
   })
 
   it('forwards console events to on("console") listeners as parsed messages', () => {
