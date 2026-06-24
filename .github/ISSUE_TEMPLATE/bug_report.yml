@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a problem with the driver or a native module
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. For suspected security issues, do not use this
+        form — see [SECURITY.md](../blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps, code, or a repo link that reproduces the issue.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: driver-version
+    attributes:
+      label: Driver version
+      description: Version of "@unrulysystems/rn-playwright-driver".
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: React Native version, Hermes/Bridgeless, platform (iOS/Android), device vs simulator, Node/bun version.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output
+      description: Relevant error output or test logs. Redact anything sensitive.
+      render: shell

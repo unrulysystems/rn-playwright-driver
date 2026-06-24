@@ -28,6 +28,11 @@ Playwright-compatible E2E test driver for React Native using Hermes CDP. It runs
 | `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS XCTest touch companion reference implementation              |
 | `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion reference implementation |
 
+> The two **companion** packages are in-repo **reference implementations** for
+> OS-level touch injection — copy them into your own native test target. They are
+> not published to npm. Everything above them in the table is published and
+> installable.
+
 ## Requirements
 
 - Node.js **>= 18**

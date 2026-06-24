@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / discussion
+    url: https://github.com/unrulysystems/rn-playwright-driver/discussions
+    about: Ask usage questions or discuss ideas before filing an issue.
+  - name: Security report
+    url: https://github.com/unrulysystems/rn-playwright-driver/security/advisories/new
+    about: Report a vulnerability privately. Do not open a public issue.
