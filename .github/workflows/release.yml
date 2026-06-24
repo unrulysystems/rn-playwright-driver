@@ -14,7 +14,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,13 +30,15 @@ jobs:
         run: |
           bun run --filter '@unrulysystems/rn-playwright-driver' build
 
-      # Auth for the unrulysystems-org GitHub Packages npm registry. Uses the
-      # built-in GITHUB_TOKEN (packages: write) — no external NPM_TOKEN needed,
-      # since the @unrulysystems scope is owned by the same org as this repo.
-      - name: Configure npm for GitHub Packages
+      # Auth for the PUBLIC npm registry. Requires an NPM_TOKEN repo secret: a
+      # granular automation token with publish scope (2FA-bypass for CI). Until
+      # that secret is set this step writes an empty token and automated publish
+      # is inert — the first public publish is run manually (`bun publish`) by a
+      # maintainer with npm 2FA. Scoped packages publish public via each
+      # package's publishConfig.access = "public".
+      - name: Configure npm for public registry
         run: |
-          echo "@unrulysystems:registry=https://npm.pkg.github.com" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       # Run the test suite before publishing — the release-manifest invariant
       # (no workspace: specs shipped; published harness/bin only imports published
