@@ -1,5 +1,16 @@
 # @0xbigboss/rn-playwright-driver
 
+## 0.5.0
+
+### Minor Changes
+
+- [`aa1beb2`](https://github.com/unrulysystems/rn-playwright-driver/commit/aa1beb2478afaaac786ad5c99e3a5a01306b2eb4) Thanks [@alleneubank](https://github.com/alleneubank)! - Add `Locator.fill(text)` for text inputs, plus correctness and packaging fixes.
+
+  - **`Locator.fill(text)`** sets a text input's value in one shot, mirrors it onto the native view, and fires a synthetic change so controlled inputs commit to React state — no native keyboard module required. It auto-waits for the input to be actionable and resolves the target by testID only; `nth()`/scoped/`getByRole()`/`getByText()` locators throw `NOT_SUPPORTED` rather than silently filling the wrong input.
+  - **Fix:** the published harness now ships its fill resolver as source, so `@0xbigboss/rn-playwright-driver/harness` resolves in installed apps (it previously imported an unpublished `src/` path). A fail-closed import-boundary test guards the published `.ts` surface against re-introducing relative imports into unpublished paths.
+  - **Fix:** CDP console/exception forwarders are registered before `Runtime.enable`, closing a connect-window gap where events emitted during attach — including uncaught exceptions surfaced by `failOnUncaughtException` — were dropped.
+  - **Fix:** the uncaught-exception buffer is bounded and only retained when `failOnUncaughtException` is enabled, preventing unbounded growth under an exception storm.
+
 ## 0.4.1
 
 ### Patch Changes
@@ -11,6 +22,7 @@
 ### Minor Changes
 
 - [#8](https://github.com/unrulysystems/rn-playwright-driver/pull/8) [`1fb4220`](https://github.com/unrulysystems/rn-playwright-driver/commit/1fb422097e0d7fe8d6e10e17045cb051487b6384) Thanks [@alleneubank](https://github.com/alleneubank)! - Add a scroll API so tests can reach, assert, and screenshot content below the fold (#7).
+
   - **`Locator.scrollIntoView(options?)` is now implemented** — previously it threw `LocatorError { code: "NOT_SUPPORTED" }`. It runs a bounded loop that measures the element and issues swipe gestures toward it until it is fully in the viewport. Direction is inferred from the element's measured bounds; for not-yet-rendered (virtualized) content, `options.direction` drives a blind scroll. The loop terminates on success, on the scroll boundary (no-progress detection), or after `options.maxScrolls` (default 10) — it never spins.
   - **New `device.scroll(options)`** — a low-level content-delta scroll performed as a single swipe gesture, with no element target. Anchored at the viewport center by default; the sign convention matches the web `scrollBy` (`dy > 0` scrolls down/reveals below-the-fold content, `dx > 0` scrolls right). Gestures stay within a mid-screen safe band and use a low-momentum motion so the scrolled offset approximates the requested delta.
   - New exported types `ScrollOptions` and `ScrollIntoViewOptions`.

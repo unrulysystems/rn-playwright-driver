@@ -39,7 +39,7 @@
     },
     "packages/driver": {
       "name": "@0xbigboss/rn-playwright-driver",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "bin": {
         "rn-inspect": "./bin/inspect.ts",
       },
