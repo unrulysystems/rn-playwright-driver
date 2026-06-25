@@ -9,6 +9,7 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Switch
 import android.widget.TextView
+import com.facebook.react.R
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.concurrent.CountDownLatch
@@ -276,6 +277,8 @@ class RNDriverViewTreeModule : Module() {
     }
 
     private fun getViewRole(view: View): String? {
+        getReactAccessibilityRole(view)?.let { return it }
+
         // Check accessibilityClassName if set
         view.accessibilityClassName?.toString()?.let { className ->
             when {
@@ -293,6 +296,54 @@ class RNDriverViewTreeModule : Module() {
             is EditText -> "textbox"
             is ImageView -> "image"
             is Switch -> "switch"
+            else -> null
+        }
+    }
+
+    private fun getReactAccessibilityRole(view: View): String? {
+        getReactRoleTagValue(view)?.let { role ->
+            mapReactRole(role)?.let { return it }
+        }
+        getReactAccessibilityRoleTagValue(view)?.let { role ->
+            mapReactRole(role)?.let { return it }
+        }
+        return null
+    }
+
+    private fun getReactRoleTagValue(view: View): String? {
+        return view.getTag(R.id.role)?.toString()
+    }
+
+    private fun getReactAccessibilityRoleTagValue(view: View): String? {
+        return view.getTag(R.id.accessibility_role)?.toString()
+    }
+
+    private fun mapReactRole(role: String): String? {
+        return when (role.lowercase()) {
+            "button", "togglebutton", "imagebutton" -> "button"
+            "link" -> "link"
+            "header", "heading" -> "header"
+            "image", "img" -> "image"
+            "text" -> "text"
+            "search", "searchbox" -> "searchbox"
+            "adjustable", "slider" -> "slider"
+            "switch" -> "switch"
+            "checkbox" -> "checkbox"
+            "combobox" -> "combobox"
+            "menu" -> "menu"
+            "menubar" -> "menubar"
+            "menuitem" -> "menuitem"
+            "progressbar" -> "progressbar"
+            "radio" -> "radio"
+            "radiogroup" -> "radiogroup"
+            "scrollbar" -> "scrollbar"
+            "spinbutton" -> "spinbutton"
+            "summary" -> "summary"
+            "tab" -> "tab"
+            "tablist" -> "tablist"
+            "timer" -> "timer"
+            "toolbar" -> "toolbar"
+            "none" -> null
             else -> null
         }
     }
