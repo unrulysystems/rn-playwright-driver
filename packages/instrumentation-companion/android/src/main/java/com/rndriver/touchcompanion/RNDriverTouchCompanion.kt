@@ -148,7 +148,7 @@ private class TouchCompanionServer(
           instrumentation.sendStringSync(text)
           okResponse()
         }
-        else -> errorResponse("Unsupported command: $type")
+        else -> errorResponse("Unsupported command: $type", "UNSUPPORTED_COMMAND")
       }
     } catch (error: Exception) {
       errorResponse(error.message ?: "Command failed")
@@ -253,10 +253,13 @@ private class TouchCompanionServer(
     return httpResponse(payload.toString())
   }
 
-  private fun errorResponse(message: String): String {
+  private fun errorResponse(message: String, code: String = "INTERNAL"): String {
     val payload = JSONObject()
     payload.put("ok", false)
-    payload.put("error", JSONObject().apply { put("message", message) })
+    payload.put("error", JSONObject().apply {
+      put("message", message)
+      put("code", code)
+    })
     return httpResponse(payload.toString(), 500)
   }
 
