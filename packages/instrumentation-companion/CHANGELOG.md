@@ -1,5 +1,12 @@
 # @unrulysystems/rn-playwright-driver-instrumentation-companion
 
+## 0.1.2
+
+### Patch Changes
+
+- Republish the Android instrumentation companion after npm accepted `0.1.1`
+  but did not expose installable package metadata.
+
 ## 0.1.1
 
 ### Patch Changes
