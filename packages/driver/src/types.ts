@@ -342,6 +342,8 @@ export type TouchBackendConfig = {
   /** Enable CLI backend (idb/adb) */
   cli?: {
     enabled?: boolean
+    adbPath?: string
+    serial?: string
   }
 }
 
@@ -612,6 +614,11 @@ export interface Device {
    * Get information about the currently selected touch backend.
    */
   getTouchBackendInfo(): Promise<TouchBackendInfo>
+
+  /**
+   * Synchronous view of the selected touch backend, or null before connect.
+   */
+  touchBackendInfo(): TouchBackendInfo | null
 
   /**
    * Start tracing driver events.

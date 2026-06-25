@@ -1,11 +1,26 @@
-import type { LongPressOptions, Point, PointerEventOptions, TapOptions } from '../types'
-import type { TouchBackend } from './backend'
+import type {
+  LongPressOptions,
+  Point,
+  PointerEventOptions,
+  TapOptions,
+  TouchBackendConfig,
+} from '../types'
+import type { TouchBackend, TouchBackendContext } from './backend'
 import { TouchBackendUnavailableError } from './backend'
 
 export class CliTouchBackend implements TouchBackend {
   readonly name = 'cli' as const
+  private readonly context: TouchBackendContext
+  private readonly config?: TouchBackendConfig['cli']
+
+  constructor(context: TouchBackendContext, config?: TouchBackendConfig['cli']) {
+    this.context = context
+    this.config = config
+  }
 
   async init(): Promise<void> {
+    void this.context
+    void this.config
     throw new TouchBackendUnavailableError(
       this.name,
       'CLI touch backend not implemented yet. Install @unrulysystems/rn-driver-touch or configure XCTest/Instrumentation.',

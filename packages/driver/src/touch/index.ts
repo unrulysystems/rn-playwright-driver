@@ -16,7 +16,7 @@ function defaultOrderForPlatform(
     case 'ios':
       return ['native-module']
     case 'android':
-      return ['native-module']
+      return ['instrumentation', 'cli']
     default: {
       const _exhaustive: never = platform
       throw new Error(`Unsupported platform: ${String(_exhaustive)}`)
@@ -100,13 +100,20 @@ function isBackendSupportedOnPlatform(
   backend: TouchBackendType,
   platform: 'ios' | 'android',
 ): boolean {
-  if (backend === 'xctest') {
-    return platform === 'ios'
+  switch (backend) {
+    case 'xctest':
+      return platform === 'ios'
+    case 'instrumentation':
+      return platform === 'android'
+    case 'cli':
+      return platform === 'android'
+    case 'native-module':
+      return true
+    default: {
+      const exhaustive: never = backend
+      throw new Error(`Unhandled backend: ${exhaustive}`)
+    }
   }
-  if (backend === 'instrumentation') {
-    return platform === 'android'
-  }
-  return true
 }
 
 function isBackendEnabled(backend: TouchBackendType, config: TouchBackendConfig): boolean {
@@ -137,7 +144,7 @@ function instantiateBackend(
     case 'native-module':
       return new NativeModuleTouchBackend(context)
     case 'cli':
-      return new CliTouchBackend()
+      return new CliTouchBackend(context, config.cli)
     default: {
       const exhaustive: never = backend
       throw new Error(`Unhandled backend: ${exhaustive}`)

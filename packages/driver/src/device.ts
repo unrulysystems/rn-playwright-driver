@@ -143,6 +143,7 @@ export class RNDevice implements Device {
       await this._touchBackend.dispose()
       this._touchBackend = null
     }
+    this._touchBackendInfo = null
     await this.cdp.disconnect()
   }
 
@@ -436,6 +437,10 @@ export class RNDevice implements Device {
     if (!this._touchBackendInfo) {
       throw new Error('Device not connected. Call connect() first.')
     }
+    return this._touchBackendInfo
+  }
+
+  touchBackendInfo(): TouchBackendInfo | null {
     return this._touchBackendInfo
   }
 

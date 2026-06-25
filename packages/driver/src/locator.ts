@@ -12,6 +12,7 @@ import type {
   ScrollIntoViewOptions,
   ScrollOptions,
   TapOptions,
+  TouchBackendInfo,
   WaitForOptions,
   WaitForState,
   WindowMetrics,
@@ -45,6 +46,7 @@ interface Evaluator {
   }
   waitForTimeout(ms: number): Promise<void>
   capabilities(): Promise<Capabilities>
+  touchBackendInfo(): TouchBackendInfo | null
   /** Window metrics, used to decide when an element is within the viewport. */
   getWindowMetrics(): Promise<WindowMetrics>
   /** Content-delta scroll, used to bring elements into view. */
@@ -97,16 +99,15 @@ export class LocatorImpl implements Locator {
 
   /**
    * Tap the element center.
-   * Requires RNDriverTouchInjector native module (no JS fallback).
+   * Requires any selected touch backend (cli/instrumentation/native-module).
    * Auto-waits for element to be visible and enabled.
    */
   async tap(): Promise<void> {
     const info = await this.waitForActionable()
-    const capabilities = await this.device.capabilities()
 
-    if (!capabilities.touchNative) {
+    if (!this.device.touchBackendInfo()) {
       throw new LocatorError(
-        'RNDriverTouchInjector native module not installed. Install @unrulysystems/rn-driver-touch and rebuild your app.',
+        'No touch backend is available. Configure the adb cli backend, run a touch companion, or install the native-module backend.',
         'NOT_SUPPORTED',
       )
     }
