@@ -1,9 +1,16 @@
 import { test as base } from '@playwright/test'
 import { createDevice, type RNDevice, type RNDeviceOptions } from './device'
-import type { Device } from './types'
+import type { Device, TouchBackendConfig, TouchBackendType } from './types'
 
 const DEFAULT_METRO_URL = 'http://localhost:8081'
 const DEFAULT_TIMEOUT = 30_000
+const DEFAULT_TOUCH_INSTRUMENTATION_PORT = 9999
+const TOUCH_BACKENDS = [
+  'cli',
+  'instrumentation',
+  'native-module',
+  'xctest',
+] as const satisfies readonly TouchBackendType[]
 
 /**
  * Parse timeout string, returning undefined if invalid.
@@ -12,6 +19,31 @@ function parseTimeout(value: string | undefined): number | undefined {
   if (!value) return undefined
   const parsed = Number.parseInt(value, 10)
   return Number.isNaN(parsed) || parsed <= 0 ? undefined : parsed
+}
+
+function isTouchBackend(value: string): value is TouchBackendType {
+  return TOUCH_BACKENDS.includes(value as TouchBackendType)
+}
+
+function touchOptionsFromEnv(): TouchBackendConfig | undefined {
+  const backend = process.env.RN_TOUCH_BACKEND
+  if (!backend || !isTouchBackend(backend)) {
+    return undefined
+  }
+
+  if (backend !== 'instrumentation') {
+    return { mode: 'force', backend }
+  }
+
+  return {
+    mode: 'force',
+    backend,
+    instrumentation: {
+      port:
+        parseTimeout(process.env.RN_TOUCH_INSTRUMENTATION_PORT) ??
+        DEFAULT_TOUCH_INSTRUMENTATION_PORT,
+    },
+  }
 }
 
 /**
@@ -37,6 +69,8 @@ export type RNWorkerFixtures = {
  * - RN_DEVICE_ID: Device ID to connect to
  * - RN_DEVICE_NAME: Device name to match (substring, case-insensitive)
  * - RN_TIMEOUT: Request timeout in ms (default: 30000)
+ * - RN_TOUCH_BACKEND: Force touch backend ('cli', 'instrumentation', 'native-module', or 'xctest')
+ * - RN_TOUCH_INSTRUMENTATION_PORT: Instrumentation companion port when RN_TOUCH_BACKEND=instrumentation (default: 9999)
  * Usage in test files:
  * ```ts
  * import { test, expect } from '@unrulysystems/rn-playwright-driver/test';
@@ -66,6 +100,11 @@ export const test = base.extend<RNTestFixtures, RNWorkerFixtures>({
       const deviceName = process.env.RN_DEVICE_NAME
       if (deviceName) {
         options.deviceName = deviceName
+      }
+
+      const touch = touchOptionsFromEnv()
+      if (touch) {
+        options.touch = touch
       }
 
       await use(options)

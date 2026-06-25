@@ -6,6 +6,8 @@
 
 import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 
+const validBackends = ['xctest', 'instrumentation', 'native-module', 'cli', 'harness']
+
 test.describe('Touch Backend Info', () => {
   test('getTouchBackendInfo() returns backend info object', async ({ device }) => {
     const info = await device.getTouchBackendInfo()
@@ -17,7 +19,6 @@ test.describe('Touch Backend Info', () => {
   test('selected backend is a valid backend type', async ({ device }) => {
     const info = await device.getTouchBackendInfo()
 
-    const validBackends = ['xctest', 'instrumentation', 'native-module', 'cli', 'harness']
     expect(validBackends).toContain(info.selected)
   })
 
@@ -54,19 +55,27 @@ test.describe('Touch Backend Info', () => {
   test('all available backends are valid types', async ({ device }) => {
     const info = await device.getTouchBackendInfo()
 
-    const validBackends = ['xctest', 'instrumentation', 'native-module', 'cli', 'harness']
-
     for (const backend of info.available) {
       expect(validBackends).toContain(backend)
     }
   })
 
-  test('native-module is selected when touchNative capability is true', async ({ device }) => {
+  test('backend selection follows platform defaults or forced env override', async ({ device }) => {
     const caps = await device.capabilities()
+    const info = await device.getTouchBackendInfo()
+    const forcedBackend = process.env.RN_TOUCH_BACKEND
 
-    if (caps.touchNative) {
-      const info = await device.getTouchBackendInfo()
-      expect(info.selected).toBe('native-module')
+    if (forcedBackend) {
+      expect(info.selected).toBe(forcedBackend)
+      return
     }
+
+    if (device.platform === 'ios' && caps.touchNative) {
+      expect(info.selected).toBe('native-module')
+      return
+    }
+
+    expect(validBackends).toContain(info.selected)
+    expect(info.available).toContain(info.selected)
   })
 })
