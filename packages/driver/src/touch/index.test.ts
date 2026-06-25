@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type TouchBackendContext, TouchBackendUnavailableError } from './backend'
-import { CliTouchBackend } from './cli-backend'
+import { type AdbExec, CliTouchBackend } from './cli-backend'
 import { createTouchBackend } from './index'
 
 function createContext(hasNativeModule: boolean, platform: 'ios' | 'android'): TouchBackendContext {
@@ -167,19 +167,33 @@ describe('createTouchBackend', () => {
 })
 
 describe('CliTouchBackend', () => {
-  it('preserves the wontfix not-implemented error', async () => {
-    const backend = new CliTouchBackend(createContext(false, 'android'), {
-      adbPath: '/custom/adb',
-      serial: 'emulator-5554',
+  it('init() rejects with TouchBackendUnavailableError when adb is unreachable (enables fallback)', async () => {
+    const adbExec = vi.fn<AdbExec>(async () => {
+      throw new Error('adb unavailable')
     })
+    const backend = new CliTouchBackend(
+      createContext(false, 'android'),
+      {
+        adbPath: '/custom/adb',
+        serial: 'emulator-5554',
+      },
+      {
+        exec: adbExec,
+      },
+    )
 
-    await expect(backend.init()).rejects.toMatchObject({
+    let error: unknown
+    try {
+      await backend.init()
+    } catch (caught) {
+      error = caught
+    }
+
+    expect(error).toBeInstanceOf(TouchBackendUnavailableError)
+    expect(error).toMatchObject({
       backend: 'cli',
-      message: expect.stringContaining('CLI touch backend not implemented yet'),
+      message: expect.stringContaining('adb get-state failed'),
     })
-    await expect(backend.tap(1, 2)).rejects.toMatchObject({
-      backend: 'cli',
-      message: 'CLI touch backend not available.',
-    })
+    expect(adbExec).toHaveBeenCalledWith(['-s', 'emulator-5554', 'get-state'])
   })
 })
