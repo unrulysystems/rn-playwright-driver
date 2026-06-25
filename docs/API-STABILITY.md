@@ -135,11 +135,17 @@ import '@unrulysystems/rn-playwright-driver/harness/dev'
 
 ### Companion Backends
 
-The `xctest` and `instrumentation` touch backends are experimental. Their driver-side clients are implemented, but companion packaging and automatic lifecycle management are not part of the stable release surface yet.
+The `xctest` and `instrumentation` touch backends are experimental. Their
+driver-side clients are implemented. Android instrumentation companion packaging
+is published, but automatic companion lifecycle management is not part of the
+stable release surface yet.
 
 ### CLI Touch Backend
 
-The `cli` backend type is experimental and currently a stub. It should not be used as a production fallback until idb/adb command execution is implemented and covered by device-backed tests.
+The `cli` backend type is experimental. Android adb command execution is
+implemented and covered by device-backed tests, but it should be treated as an
+adb-limited backend rather than a full replacement for companion or native
+injection.
 
 ## Internal API
 

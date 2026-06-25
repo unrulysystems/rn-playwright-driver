@@ -156,7 +156,7 @@ Fallback for when companions aren't running but CLI tools are available.
   - Add Xcode project for building
   - Document integration with app's test target
 
-- [ ] **instrumentation-companion**
+- [x] **instrumentation-companion**
   - Add proper package.json
   - Add Gradle build setup
   - Document APK building and installation

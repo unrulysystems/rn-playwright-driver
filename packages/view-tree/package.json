@@ -1,6 +1,6 @@
 {
   "name": "@unrulysystems/rn-driver-view-tree",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Native view tree module for rn-playwright-driver",
   "keywords": [
     "expo",
@@ -12,9 +12,17 @@
   "author": "0xbigboss",
   "repository": {
     "type": "git",
-    "url": "https://github.com/unrulysystems/rn-playwright-driver",
+    "url": "git+https://github.com/unrulysystems/rn-playwright-driver.git",
     "directory": "packages/view-tree"
   },
+  "files": [
+    "CHANGELOG.md",
+    "android/build.gradle",
+    "android/src",
+    "expo-module.config.json",
+    "ios",
+    "src"
+  ],
   "main": "src/index.ts",
   "types": "src/index.ts",
   "publishConfig": {

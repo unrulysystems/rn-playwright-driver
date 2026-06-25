@@ -11,15 +11,15 @@ This document describes the complete architecture for Phase 3 native modules in 
 
 ## Quick Reference
 
-| Decision             | Choice                                                                                                                            |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Repository structure | Monorepo (`packages/driver`, `packages/view-tree`, etc.)                                                                          |
-| Touch injection      | Default backend: native module. Opt-in backends: companion (OS-level) and CLI stub. No harness fallback exists in current source. |
-| Element handles      | Random IDs (`element_{16-char-hex}`)                                                                                              |
-| View tree queries    | Fresh traversal (no caching)                                                                                                      |
-| Native module API    | Expo Modules API (Swift + Kotlin)                                                                                                 |
-| Coordinates          | Logical points (not pixels)                                                                                                       |
-| Result type          | `NativeResult<T>` with error codes                                                                                                |
+| Decision             | Choice                                                                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository structure | Monorepo (`packages/driver`, `packages/view-tree`, etc.)                                                                                 |
+| Touch injection      | Default backend: native module. Opt-in backends: companion (OS-level) and Android adb CLI. No harness fallback exists in current source. |
+| Element handles      | Random IDs (`element_{16-char-hex}`)                                                                                                     |
+| View tree queries    | Fresh traversal (no caching)                                                                                                             |
+| Native module API    | Expo Modules API (Swift + Kotlin)                                                                                                        |
+| Coordinates          | Logical points (not pixels)                                                                                                              |
+| Result type          | `NativeResult<T>` with error codes                                                                                                       |
 
 ### Packages
 
@@ -43,7 +43,12 @@ The source default in `packages/driver/src/touch/index.ts` is:
 | iOS      | `native-module`      |
 | Android  | `native-module`      |
 
-Companion backends are implemented and useful when the test environment starts them explicitly, but they are not selected by default. To use them, pass `DeviceOptions.touch.order` such as `["xctest", "native-module"]` or force a backend with `mode: "force"`. The `cli` backend is a stub and should not be advertised as a working fallback until `idb`/`adb` spawning is implemented.
+Companion backends are implemented and useful when the test environment starts
+them explicitly, but they are not selected by default. To use them, pass
+`DeviceOptions.touch.order` such as `["instrumentation", "native-module"]` or
+force a backend with `mode: "force"`. The `cli` backend is implemented for
+Android through adb input commands and is intentionally limited to gestures adb
+can faithfully express.
 
 The old JS harness touch fallback and R3F touch-handler routing are no longer part of the release surface. R3F testing was moved out of this repo into the Scenic monorepo — `@unrulysystems/scenic-three` owns the `<ScenicBridge>` install (`TestBridge` successor: hit-testing, `dispatchPointer`, locators) and `@unrulysystems/scenic-native` owns the test-side `device.scenic` assertion layer over this driver's `device.evaluate` transport.
 

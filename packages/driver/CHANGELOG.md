@@ -1,5 +1,14 @@
 # @unrulysystems/rn-playwright-driver
 
+## 0.6.0
+
+### Minor Changes
+
+- Add release-ready Android touch backend support.
+  - Implement the Android adb CLI touch backend and route simple drag/swipe gestures through the faithful single-swipe path.
+  - Add Android instrumentation companion auth/config support.
+  - Add environment parsing for Android touch backend configuration, including token-file support for local instrumentation scripts.
+
 ## 0.5.1
 
 ### Patch Changes

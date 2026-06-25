@@ -21,20 +21,19 @@ Drive a React Native app from a Playwright test the same way you'd drive a web p
 
 ## Packages
 
-| Package                                                         | Purpose                                                          |
-| --------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `@unrulysystems/rn-playwright-driver`                           | Driver + Playwright fixtures + harness                           |
-| `@unrulysystems/rn-driver-view-tree`                            | View tree queries (locators, bounds, visibility)                 |
-| `@unrulysystems/rn-driver-screenshot`                           | Screen/region capture                                            |
-| `@unrulysystems/rn-driver-lifecycle`                            | App lifecycle helpers                                            |
-| `@unrulysystems/rn-driver-touch`                                | App-level native touch injection                                 |
-| `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS XCTest touch companion reference implementation              |
-| `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion reference implementation |
+| Package                                                         | Purpose                                               |
+| --------------------------------------------------------------- | ----------------------------------------------------- |
+| `@unrulysystems/rn-playwright-driver`                           | Driver + Playwright fixtures + harness                |
+| `@unrulysystems/rn-driver-view-tree`                            | View tree queries (locators, bounds, visibility)      |
+| `@unrulysystems/rn-driver-screenshot`                           | Screen/region capture                                 |
+| `@unrulysystems/rn-driver-lifecycle`                            | App lifecycle helpers                                 |
+| `@unrulysystems/rn-driver-touch`                                | App-level native touch injection                      |
+| `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion config plugin |
+| `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS XCTest touch companion reference implementation   |
 
-> The two **companion** packages are in-repo **reference implementations** for
-> OS-level touch injection — copy them into your own native test target. They are
-> not published to npm. Everything above them in the table is published and
-> installable.
+> The Android instrumentation companion is published and installable. The XCTest
+> companion remains an in-repo reference implementation for manual iOS test target
+> integration.
 
 ## Requirements
 
@@ -52,6 +51,21 @@ bun add @unrulysystems/rn-playwright-driver \
   @unrulysystems/rn-driver-screenshot \
   @unrulysystems/rn-driver-lifecycle \
   @unrulysystems/rn-driver-touch
+```
+
+For Android OS-level touch injection through `UiAutomation`, install the
+instrumentation companion and add its Expo config plugin:
+
+```bash
+bun add -d @unrulysystems/rn-playwright-driver-instrumentation-companion
+```
+
+```json
+{
+  "expo": {
+    "plugins": ["@unrulysystems/rn-playwright-driver-instrumentation-companion"]
+  }
+}
 ```
 
 Install Playwright in your test workspace:
@@ -218,25 +232,54 @@ Environment variables for target selection and timeouts:
 | `RN_DEVICE_NAME` | Device name substring match | _unset_                 |
 | `RN_TIMEOUT`     | Request timeout (ms)        | `30000`                 |
 
+Touch backend environment variables used by the Playwright fixture:
+
+| Env var                               | Description                                              | Default |
+| ------------------------------------- | -------------------------------------------------------- | ------- |
+| `RN_TOUCH_BACKEND`                    | Force `native-module`, `cli`, `instrumentation`, etc.    | `auto`  |
+| `RN_TOUCH_CLI_ADB_PATH`               | `adb` executable path for the Android CLI backend        | `adb`   |
+| `RN_TOUCH_INSTRUMENTATION_PORT`       | Local forwarded companion port                           | `9999`  |
+| `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` | File containing the local instrumentation auth token     | _unset_ |
+| `RN_TOUCH_INSTRUMENTATION_TOKEN`      | Inline token fallback when a token file is not practical | _unset_ |
+
 ## Touch Backend Status
 
 The current source default is intentionally conservative:
 
 - `auto` mode tries `native-module` only on iOS and Android.
 - `native-module` requires `@unrulysystems/rn-driver-touch` in the tested app and `globalThis.__RN_DRIVER__.capabilities.touchNative === true`.
-- `xctest` and `instrumentation` clients are implemented but opt-in through `DeviceOptions.touch.order` or `DeviceOptions.touch.backend`; their companion packages are reference integrations, not automatic launchers.
-- `cli` exists as a typed backend stub and currently throws `NOT_SUPPORTED`.
+- `cli` is an Android adb backend. It is opt-in and works without a companion APK, but it is limited to gestures expressible through adb input commands.
+- `instrumentation` is an Android companion backend. It is opt-in, requires the instrumentation companion process to be running, and supports OS-level injected gestures through `UiAutomation`.
+- `xctest` is an iOS companion client. It is opt-in and still requires manual XCTest companion integration.
 - There is no JS harness touch fallback backend in the current release surface.
 
-Example companion preference:
+Example Android CLI preference:
 
 ```ts
 import { createDevice } from '@unrulysystems/rn-playwright-driver'
 
 const device = createDevice({
   touch: {
-    order: ['xctest', 'native-module'],
-    xctest: { port: 9999 },
+    mode: 'force',
+    backend: 'cli',
+    cli: { serial: process.env.RN_DEVICE_ID },
+  },
+})
+```
+
+Example Android instrumentation preference:
+
+```ts
+import { createDevice } from '@unrulysystems/rn-playwright-driver'
+
+const device = createDevice({
+  touch: {
+    mode: 'force',
+    backend: 'instrumentation',
+    instrumentation: {
+      port: 9999,
+      authToken: process.env.RN_TOUCH_INSTRUMENTATION_TOKEN,
+    },
   },
 })
 ```

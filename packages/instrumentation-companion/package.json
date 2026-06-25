@@ -1,6 +1,6 @@
 {
   "name": "@unrulysystems/rn-playwright-driver-instrumentation-companion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Android Instrumentation HTTP companion for RN Playwright driver touch injection",
   "keywords": [
     "android",
@@ -14,9 +14,17 @@
   "author": "0xbigboss",
   "repository": {
     "type": "git",
-    "url": "https://github.com/unrulysystems/rn-playwright-driver",
+    "url": "git+https://github.com/unrulysystems/rn-playwright-driver.git",
     "directory": "packages/instrumentation-companion"
   },
+  "files": [
+    "CHANGELOG.md",
+    "README.md",
+    "android/build.gradle",
+    "android/src",
+    "app.plugin.js",
+    "plugin/withRNDriverTouchCompanion.js"
+  ],
   "main": "app.plugin.js",
   "publishConfig": {
     "access": "public"

@@ -1,6 +1,6 @@
 {
   "name": "@unrulysystems/rn-playwright-driver",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Playwright-compatible E2E test driver for React Native",
   "keywords": [
     "automation",
@@ -14,11 +14,11 @@
   "author": "0xbigboss",
   "repository": {
     "type": "git",
-    "url": "https://github.com/unrulysystems/rn-playwright-driver",
+    "url": "git+https://github.com/unrulysystems/rn-playwright-driver.git",
     "directory": "packages/driver"
   },
   "bin": {
-    "rn-inspect": "./bin/inspect.ts"
+    "rn-inspect": "bin/inspect.ts"
   },
   "files": [
     "bin",
