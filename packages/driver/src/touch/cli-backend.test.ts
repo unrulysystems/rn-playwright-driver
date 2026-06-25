@@ -103,26 +103,28 @@ describe('CliTouchBackend', () => {
       },
     ]
 
-    for (const entry of cases) {
-      const { context } = createContext()
-      const backend = new CliTouchBackend(
-        context,
-        { adbPath: '/opt/android/adb', serial: 'emulator-5554' },
-        { exec: entry.exec },
-      )
+    await Promise.all(
+      cases.map(async (entry) => {
+        const { context } = createContext()
+        const backend = new CliTouchBackend(
+          context,
+          { adbPath: '/opt/android/adb', serial: 'emulator-5554' },
+          { exec: entry.exec },
+        )
 
-      await expect(backend.init(), entry.name).rejects.toMatchObject({
-        backend: 'cli' satisfies TouchBackendName,
-        message: expect.stringContaining('/opt/android/adb'),
-        name: 'TouchBackendUnavailableError',
-      })
-      await expect(backend.init(), entry.name).rejects.toMatchObject({
-        message: expect.stringContaining('emulator-5554'),
-      })
-      await expect(backend.init(), entry.name).rejects.toMatchObject({
-        message: expect.stringContaining(entry.message),
-      })
-    }
+        await expect(backend.init(), entry.name).rejects.toMatchObject({
+          backend: 'cli' satisfies TouchBackendName,
+          message: expect.stringContaining('/opt/android/adb'),
+          name: 'TouchBackendUnavailableError',
+        })
+        await expect(backend.init(), entry.name).rejects.toMatchObject({
+          message: expect.stringContaining('emulator-5554'),
+        })
+        await expect(backend.init(), entry.name).rejects.toMatchObject({
+          message: expect.stringContaining(entry.message),
+        })
+      }),
+    )
   })
 
   it('converts dp to px for taps and caches density across commands', async () => {
