@@ -12,33 +12,33 @@ const TEST_RUNNER_DEP = 'androidTestImplementation "androidx.test:runner:1.6.2"'
 const TEST_CORE_DEP = 'androidTestImplementation "androidx.test:core:1.6.1"'
 
 function withRNDriverTouchCompanion(config) {
-  config = withAndroidManifest(config, (config) => {
-    const manifest = config.modResults.manifest
-    const applicationId = getAndroidPackage(config, manifest)
+  config = withAndroidManifest(config, (androidConfig) => {
+    const manifest = androidConfig.modResults.manifest
+    const applicationId = getAndroidPackage(androidConfig, manifest)
     if (!applicationId) {
       throw new Error(
         'RN Driver Touch Companion requires expo.android.package so the androidTest instrumentation can target the app.',
       )
     }
-    return config
+    return androidConfig
   })
 
-  config = withAppBuildGradle(config, (config) => {
-    config.modResults.contents = addAndroidTestGradleConfig(config.modResults.contents)
-    return config
+  config = withAppBuildGradle(config, (gradleConfig) => {
+    gradleConfig.modResults.contents = addAndroidTestGradleConfig(gradleConfig.modResults.contents)
+    return gradleConfig
   })
 
   config = withDangerousMod(config, [
     'android',
-    async (config) => {
-      const applicationId = getAndroidPackage(config)
+    async (dangerousConfig) => {
+      const applicationId = getAndroidPackage(dangerousConfig)
       if (!applicationId) {
         throw new Error(
           'RN Driver Touch Companion requires expo.android.package so the androidTest instrumentation can target the app.',
         )
       }
 
-      const projectRoot = config.modRequest.platformProjectRoot
+      const projectRoot = dangerousConfig.modRequest.platformProjectRoot
       const javaDest = path.join(
         projectRoot,
         'app/src/androidTest/java/com/rndriver/touchcompanion/RNDriverTouchCompanion.kt',
@@ -54,7 +54,7 @@ function withRNDriverTouchCompanion(config) {
       await fs.promises.copyFile(source, javaDest)
       await fs.promises.writeFile(manifestDest, androidTestManifest(applicationId))
 
-      return config
+      return dangerousConfig
     },
   ])
 
