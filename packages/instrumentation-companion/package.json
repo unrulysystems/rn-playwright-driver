@@ -23,7 +23,8 @@
   },
   "scripts": {
     "build": "echo 'Android instrumentation companion - no JS build needed'",
-    "clean": "echo 'Android instrumentation companion - no JS build artifacts'"
+    "clean": "echo 'Android instrumentation companion - no JS build artifacts'",
+    "test": "bun test plugin/withRNDriverTouchCompanion.test.js"
   },
   "dependencies": {
     "@expo/config-plugins": "~54.0.4"

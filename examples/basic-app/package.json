@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "test:e2e:android:dual": "bash scripts/e2e-android-dual.sh",
     "test:e2e:android:cli": "RN_TOUCH_BACKEND=cli playwright test e2e/integration/counter.spec.ts e2e/primitives/touch-backend.spec.ts",
-    "test:e2e:android:instrumentation": "RN_TOUCH_BACKEND=instrumentation playwright test e2e/integration/counter.spec.ts e2e/primitives/touch-backend.spec.ts",
+    "test:e2e:android:instrumentation": "test -n \"${RN_TOUCH_INSTRUMENTATION_TOKEN:-}${RN_TOUCH_INSTRUMENTATION_TOKEN_FILE:-}\" || (echo 'Set RN_TOUCH_INSTRUMENTATION_TOKEN or RN_TOUCH_INSTRUMENTATION_TOKEN_FILE to match rnDriverAuthToken' >&2; exit 1); RN_TOUCH_BACKEND=instrumentation playwright test e2e/integration/counter.spec.ts e2e/primitives/touch-backend.spec.ts",
     "prepare": "lefthook install"
   },
   "dependencies": {

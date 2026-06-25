@@ -11,7 +11,7 @@
 import type { ElementInfo, NativeResult } from '@unrulysystems/rn-driver-shared-types'
 import { describe, expect, it, vi } from 'vitest'
 import { createLocator, type Locator } from './locator'
-import type { Capabilities, ScrollOptions, TouchBackendInfo, WindowMetrics } from './types'
+import type { ScrollOptions, TouchBackendInfo, WindowMetrics } from './types'
 
 const METRICS: WindowMetrics = {
   width: 400,
@@ -20,21 +20,6 @@ const METRICS: WindowMetrics = {
   scale: 2,
   fontScale: 1,
   orientation: 'portrait',
-}
-
-const CAPABILITIES: Capabilities = {
-  apiVersion: 1,
-  viewTree: true,
-  viewTreeTap: true,
-  screenshot: true,
-  screenshotCaptureElement: true,
-  lifecycle: true,
-  touchNative: true,
-}
-
-const CAPABILITIES_WITHOUT_NATIVE_TOUCH: Capabilities = {
-  ...CAPABILITIES,
-  touchNative: false,
 }
 
 const CLI_TOUCH_BACKEND: TouchBackendInfo = {
@@ -180,11 +165,7 @@ class FakeDevice {
     }
   }
 
-  async capabilities(): Promise<Capabilities> {
-    return CAPABILITIES
-  }
-
-  touchBackendInfo(): TouchBackendInfo | null {
+  async getTouchBackendInfo(): Promise<TouchBackendInfo> {
     return {
       selected: 'native-module',
       available: ['native-module'],
@@ -230,8 +211,12 @@ describe('Locator.tap', () => {
       evaluate: async <T>(): Promise<T> => ({ success: true, data: ELEMENT }) as T,
       pointer: { tap },
       waitForTimeout: async () => undefined,
-      capabilities: async () => CAPABILITIES_WITHOUT_NATIVE_TOUCH,
-      touchBackendInfo: () => touchBackendInfo,
+      getTouchBackendInfo: async () => {
+        if (!touchBackendInfo) {
+          throw new Error('Device not connected. Call connect() first.')
+        }
+        return touchBackendInfo
+      },
       getWindowMetrics: async () => METRICS,
       scroll: async () => undefined,
       platform: 'android' as const,
@@ -443,8 +428,7 @@ describe('Locator.fill', () => {
       }) as <T>(expression: string) => Promise<T>,
       pointer: { tap: async () => undefined },
       waitForTimeout: async () => undefined,
-      capabilities: async () => CAPABILITIES,
-      touchBackendInfo: (): TouchBackendInfo => ({
+      getTouchBackendInfo: async (): Promise<TouchBackendInfo> => ({
         selected: 'native-module',
         available: ['native-module'],
       }),

@@ -32,12 +32,20 @@ describe('Pointer Path Methods', () => {
   })
 
   describe('drag', () => {
-    it('should apply default holdStart/holdEnd delays', async () => {
+    it('should delegate a simple drag to the backend swipe primitive', async () => {
       await pointer.drag({ x: 0, y: 0 }, { x: 10, y: 10 })
 
-      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2)
-      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, FRAME_MS)
-      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, FRAME_MS)
+      expect(mockBackend.swipe).toHaveBeenCalledWith({ x: 0, y: 0 }, { x: 10, y: 10 }, 300)
+      expect(mockBackend.down).not.toHaveBeenCalled()
+      expect(mockBackend.move).not.toHaveBeenCalled()
+      expect(mockBackend.up).not.toHaveBeenCalled()
+      expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled()
+    })
+
+    it('should delegate duration-only drags to the backend swipe primitive', async () => {
+      await pointer.drag({ x: 0, y: 0 }, { x: 10, y: 10 }, { duration: 125 })
+
+      expect(mockBackend.swipe).toHaveBeenCalledWith({ x: 0, y: 0 }, { x: 10, y: 10 }, 125)
     })
 
     it('should apply custom holdStart/holdEnd delays', async () => {
@@ -48,17 +56,26 @@ describe('Pointer Path Methods', () => {
       expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, 25)
     })
 
+    it('should use the streaming path for explicitly stepped drags', async () => {
+      await pointer.drag({ x: 0, y: 0 }, { x: 10, y: 10 }, { holdStart: 0, holdEnd: 0, steps: 2 })
+
+      expect(mockBackend.swipe).not.toHaveBeenCalled()
+      expect(mockBackend.down).toHaveBeenCalledWith(0, 0)
+      expect(mockBackend.move).toHaveBeenCalledTimes(2)
+      expect(mockBackend.up).toHaveBeenCalledTimes(1)
+    })
+
     it('should skip hold delays when set to 0', async () => {
       await pointer.drag({ x: 0, y: 0 }, { x: 10, y: 10 }, { holdStart: 0, holdEnd: 0, steps: 1 })
 
       expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled()
     })
 
-    it('should wait between moves when duration is set', async () => {
+    it('should wait between moves when duration is set on a custom-eased drag', async () => {
       await pointer.drag(
         { x: 0, y: 0 },
         { x: 10, y: 0 },
-        { duration: 32, holdStart: 0, holdEnd: 0 },
+        { duration: 32, holdStart: 0, holdEnd: 0, easing: 'linear' },
       )
 
       expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2)
@@ -80,7 +97,42 @@ describe('Pointer Path Methods', () => {
     })
   })
 
+  describe('swipe', () => {
+    it('should delegate a simple swipe to the backend swipe primitive', async () => {
+      await pointer.swipe({ from: { x: 1, y: 2 }, to: { x: 3, y: 4 } })
+
+      expect(mockBackend.swipe).toHaveBeenCalledWith({ x: 1, y: 2 }, { x: 3, y: 4 }, 300)
+      expect(mockBackend.down).not.toHaveBeenCalled()
+      expect(mockBackend.move).not.toHaveBeenCalled()
+      expect(mockBackend.up).not.toHaveBeenCalled()
+    })
+
+    it('should use the streaming path when custom swipe holds are requested', async () => {
+      await pointer.swipe({
+        from: { x: 1, y: 2 },
+        to: { x: 3, y: 4 },
+        holdStart: 20,
+        holdEnd: 30,
+      })
+
+      expect(mockBackend.swipe).not.toHaveBeenCalled()
+      expect(mockBackend.down).toHaveBeenCalledWith(1, 2)
+      expect(mockBackend.up).toHaveBeenCalledTimes(1)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, 20)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenLastCalledWith(30)
+    })
+  })
+
   describe('tap', () => {
+    it('should delegate simple taps to the backend tap command', async () => {
+      await pointer.tap(5, 5)
+
+      expect(mockBackend.tap).toHaveBeenCalledWith(5, 5, undefined)
+      expect(mockBackend.down).not.toHaveBeenCalled()
+      expect(mockBackend.up).not.toHaveBeenCalled()
+      expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled()
+    })
+
     it('should support multi-tap with custom delays', async () => {
       await pointer.tap(5, 5, { count: 2, holdStart: 10, tapDelay: 20 })
 

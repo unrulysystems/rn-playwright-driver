@@ -61,9 +61,19 @@ export class Pointer {
    */
   async tap(x: number, y: number, options?: TapOptions): Promise<void> {
     const count = Math.max(1, options?.count ?? 1)
-    const holdStart = Math.max(0, options?.holdStart ?? DEFAULT_FRAME_MS)
     const tapDelay = Math.max(0, options?.tapDelay ?? DEFAULT_TAP_DELAY)
 
+    if (options?.holdStart === undefined) {
+      for (let i = 0; i < count; i++) {
+        await this.getBackend().tap(x, y, options)
+        if (i < count - 1 && tapDelay > 0) {
+          await this.timeoutProvider.waitForTimeout(tapDelay)
+        }
+      }
+      return
+    }
+
+    const holdStart = Math.max(0, options.holdStart)
     for (let i = 0; i < count; i++) {
       await this.sendDown(x, y)
       if (holdStart > 0) {
@@ -145,6 +155,12 @@ export class Pointer {
    * Drag from one point to another with interpolation.
    */
   async drag(from: Point, to: Point, options?: DragOptions): Promise<void> {
+    const backendSwipeDuration = backendSwipeDurationFor(options)
+    if (backendSwipeDuration !== null) {
+      await this.getBackend().swipe(from, to, backendSwipeDuration)
+      return
+    }
+
     const holdStart = Math.max(0, options?.holdStart ?? DEFAULT_FRAME_MS)
     const holdEnd = Math.max(0, options?.holdEnd ?? DEFAULT_FRAME_MS)
 
@@ -168,6 +184,12 @@ export class Pointer {
    * Swipe from one point to another with duration-based interpolation.
    */
   async swipe(options: SwipeOptions): Promise<void> {
+    const backendSwipeDuration = backendSwipeDurationFor(options)
+    if (backendSwipeDuration !== null) {
+      await this.getBackend().swipe(options.from, options.to, backendSwipeDuration)
+      return
+    }
+
     const holdStart = Math.max(0, options.holdStart ?? DEFAULT_FRAME_MS)
     const holdEnd = Math.max(0, options.holdEnd ?? DEFAULT_FRAME_MS)
 
@@ -453,6 +475,16 @@ function pickPointerEventOptions(
   if (pointerId !== undefined) result.pointerId = pointerId
   if (pressure !== undefined) result.pressure = pressure
   return result
+}
+
+function backendSwipeDurationFor(options?: DragOptions | SwipeOptions): number | null {
+  if (options?.steps !== undefined || options?.easing !== undefined) {
+    return null
+  }
+  if ((options?.holdStart ?? 0) > 0 || (options?.holdEnd ?? 0) > 0) {
+    return null
+  }
+  return Math.max(0, options?.duration ?? DEFAULT_SWIPE_DURATION)
 }
 
 function pointOnCircle(center: Point, radius: number, angle: number): Point {

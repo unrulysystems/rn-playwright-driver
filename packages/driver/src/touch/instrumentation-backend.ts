@@ -12,12 +12,14 @@ export type InstrumentationBackendOptions = TouchBackendOptions
 export class InstrumentationTouchBackend implements TouchBackend {
   readonly name = 'instrumentation' as const
   private readonly baseUrl: string
+  private readonly authToken: string | undefined
   private readonly connectTimeoutMs: number
   private readonly requestTimeoutMs: number
 
   constructor(options: InstrumentationBackendOptions = {}) {
     const resolved = resolveTouchBackendOptions(options, (host, port) => `http://${host}:${port}`)
     this.baseUrl = resolved.url
+    this.authToken = resolved.authToken
     this.connectTimeoutMs = resolved.connectTimeoutMs
     this.requestTimeoutMs = resolved.requestTimeoutMs
   }
@@ -70,26 +72,28 @@ export class InstrumentationTouchBackend implements TouchBackend {
     try {
       const response = await fetch(`${this.baseUrl}/command`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: this.requestHeaders(),
         body: JSON.stringify(payload),
         signal: controller.signal,
       })
 
+      const data = await readJsonResponse(response)
+
       if (!response.ok) {
+        if (data?.error !== undefined) {
+          const message =
+            data.error.message ?? `HTTP ${response.status} from instrumentation companion`
+          throw new TouchBackendCommandError(this.name, message, data.error.code)
+        }
         throw new TouchBackendUnavailableError(
           this.name,
           `HTTP ${response.status} from instrumentation companion`,
         )
       }
 
-      const data = (await response.json()) as {
-        ok?: boolean
-        error?: { message?: string; code?: string }
-      }
-
-      if (!data.ok) {
-        const message = data.error?.message ?? 'Instrumentation command failed'
-        const code = data.error?.code
+      if (data?.ok !== true) {
+        const message = data?.error?.message ?? 'Instrumentation command failed'
+        const code = data?.error?.code
         throw new TouchBackendCommandError(this.name, message, code)
       }
     } catch (error) {
@@ -104,5 +108,26 @@ export class InstrumentationTouchBackend implements TouchBackend {
     } finally {
       clearTimeout(timeoutId)
     }
+  }
+
+  private requestHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { 'content-type': 'application/json' }
+    if (this.authToken !== undefined) {
+      headers['x-rn-driver-auth'] = this.authToken
+    }
+    return headers
+  }
+}
+
+async function readJsonResponse(
+  response: Response,
+): Promise<{ ok?: boolean; error?: { message?: string; code?: string } } | null> {
+  try {
+    return (await response.json()) as {
+      ok?: boolean
+      error?: { message?: string; code?: string }
+    }
+  } catch {
+    return null
   }
 }

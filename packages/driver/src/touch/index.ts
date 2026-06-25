@@ -16,7 +16,7 @@ function defaultOrderForPlatform(
     case 'ios':
       return ['native-module']
     case 'android':
-      return ['instrumentation', 'cli']
+      return ['native-module']
     default: {
       const _exhaustive: never = platform
       throw new Error(`Unsupported platform: ${String(_exhaustive)}`)

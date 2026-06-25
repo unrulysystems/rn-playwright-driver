@@ -145,6 +145,18 @@ describe('RNDevice Core Primitives', () => {
       expect(platformDevice.platform).toBe('android')
     })
 
+    it('detects Android from generic emulator device metadata', async () => {
+      const platformDevice = await connectWithPlatformProbe(
+        {
+          ...defaultTarget(),
+          deviceName: 'sdk_gphone64_arm64 - 15 - API 35',
+        },
+        () => Promise.reject(new Error('probe should not run')),
+      )
+
+      expect(platformDevice.platform).toBe('android')
+    })
+
     it('detects iOS from target name metadata', async () => {
       const platformDevice = await connectWithPlatformProbe(
         { ...defaultTarget(), title: 'iPhone 16 Pro' },

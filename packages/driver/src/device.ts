@@ -440,10 +440,6 @@ export class RNDevice implements Device {
     return this._touchBackendInfo
   }
 
-  touchBackendInfo(): TouchBackendInfo | null {
-    return this._touchBackendInfo
-  }
-
   async startTracing(options?: TracingOptions): Promise<void> {
     const optionsJson = JSON.stringify(options ?? {})
     await this.evaluate(buildHarnessCall('startTracing', optionsJson))
@@ -470,7 +466,12 @@ export class RNDevice implements Device {
     if (name.includes('iphone') || name.includes('ipad') || name.includes('ios')) {
       return 'ios'
     }
-    if (name.includes('android') || name.includes('pixel') || name.includes('samsung')) {
+    if (
+      name.includes('android') ||
+      name.includes('pixel') ||
+      name.includes('samsung') ||
+      name.includes('gphone')
+    ) {
       return 'android'
     }
 
@@ -486,7 +487,8 @@ export class RNDevice implements Device {
       }
     } catch (error) {
       throw new Error(
-        `Could not detect platform: CDP target name unrecognized and Platform.OS probe failed (${error instanceof Error ? error.message : String(error)})`, { cause: error },
+        `Could not detect platform: CDP target name unrecognized and Platform.OS probe failed (${error instanceof Error ? error.message : String(error)})`,
+        { cause: error },
       )
     }
 

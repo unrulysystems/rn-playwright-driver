@@ -38,6 +38,7 @@ describe('InstrumentationTouchBackend', () => {
     const backend = new InstrumentationTouchBackend({
       host: '10.0.2.2',
       port: 4545,
+      authToken: 'test-token',
       connectTimeoutMs: 123,
     })
 
@@ -47,7 +48,10 @@ describe('InstrumentationTouchBackend', () => {
       'http://10.0.2.2:4545/command',
       expect.objectContaining({
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          'x-rn-driver-auth': 'test-token',
+        },
         body: JSON.stringify({ type: 'hello' }),
         signal: expect.any(AbortSignal),
       }),
@@ -83,9 +87,11 @@ describe('InstrumentationTouchBackend', () => {
   })
 
   it('maps companion command errors', async () => {
-    fetchMock.mockResolvedValueOnce(
-      okResponse({ ok: false, error: { message: 'tap rejected', code: 'E_TAP' } }),
-    )
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ ok: false, error: { message: 'tap rejected', code: 'E_TAP' } }),
+    } as Response)
     const backend = new InstrumentationTouchBackend()
     const promise = backend.tap(1, 2)
 

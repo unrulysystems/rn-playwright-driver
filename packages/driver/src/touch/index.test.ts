@@ -20,15 +20,13 @@ function okResponse(data: unknown = { ok: true }): Response {
   } as Response
 }
 
-const originalFetch = globalThis.fetch
-
 describe('createTouchBackend', () => {
   beforeEach(() => {
-    globalThis.fetch = vi.fn(async () => okResponse()) as typeof fetch
+    vi.stubGlobal('fetch', vi.fn(async () => okResponse()) as typeof fetch)
   })
 
   afterEach(() => {
-    globalThis.fetch = originalFetch
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 
@@ -43,27 +41,18 @@ describe('createTouchBackend', () => {
     expect(result.attempted).toEqual([])
   })
 
-  it('uses instrumentation then cli as the Android auto order', async () => {
-    const fetchMock = globalThis.fetch as unknown as {
-      mockRejectedValueOnce(value: unknown): void
-    }
-    fetchMock.mockRejectedValueOnce(new Error('companion absent'))
+  it('uses the native module backend as the Android auto order', async () => {
     const cliInit = vi.spyOn(CliTouchBackend.prototype, 'init').mockResolvedValueOnce(undefined)
 
-    const result = await createTouchBackend(createContext(false, 'android'))
+    const result = await createTouchBackend(createContext(true, 'android'))
 
-    expect(result.backend.name).toBe('cli')
+    expect(result.backend.name).toBe('native-module')
     expect(result.selection).toEqual({
-      backend: 'cli',
-      available: ['instrumentation', 'cli'],
-      reason: 'Selected after 1 failed attempts',
+      backend: 'native-module',
+      available: ['native-module'],
     })
-    expect(result.attempted).toHaveLength(1)
-    expect(result.attempted[0]).toMatchObject({
-      backend: 'instrumentation',
-      error: expect.any(TouchBackendUnavailableError),
-    })
-    expect(cliInit).toHaveBeenCalledTimes(1)
+    expect(result.attempted).toEqual([])
+    expect(cliInit).not.toHaveBeenCalled()
   })
 
   it('skips unsupported backends and selects the next platform-compatible backend', async () => {

@@ -9,8 +9,7 @@
  * Run with: bun run test:e2e
  */
 
-import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
-import { countEvents, expectEventsAtLeast, tracePointerDrag, withTracing } from '../utils/tracing'
+import { expect, expectLocator, test } from '@unrulysystems/rn-playwright-driver/test'
 
 type NativeResult<T> = { success: true; data: T } | { success: false; error: string; code?: string }
 
@@ -74,6 +73,22 @@ async function requireLifecycle(device: {
   return true
 }
 
+async function getCount(device: { evaluate<T>(expression: string): Promise<T> }): Promise<number> {
+  const text = await device.evaluate<string>(
+    "globalThis.__RN_DRIVER__.viewTree.findByTestId('count-display').then(r => r.success ? r.data.text : '0')",
+  )
+  const match = /\d+/.exec(text)
+  return match ? Number.parseInt(match[0], 10) : 0
+}
+
+async function getDragStatus(device: {
+  evaluate<T>(expression: string): Promise<T>
+}): Promise<string> {
+  return device.evaluate<string>(
+    "globalThis.__RN_DRIVER__.viewTree.findByTestId('drag-status').then(r => r.success ? r.data.text : '')",
+  )
+}
+
 test.describe('Counter App - Core Features', () => {
   test('harness is installed', async ({ device }) => {
     // Verify the harness is installed (use globalThis for Bridgeless RN compatibility)
@@ -115,18 +130,48 @@ test.describe('Counter App - Core Features', () => {
   })
 
   test('pointer tap simulates touch', async ({ device }) => {
-    const events = await withTracing(device, async () => {
-      await device.pointer.tap(100, 200)
-    })
+    if (!(await requireViewTree(device))) {
+      return
+    }
 
-    expectEventsAtLeast(events, 'pointer:down')
-    expectEventsAtLeast(events, 'pointer:up')
+    const button = device.getByTestId('increment-button')
+    await expectLocator(button).toBeVisible()
+
+    const bounds = await button.bounds()
+    expect(bounds).not.toBeNull()
+
+    const before = await getCount(device)
+    await device.pointer.tap(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2)
+
+    await expectLocator(device.getByTestId('count-display')).toHaveText(String(before + 1), {
+      exact: false,
+    })
   })
 
-  test('pointer drag interpolates movement', async ({ device }) => {
-    const events = await tracePointerDrag(device, { x: 0, y: 0 }, { x: 100, y: 100 }, { steps: 5 })
+  test('pointer drag is observed by the app', async ({ device }) => {
+    if (!(await requireViewTree(device))) {
+      return
+    }
 
-    expect(countEvents(events, 'pointer:move')).toBe(5)
+    const target = device.getByTestId('drag-target')
+    await expectLocator(target).toBeVisible()
+
+    const bounds = await target.bounds()
+    expect(bounds).not.toBeNull()
+
+    await device.pointer.drag(
+      { x: bounds!.x + bounds!.width * 0.25, y: bounds!.y + bounds!.height / 2 },
+      { x: bounds!.x + bounds!.width * 0.75, y: bounds!.y + bounds!.height / 2 },
+      { duration: 350 },
+    )
+
+    await expectLocator(device.getByTestId('drag-status')).toHaveText('Drag: ended', {
+      exact: false,
+    })
+    const status = await getDragStatus(device)
+    const moveMatch = /moves:\s*(\d+)/.exec(status)
+    expect(moveMatch).not.toBeNull()
+    expect(Number.parseInt(moveMatch![1]!, 10)).toBeGreaterThan(0)
   })
 
   test('waitForFunction polls until truthy', async ({ device }) => {
@@ -447,11 +492,13 @@ test.describe('Counter App - View Tree Matching', () => {
     }
 
     // Test partial text matching (exact=false)
-    const partial = await device.evaluate<Result<Elem>>(
-      "globalThis.__RN_DRIVER__.viewTree.findByText('Count', false)",
+    const partial = await device.evaluate<Result<Elem[]>>(
+      "globalThis.__RN_DRIVER__.viewTree.findAllByText('RN Playwright', false)",
     )
     expect(partial.success).toBe(true)
-    if (partial.success) expect(partial.data.text).toContain('Count')
+    if (partial.success) {
+      expect(partial.data.some((element) => element.text?.includes('RN Playwright'))).toBe(true)
+    }
 
     // Test exact text matching (exact=true)
     // The title element contains "RN Playwright Driver Example" - test with actual exact text
@@ -462,12 +509,13 @@ test.describe('Counter App - View Tree Matching', () => {
 
     // Test role matching - note: requires accessibilityRole="button" on Pressable components
     // If the app hasn't been rebuilt with accessibilityRole props, this may not find elements
-    const byRole = await device.evaluate<Result<Elem>>(
-      "globalThis.__RN_DRIVER__.viewTree.findByRole('button', null)",
+    const byRole = await device.evaluate<Result<Elem[]>>(
+      "globalThis.__RN_DRIVER__.viewTree.findAllByRole('button', null)",
     )
-    // Role matching works when accessibilityRole is set - verify the query returns a result object
-    expect(typeof byRole.success).toBe('boolean')
-    if (byRole.success) expect(byRole.data.role).toBe('button')
+    expect(byRole.success).toBe(true)
+    if (byRole.success) {
+      expect(byRole.data.some((element) => element.role === 'button')).toBe(true)
+    }
 
     // Test element info includes all required properties
     const info = await device.evaluate<Result<Elem>>(
@@ -492,28 +540,20 @@ test.describe('Counter App - Counter Functionality', () => {
       return
     }
 
-    // Helper to get current count from display
-    const getCount = async (): Promise<number> => {
-      const text = await device.evaluate<string>(
-        "globalThis.__RN_DRIVER__.viewTree.findByTestId('count-display').then(r => r.success ? r.data.text : 'Count: 0')",
-      )
-      return Number.parseInt(text.replace('Count: ', ''), 10)
-    }
-
     // Wait for display to be visible
     await device.getByTestId('count-display').waitFor({ state: 'visible', timeout: 5000 })
 
     // Test increment: tap + button and verify count increases
-    const beforeIncrement = await getCount()
+    const beforeIncrement = await getCount(device)
     await device.getByTestId('increment-button').tap()
     await device.waitForTimeout(100)
-    expect(await getCount()).toBe(beforeIncrement + 1)
+    expect(await getCount(device)).toBe(beforeIncrement + 1)
 
     // Test decrement: tap - button and verify count decreases
-    const beforeDecrement = await getCount()
+    const beforeDecrement = await getCount(device)
     await device.getByTestId('decrement-button').tap()
     await device.waitForTimeout(100)
-    expect(await getCount()).toBe(beforeDecrement - 1)
+    expect(await getCount(device)).toBe(beforeDecrement - 1)
 
     // Test reset: increment a few times, then reset to 0
     await device.getByTestId('increment-button').tap()
@@ -522,11 +562,11 @@ test.describe('Counter App - Counter Functionality', () => {
     await device.waitForTimeout(50)
     await device.getByTestId('increment-button').tap()
     await device.waitForTimeout(100)
-    expect(await getCount()).not.toBe(0)
+    expect(await getCount(device)).not.toBe(0)
 
     await device.getByTestId('reset-button').tap()
     await device.waitForTimeout(100)
-    expect(await getCount()).toBe(0)
+    expect(await getCount(device)).toBe(0)
   })
 })
 

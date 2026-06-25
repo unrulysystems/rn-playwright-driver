@@ -6,7 +6,7 @@
 
 import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 
-const validBackends = ['xctest', 'instrumentation', 'native-module', 'cli', 'harness']
+const validBackends = ['xctest', 'instrumentation', 'native-module', 'cli']
 
 test.describe('Touch Backend Info', () => {
   test('getTouchBackendInfo() returns backend info object', async ({ device }) => {

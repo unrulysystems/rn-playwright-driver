@@ -22,10 +22,7 @@ During `expo prebuild`, the plugin:
 - writes `android/app/src/androidTest/AndroidManifest.xml` with the
   instrumentation registration;
 - adds `androidx.test:runner` and `androidx.test:core` as `androidTestImplementation`
-  dependencies;
-- sets `testInstrumentationRunner` to
-  `com.rndriver.touchcompanion.RNDriverTouchCompanion` when the app build file
-  does not already define a runner.
+  dependencies.
 
 The plugin requires `expo.android.package` so the androidTest manifest can target
 the app package. The packaged Android manifest uses `${applicationId}` as the
@@ -57,21 +54,35 @@ adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 Forward the companion port and launch the instrumentation:
 
 ```bash
+RN_TOUCH_INSTRUMENTATION_TOKEN="$(openssl rand -hex 16)"
+export RN_TOUCH_INSTRUMENTATION_TOKEN_FILE="$(mktemp -t rn-driver-touch-token.XXXXXX)"
+chmod 600 "$RN_TOUCH_INSTRUMENTATION_TOKEN_FILE"
+printf '%s' "$RN_TOUCH_INSTRUMENTATION_TOKEN" >"$RN_TOUCH_INSTRUMENTATION_TOKEN_FILE"
 adb forward tcp:9999 tcp:9999
-adb shell am instrument -w <app>.test/com.rndriver.touchcompanion.RNDriverTouchCompanion
+adb shell am instrument -e rnDriverAuthToken "$RN_TOUCH_INSTRUMENTATION_TOKEN" -w <app>.test/com.rndriver.touchcompanion.RNDriverTouchCompanion
 ```
 
 Configure the driver to force the instrumentation backend:
 
 ```ts
+import fs from 'node:fs'
+
+const authToken = fs.readFileSync(process.env.RN_TOUCH_INSTRUMENTATION_TOKEN_FILE!, 'utf8').trim()
 const device = createDevice({
   touch: {
     mode: 'force',
     backend: 'instrumentation',
-    instrumentation: { port: 9999 },
+    instrumentation: { port: 9999, authToken },
   },
 })
 ```
+
+The test fixture also accepts `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` directly
+when `RN_TOUCH_BACKEND=instrumentation`. Prefer the file form for local scripts
+so the Playwright process environment carries only a path. The value is still a
+local capability token rather than a durable secret: Android instrumentation
+requires passing it as the `rnDriverAuthToken` argument to `adb shell am
+instrument`.
 
 ## Raw Assets
 
@@ -85,6 +96,7 @@ If the config plugin cannot be used, copy these assets after `expo prebuild`:
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="<app>.test">
+  <uses-permission android:name="android.permission.INTERNET" />
   <instrumentation
     android:name="com.rndriver.touchcompanion.RNDriverTouchCompanion"
     android:targetPackage="<app>"
@@ -95,12 +107,6 @@ If the config plugin cannot be used, copy these assets after `expo prebuild`:
 ```
 
 ```gradle
-android {
-  defaultConfig {
-    testInstrumentationRunner "com.rndriver.touchcompanion.RNDriverTouchCompanion"
-  }
-}
-
 dependencies {
   androidTestImplementation "androidx.test:runner:1.6.2"
   androidTestImplementation "androidx.test:core:1.6.1"
@@ -109,7 +115,8 @@ dependencies {
 
 ## Protocol
 
-POST `/command` with a JSON body.
+POST `/command` with a JSON body and the `x-rn-driver-auth` header matching
+the `rnDriverAuthToken` instrumentation argument.
 
 | Command     | Body                                                                                                 |
 | ----------- | ---------------------------------------------------------------------------------------------------- |

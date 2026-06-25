@@ -74,19 +74,12 @@ function addAndroidTestGradleConfig(contents) {
   if (!next.includes(TEST_CORE_DEP)) {
     next = addToDependenciesBlock(next, TEST_CORE_DEP)
   }
-  if (!/testInstrumentationRunner\s+["'][^"']+["']/.test(next)) {
-    next = addToDefaultConfigBlock(next, `testInstrumentationRunner "${COMPANION_CLASS}"`)
-  }
 
   return next
 }
 
 function addToDependenciesBlock(contents, line) {
   return addToNamedBlock(contents, 'dependencies', generatedBlock(line, '  '))
-}
-
-function addToDefaultConfigBlock(contents, line) {
-  return addToNamedBlock(contents, 'defaultConfig', generatedBlock(line, '    '))
 }
 
 function addToNamedBlock(contents, blockName, block) {
@@ -137,6 +130,7 @@ function findMatchingBrace(contents, openBraceIndex) {
 function androidTestManifest(applicationId) {
   return `<manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="${applicationId}.test">
+  <uses-permission android:name="android.permission.INTERNET" />
   <instrumentation
     android:name="${COMPANION_CLASS}"
     android:targetPackage="${applicationId}"
@@ -148,3 +142,5 @@ function androidTestManifest(applicationId) {
 }
 
 module.exports = withRNDriverTouchCompanion
+module.exports.addAndroidTestGradleConfig = addAndroidTestGradleConfig
+module.exports.androidTestManifest = androidTestManifest

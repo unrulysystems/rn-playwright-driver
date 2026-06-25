@@ -11,7 +11,7 @@ function createContext(density = 1): {
   context: TouchBackendContext
   evaluate: ReturnType<typeof vi.fn>
 } {
-  const evaluate = vi.fn((_expression: string) => density)
+  const evaluate = vi.fn((_expression: string) => ({ pixelRatio: density }))
   return {
     context: {
       platform: 'android',
@@ -144,7 +144,7 @@ describe('CliTouchBackend', () => {
       ['-s', 'emulator-5554', 'shell', 'input', 'tap', '33', '63'],
     ])
     expect(evaluate).toHaveBeenCalledTimes(1)
-    expect(evaluate).toHaveBeenCalledWith("require('react-native').PixelRatio.get()")
+    expect(evaluate).toHaveBeenCalledWith('globalThis.__RN_DRIVER__.getWindowMetrics()')
   })
 
   it('emits exact swipe and longPress argv with converted coordinates', async () => {
@@ -161,12 +161,23 @@ describe('CliTouchBackend', () => {
     ])
   })
 
-  it('escapes spaces for adb input text', async () => {
+  it('escapes shell metacharacters for adb input text', async () => {
     const { backend, calls } = createBackend({ adbPath: '/custom/adb', serial: 'device-1' })
 
-    await backend.typeText('a b')
+    await backend.typeText('a b$`"')
 
-    expect(calls).toEqual([['-s', 'device-1', 'shell', 'input', 'text', 'a%sb']])
+    expect(calls).toEqual([['-s', 'device-1', 'shell', 'input', 'text', 'a%sb\\$\\`\\\"']])
+  })
+
+  it('rejects text that adb input text cannot safely represent', async () => {
+    const { backend, calls } = createBackend({ adbPath: '/custom/adb', serial: 'device-1' })
+
+    await expect(backend.typeText('a\nb')).rejects.toMatchObject({
+      backend: 'cli',
+      code: 'UNSUPPORTED_TEXT',
+      name: 'TouchBackendCommandError',
+    })
+    expect(calls).toEqual([])
   })
 
   it('emits motion events on API 30 and later, with up using the last position', async () => {
@@ -181,6 +192,30 @@ describe('CliTouchBackend', () => {
       ['-s', 'emulator-5554', 'shell', 'input', 'motionevent', 'DOWN', '3', '6'],
       ['-s', 'emulator-5554', 'shell', 'input', 'motionevent', 'MOVE', '9', '12'],
       ['-s', 'emulator-5554', 'shell', 'input', 'motionevent', 'UP', '9', '12'],
+    ])
+  })
+
+  it('rejects move and repeated up outside an active touch sequence', async () => {
+    const { backend, calls } = createBackend({ density: 3, serial: 'emulator-5554' })
+
+    await expect(backend.move(1, 2)).rejects.toMatchObject({
+      backend: 'cli',
+      code: 'NO_ACTIVE_TOUCH',
+      name: 'TouchBackendCommandError',
+    })
+
+    await backend.down(1, 2)
+    await backend.up()
+    await expect(backend.up()).rejects.toMatchObject({
+      backend: 'cli',
+      code: 'NO_ACTIVE_TOUCH',
+      name: 'TouchBackendCommandError',
+    })
+
+    expect(calls).toEqual([
+      ['-s', 'emulator-5554', 'shell', 'getprop', 'ro.build.version.sdk'],
+      ['-s', 'emulator-5554', 'shell', 'input', 'motionevent', 'DOWN', '3', '6'],
+      ['-s', 'emulator-5554', 'shell', 'input', 'motionevent', 'UP', '3', '6'],
     ])
   })
 

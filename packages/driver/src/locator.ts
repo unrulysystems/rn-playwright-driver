@@ -6,7 +6,6 @@ import { buildHarnessCall } from './harness-expressions'
 import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from './scroll'
 import { waitForStable } from './wait-for-stable'
 import type {
-  Capabilities,
   ElementBounds,
   Locator,
   ScrollIntoViewOptions,
@@ -45,8 +44,7 @@ interface Evaluator {
     tap(x: number, y: number, options?: TapOptions): Promise<void>
   }
   waitForTimeout(ms: number): Promise<void>
-  capabilities(): Promise<Capabilities>
-  touchBackendInfo(): TouchBackendInfo | null
+  getTouchBackendInfo(): Promise<TouchBackendInfo>
   /** Window metrics, used to decide when an element is within the viewport. */
   getWindowMetrics(): Promise<WindowMetrics>
   /** Content-delta scroll, used to bring elements into view. */
@@ -105,7 +103,9 @@ export class LocatorImpl implements Locator {
   async tap(): Promise<void> {
     const info = await this.waitForActionable()
 
-    if (!this.device.touchBackendInfo()) {
+    try {
+      await this.device.getTouchBackendInfo()
+    } catch {
       throw new LocatorError(
         'No touch backend is available. Configure the adb cli backend, run a touch companion, or install the native-module backend.',
         'NOT_SUPPORTED',

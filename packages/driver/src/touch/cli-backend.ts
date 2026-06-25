@@ -22,7 +22,7 @@ type PxPoint = {
 }
 
 const DEFAULT_ADB_PATH = 'adb'
-const PIXEL_RATIO_EXPRESSION = "require('react-native').PixelRatio.get()"
+const WINDOW_METRICS_EXPRESSION = 'globalThis.__RN_DRIVER__.getWindowMetrics()'
 const SDK_PROPERTY = 'ro.build.version.sdk'
 const MOTION_EVENT_MIN_API = 30
 
@@ -34,7 +34,8 @@ export class CliTouchBackend implements TouchBackend {
   private readonly exec: AdbExec
   private density?: number
   private sdkLevel?: number
-  private lastPoint?: PxPoint
+  private lastPoint: PxPoint | undefined
+  private isTouchActive = false
 
   constructor(
     context: TouchBackendContext,
@@ -83,10 +84,18 @@ export class CliTouchBackend implements TouchBackend {
     const point = await this.toPxPoint({ x, y })
     await this.runMotionEvent('DOWN', point)
     this.lastPoint = point
+    this.isTouchActive = true
   }
 
   async move(x: number, y: number, _options?: PointerEventOptions): Promise<void> {
     await this.ensureMotionEventSupported()
+    if (!this.isTouchActive) {
+      throw new TouchBackendCommandError(
+        this.name,
+        'Cannot emit adb motionevent MOVE before a down command starts a touch sequence.',
+        'NO_ACTIVE_TOUCH',
+      )
+    }
     const point = await this.toPxPoint({ x, y })
     await this.runMotionEvent('MOVE', point)
     this.lastPoint = point
@@ -94,14 +103,16 @@ export class CliTouchBackend implements TouchBackend {
 
   async up(_options?: PointerEventOptions): Promise<void> {
     await this.ensureMotionEventSupported()
-    if (this.lastPoint === undefined) {
+    if (!this.isTouchActive || this.lastPoint === undefined) {
       throw new TouchBackendCommandError(
         this.name,
-        'Cannot emit adb motionevent UP before a down or move command establishes pointer coordinates.',
-        'NO_POINTER_POSITION',
+        'Cannot emit adb motionevent UP before a down command starts a touch sequence.',
+        'NO_ACTIVE_TOUCH',
       )
     }
     await this.runMotionEvent('UP', this.lastPoint)
+    this.isTouchActive = false
+    this.lastPoint = undefined
   }
 
   async swipe(from: Point, to: Point, durationMs: number): Promise<void> {
@@ -156,8 +167,9 @@ export class CliTouchBackend implements TouchBackend {
       return this.density
     }
 
-    const density = await this.context.evaluate<number>(PIXEL_RATIO_EXPRESSION)
-    if (!Number.isFinite(density) || density <= 0) {
+    const metrics = await this.context.evaluate<{ pixelRatio?: unknown }>(WINDOW_METRICS_EXPRESSION)
+    const density = metrics.pixelRatio
+    if (typeof density !== 'number' || !Number.isFinite(density) || density <= 0) {
       throw new TouchBackendCommandError(
         this.name,
         `Invalid React Native PixelRatio density for adb touch conversion: ${String(density)}`,
@@ -255,9 +267,16 @@ function createDefaultAdbExec(adbPath: string): AdbExec {
 }
 
 function escapeAdbInputText(text: string): string {
+  if (text.includes('\0') || text.includes('\r') || text.includes('\n')) {
+    throw new TouchBackendCommandError(
+      'cli',
+      'adb shell input text does not support NUL or newline characters.',
+      'UNSUPPORTED_TEXT',
+    )
+  }
   // Android's `input text` is ASCII-oriented: spaces are `%s`, and characters
   // that the device shell would interpret must be escaped before input receives them.
-  return text.replace(/[ "'()&<>;|\\]/g, (character) => {
+  return text.replace(/[$ "`'()&<>;|\\]/g, (character) => {
     if (character === ' ') {
       return '%s'
     }

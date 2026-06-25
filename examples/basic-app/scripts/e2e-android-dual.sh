@@ -4,6 +4,8 @@ set -euo pipefail
 APP_ID="${APP_ID:-com.unrulyfall.example}"
 INSTRUMENTATION_TARGET="${INSTRUMENTATION_TARGET:-com.unrulyfall.example.test/com.rndriver.touchcompanion.RNDriverTouchCompanion}"
 TOUCH_PORT="${RN_TOUCH_INSTRUMENTATION_PORT:-9999}"
+TOUCH_AUTH_TOKEN="${RN_TOUCH_INSTRUMENTATION_TOKEN:-}"
+TOUCH_AUTH_TOKEN_FILE=""
 METRO_HOST="${METRO_HOST:-127.0.0.1}"
 METRO_PORT="${METRO_PORT:-8081}"
 METRO_URL="${RN_METRO_URL:-http://${METRO_HOST}:${METRO_PORT}}"
@@ -40,6 +42,10 @@ cleanup() {
   if [[ -n "$METRO_PID" ]]; then
     kill "$METRO_PID" >/dev/null 2>&1
     wait "$METRO_PID" >/dev/null 2>&1
+  fi
+
+  if [[ -n "$TOUCH_AUTH_TOKEN_FILE" ]]; then
+    rm -f "$TOUCH_AUTH_TOKEN_FILE"
   fi
 
   echo "Android dual-backend e2e summary:"
@@ -95,6 +101,18 @@ wait_for_metro() {
   return 1
 }
 
+wait_for_hermes_target() {
+  for _ in {1..45}; do
+    if curl -fsS "${METRO_URL}/json" 2>/dev/null | grep -Fq "$APP_ID"; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "Hermes target for ${APP_ID} did not appear at ${METRO_URL}/json" >&2
+  return 1
+}
+
 wait_for_instrumentation() {
   local hello_url="http://127.0.0.1:${TOUCH_PORT}/command"
 
@@ -105,7 +123,7 @@ wait_for_instrumentation() {
       return 1
     fi
 
-    if curl -fsS -m 1 -X POST -H 'content-type: application/json' --data '{"type":"hello"}' "$hello_url" >/dev/null 2>&1; then
+    if curl -fsS -m 1 -X POST -H 'content-type: application/json' -H "x-rn-driver-auth: ${TOUCH_AUTH_TOKEN}" --data '{"type":"hello"}' "$hello_url" >/dev/null 2>&1; then
       return 0
     fi
     sleep 1
@@ -116,6 +134,34 @@ wait_for_instrumentation() {
   return 1
 }
 
+configure_jdk() {
+  if [[ -n "${JAVA_HOME:-}" ]]; then
+    return
+  fi
+
+  if [[ -x /usr/libexec/java_home ]]; then
+    local java_home
+    java_home="$(/usr/libexec/java_home -v 17 2>/dev/null || true)"
+    if [[ -n "$java_home" ]]; then
+      export JAVA_HOME="$java_home"
+    fi
+  fi
+}
+
+set_debug_http_host() {
+  local debug_host="10.0.2.2:${METRO_PORT}"
+
+  printf "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n  <string name=\"debug_http_host\">%s</string>\n</map>\n" "$debug_host" \
+    | adb -s "$SERIAL" shell "run-as $APP_ID sh -c 'mkdir -p /data/data/$APP_ID/shared_prefs && cat > /data/data/$APP_ID/shared_prefs/${APP_ID}_preferences.xml'"
+
+  echo "Configured ${APP_ID} debug_http_host=${debug_host}"
+}
+
+launch_app() {
+  adb -s "$SERIAL" shell am start -W -n "$APP_ID/.MainActivity" >/dev/null
+  wait_for_hermes_target
+}
+
 run_backend() {
   local backend="$1"
   shift
@@ -123,8 +169,9 @@ run_backend() {
   echo "Running Android e2e smoke with RN_TOUCH_BACKEND=${backend}"
   if RN_TOUCH_BACKEND="$backend" \
     RN_TOUCH_INSTRUMENTATION_PORT="$TOUCH_PORT" \
+    RN_TOUCH_INSTRUMENTATION_TOKEN_FILE="$TOUCH_AUTH_TOKEN_FILE" \
     RN_METRO_URL="$METRO_URL" \
-    RN_DEVICE_ID="$SERIAL" \
+    RN_DEVICE_ID="" \
     ANDROID_SERIAL="$SERIAL" \
     "$@"; then
     return 0
@@ -136,6 +183,13 @@ run_backend() {
 require_command adb
 require_command curl
 require_command npx
+if [[ -z "$TOUCH_AUTH_TOKEN" ]]; then
+  require_command openssl
+  TOUCH_AUTH_TOKEN="$(openssl rand -hex 16)"
+fi
+TOUCH_AUTH_TOKEN_FILE="$(mktemp -t rn-driver-touch-token.XXXXXX)"
+chmod 600 "$TOUCH_AUTH_TOKEN_FILE"
+printf '%s' "$TOUCH_AUTH_TOKEN" >"$TOUCH_AUTH_TOKEN_FILE"
 
 SERIAL="$(pick_emulator_serial)"
 export SERIAL
@@ -144,9 +198,10 @@ require_booted_device
 
 echo "Using Android device ${SERIAL}"
 echo "Generating Android project with Expo prebuild"
-npx expo prebuild --platform android
+npx expo prebuild --platform android --no-install
 
 echo "Building app and androidTest APKs"
+configure_jdk
 (
   cd android
   ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
@@ -165,10 +220,11 @@ CI=1 EXPO_NO_TELEMETRY=1 npx expo start --localhost --port "$METRO_PORT" >"$METR
 METRO_PID="$!"
 wait_for_metro
 
+set_debug_http_host
 echo "Launching ${APP_ID}"
-adb -s "$SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null
+launch_app
 
-if run_backend cli npx playwright test "${SPECS[@]}"; then
+if run_backend cli npx playwright test "${SPECS[@]}" --reporter=line; then
   CLI_STATUS="pass"
 else
   CLI_STATUS="fail"
@@ -176,11 +232,12 @@ fi
 
 echo "Starting instrumentation companion ${INSTRUMENTATION_TARGET} on port ${TOUCH_PORT}"
 adb -s "$SERIAL" forward "tcp:${TOUCH_PORT}" "tcp:${TOUCH_PORT}"
-adb -s "$SERIAL" shell am instrument -w "$INSTRUMENTATION_TARGET" >"$INSTRUMENTATION_LOG" 2>&1 &
+adb -s "$SERIAL" shell am instrument -e rnDriverAuthToken "$TOUCH_AUTH_TOKEN" -w "$INSTRUMENTATION_TARGET" >"$INSTRUMENTATION_LOG" 2>&1 &
 INSTRUMENTATION_PID="$!"
 wait_for_instrumentation
+launch_app
 
-if run_backend instrumentation npx playwright test "${SPECS[@]}"; then
+if run_backend instrumentation npx playwright test "${SPECS[@]}" --reporter=line; then
   INSTRUMENTATION_STATUS="pass"
 else
   INSTRUMENTATION_STATUS="fail"

@@ -1,6 +1,7 @@
 package com.rndriver.touchcompanion
 
 import android.app.Instrumentation
+import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import android.view.MotionEvent
@@ -9,6 +10,8 @@ import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.charset.StandardCharsets
@@ -17,14 +20,29 @@ import kotlin.concurrent.thread
 
 private const val DEFAULT_PORT = 9999
 private const val TAG = "RNDriverTouchCompanion"
+private const val ARG_AUTH_TOKEN = "rnDriverAuthToken"
+private const val AUTH_HEADER = "x-rn-driver-auth"
+private const val SOCKET_TIMEOUT_MS = 2_000
+private const val MAX_HEADER_BYTES = 16 * 1024
+private const val MAX_BODY_BYTES = 1024 * 1024
 
 class RNDriverTouchCompanion : Instrumentation() {
   private var server: TouchCompanionServer? = null
+  private var authToken: String? = null
   private val keepAlive = CountDownLatch(1)
+
+  override fun onCreate(arguments: Bundle?) {
+    super.onCreate(arguments)
+    authToken = arguments?.getString(ARG_AUTH_TOKEN)?.takeIf { it.isNotBlank() }
+    start()
+  }
 
   override fun onStart() {
     super.onStart()
-    server = TouchCompanionServer(this)
+    val token = checkNotNull(authToken) {
+      "RNDriverTouchCompanion requires -e $ARG_AUTH_TOKEN <token>"
+    }
+    server = TouchCompanionServer(this, authToken = token)
     server?.start()
     keepAlive.await()
   }
@@ -33,6 +51,7 @@ class RNDriverTouchCompanion : Instrumentation() {
 private class TouchCompanionServer(
   private val instrumentation: Instrumentation,
   private val port: Int = DEFAULT_PORT,
+  private val authToken: String,
 ) {
   private var serverThread: Thread? = null
   private val density: Float = instrumentation.targetContext.resources.displayMetrics.density
@@ -40,11 +59,16 @@ private class TouchCompanionServer(
   fun start() {
     if (serverThread != null) return
     serverThread = thread(name = "rn-driver-touch-server", isDaemon = true) {
-      ServerSocket(port).use { serverSocket ->
-        Log.i(TAG, "Touch companion listening on :$port")
+      ServerSocket().use { serverSocket ->
+        serverSocket.bind(InetSocketAddress(InetAddress.getLoopbackAddress(), port))
+        Log.i(TAG, "Touch companion listening on 127.0.0.1:$port")
         while (!Thread.currentThread().isInterrupted) {
           val socket = serverSocket.accept()
-          handleClient(socket)
+          try {
+            handleClient(socket)
+          } catch (error: Exception) {
+            Log.w(TAG, "Touch companion request failed", error)
+          }
         }
       }
     }
@@ -54,6 +78,7 @@ private class TouchCompanionServer(
     socket.use { client ->
       val input = BufferedInputStream(client.getInputStream())
       val output = BufferedOutputStream(client.getOutputStream())
+      client.soTimeout = SOCKET_TIMEOUT_MS
 
       val request = readHttpRequest(input) ?: return
       val response = handleCommand(request)
@@ -63,7 +88,12 @@ private class TouchCompanionServer(
     }
   }
 
-  private fun readHttpRequest(input: InputStream): String? {
+  private data class HttpRequest(
+    val headers: Map<String, String>,
+    val body: String,
+  )
+
+  private fun readHttpRequest(input: InputStream): HttpRequest? {
     val headerBuffer = ByteArrayOutputStream()
     val delimiter = "\r\n\r\n".toByteArray(StandardCharsets.UTF_8)
     val temp = ByteArray(1024)
@@ -72,11 +102,18 @@ private class TouchCompanionServer(
       val read = input.read(temp)
       if (read <= 0) return null
       headerBuffer.write(temp, 0, read)
+      if (headerBuffer.size() > MAX_HEADER_BYTES) {
+        throw IllegalArgumentException("HTTP headers exceed ${MAX_HEADER_BYTES} bytes")
+      }
       val bytes = headerBuffer.toByteArray()
       val index = indexOf(bytes, delimiter)
       if (index >= 0) {
-        val headers = String(bytes, 0, index + delimiter.size, StandardCharsets.UTF_8)
+        val headerText = String(bytes, 0, index + delimiter.size, StandardCharsets.UTF_8)
+        val headers = parseHeaders(headerText)
         val contentLength = parseContentLength(headers)
+        if (contentLength > MAX_BODY_BYTES) {
+          throw IllegalArgumentException("HTTP body exceeds ${MAX_BODY_BYTES} bytes")
+        }
         val remainingStart = index + delimiter.size
         val remaining = bytes.size - remainingStart
 
@@ -90,14 +127,18 @@ private class TouchCompanionServer(
           if (count <= 0) break
           body.write(temp, 0, count)
         }
-        return String(body.toByteArray(), StandardCharsets.UTF_8)
+        return HttpRequest(headers, String(body.toByteArray(), StandardCharsets.UTF_8))
       }
     }
   }
 
-  private fun handleCommand(body: String): String {
+  private fun handleCommand(request: HttpRequest): String {
+    if (request.headers[AUTH_HEADER] != authToken) {
+      return errorResponse("Unauthorized instrumentation companion request", "UNAUTHORIZED", 401)
+    }
+
     return try {
-      val payload = JSONObject(body)
+      val payload = JSONObject(request.body)
       val type = payload.optString("type", "")
 
       when (type) {
@@ -253,14 +294,14 @@ private class TouchCompanionServer(
     return httpResponse(payload.toString())
   }
 
-  private fun errorResponse(message: String, code: String = "INTERNAL"): String {
+  private fun errorResponse(message: String, code: String = "INTERNAL", status: Int = 500): String {
     val payload = JSONObject()
     payload.put("ok", false)
     payload.put("error", JSONObject().apply {
       put("message", message)
       put("code", code)
     })
-    return httpResponse(payload.toString(), 500)
+    return httpResponse(payload.toString(), status)
   }
 
   private fun httpResponse(body: String, status: Int = 200): String {
@@ -271,13 +312,21 @@ private class TouchCompanionServer(
       body
   }
 
-  private fun parseContentLength(headers: String): Int {
-    return headers.split("\r\n")
-      .firstOrNull { it.lowercase().startsWith("content-length") }
-      ?.split(":")
-      ?.getOrNull(1)
-      ?.trim()
-      ?.toIntOrNull() ?: 0
+  private fun parseHeaders(headerText: String): Map<String, String> {
+    return headerText.split("\r\n")
+      .drop(1)
+      .mapNotNull { line ->
+        val separator = line.indexOf(':')
+        if (separator <= 0) return@mapNotNull null
+        val name = line.substring(0, separator).trim().lowercase()
+        val value = line.substring(separator + 1).trim()
+        name to value
+      }
+      .toMap()
+  }
+
+  private fun parseContentLength(headers: Map<String, String>): Int {
+    return headers["content-length"]?.toIntOrNull() ?: 0
   }
 
   private fun indexOf(haystack: ByteArray, needle: ByteArray): Int {

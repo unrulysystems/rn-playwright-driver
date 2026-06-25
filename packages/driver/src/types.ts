@@ -332,6 +332,7 @@ export type TouchBackendConfig = {
     enabled?: boolean
     host?: string
     port?: number
+    authToken?: string
     connectTimeoutMs?: number
     requestTimeoutMs?: number
   }
@@ -614,11 +615,6 @@ export interface Device {
    * Get information about the currently selected touch backend.
    */
   getTouchBackendInfo(): Promise<TouchBackendInfo>
-
-  /**
-   * Synchronous view of the selected touch backend, or null before connect.
-   */
-  touchBackendInfo(): TouchBackendInfo | null
 
   /**
    * Start tracing driver events.
