@@ -20,7 +20,7 @@ export function parsePositiveInteger(value: string | undefined): number | undefi
   return Number.isNaN(parsed) || parsed <= 0 ? undefined : parsed
 }
 
-export function parsePort(value: string | undefined): number | undefined {
+function parsePort(value: string | undefined): number | undefined {
   const parsed = parsePositiveInteger(value)
   return parsed === undefined || parsed > 65_535 ? undefined : parsed
 }
@@ -29,7 +29,7 @@ function isTouchBackend(value: string): value is TouchBackendType {
   return TOUCH_BACKENDS.includes(value as TouchBackendType)
 }
 
-export function instrumentationAuthTokenFromEnv(
+function instrumentationAuthTokenFromEnv(
   env: TestEnvironment,
   readTextFile: ReadTextFile,
 ): string | undefined {
