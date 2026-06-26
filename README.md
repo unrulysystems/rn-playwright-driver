@@ -301,13 +301,36 @@ const device = createDevice({
 
 ## Running E2E Tests
 
-1. Start Metro for the app (e.g., `expo start`).
-2. Run the app on device/simulator with Hermes debugging enabled.
-3. Run Playwright:
+For the example app, use the companion-backed gates. These scripts prebuild the
+native app, start Metro, start the platform companion, run Playwright, and clean
+up the companion process/ports:
 
 ```bash
-bun run test:e2e
+cd examples/basic-app
+bun run test:e2e:android # Android instrumentation companion
+bun run test:e2e:ios     # iOS XCTest companion
 ```
+
+For your app, the same shape applies:
+
+1. Import `@unrulysystems/rn-playwright-driver/harness/dev` in the E2E/dev entry.
+2. Add the platform companion config plugin and regenerate native projects.
+3. Start Metro and run the app with Hermes debugging enabled.
+4. Start the platform companion.
+5. Run Playwright with the matching backend:
+
+```bash
+RN_TOUCH_BACKEND=instrumentation bun run test:e2e # Android
+RN_TOUCH_BACKEND=xctest bun run test:e2e          # iOS
+```
+
+See
+[`packages/instrumentation-companion/README.md`](packages/instrumentation-companion/README.md)
+and
+[`packages/xctest-companion/README.md`](packages/xctest-companion/README.md)
+for the companion launch commands and token-file setup. Prefer token files
+(`RN_TOUCH_INSTRUMENTATION_TOKEN_FILE`, `RN_TOUCH_XCTEST_TOKEN_FILE`) over inline
+token environment variables in local scripts.
 
 ## Development (Monorepo)
 

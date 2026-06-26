@@ -132,6 +132,11 @@ dual/native-module lanes for release validation.
 
 ## GitHub Actions Example
 
+This is a starting point for hosted or self-hosted CI. The example app scripts
+own simulator/emulator boot, Metro startup, companion startup, Playwright
+execution, and cleanup. Keep those responsibilities in one script when adapting
+this to an app repo.
+
 ```yaml
 name: E2E Tests
 
@@ -154,11 +159,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Boot iOS Simulator
-        run: |
-          xcrun simctl boot "iPhone 15 Pro" || true
-          xcrun simctl bootstatus "iPhone 15 Pro" -b
 
       - name: Run XCTest companion E2E
         working-directory: examples/basic-app

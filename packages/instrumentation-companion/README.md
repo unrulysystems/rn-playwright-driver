@@ -8,6 +8,10 @@ OS-level touch events through `UiAutomation.injectInputEvent`.
 
 Install the package in the app under test and add the config plugin:
 
+```bash
+bun add -d @unrulysystems/rn-playwright-driver-instrumentation-companion
+```
+
 ```json
 {
   "expo": {
@@ -25,9 +29,10 @@ During `expo prebuild`, the plugin:
   dependencies.
 
 The plugin requires `expo.android.package` so the androidTest manifest can target
-the app package. The packaged Android manifest uses `${applicationId}` as the
-target package placeholder; if a consuming build cannot resolve that placeholder,
-copy the manifest below and replace it with the app id.
+the app package. In the commands below, `<app>` is that Android application id
+(for example `com.example.app`). The packaged Android manifest uses
+`${applicationId}` as the target package placeholder; if a consuming build cannot
+resolve that placeholder, copy the manifest below and replace it with the app id.
 
 ## Manual Device Flow
 
@@ -84,6 +89,12 @@ so the Playwright process environment carries only a path. Prefer
 `rnDriverAuthTokenFile` for the instrumentation process as well; it names a file
 in the target app's private `files/` directory and avoids exposing the token in
 the long-lived `adb shell am instrument` process arguments.
+
+For an end-to-end automation script, use
+`examples/basic-app/scripts/e2e-android-instrumentation.sh` as the reference. It
+generates a per-run token file, installs both APKs, launches the companion, runs
+Playwright with `RN_TOUCH_BACKEND=instrumentation`, and cleans up the forwarded
+port.
 
 ## Raw Assets
 
