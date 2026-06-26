@@ -3,10 +3,10 @@
  *
  * Tests dragPath() and movePath() for complex gesture paths.
  *
- * NOTE: These tests require RNDriverTouchInjector to be installed.
+ * NOTE: These tests require the platform touch companion for the official e2e lanes.
  */
 
-import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
+import { expect, expectLocator, test } from '@unrulysystems/rn-playwright-driver/test'
 import { expectEventsAtLeast, withTracing } from '../utils/tracing'
 
 const ZIGZAG_PATH = [
@@ -20,6 +20,14 @@ const DIAGONAL_PATH = [
   { x: 150, y: 150 },
   { x: 200, y: 200 },
 ]
+
+async function getDragStatus(device: {
+  evaluate<T>(expression: string): Promise<T>
+}): Promise<string> {
+  return device.evaluate<string>(
+    "globalThis.__RN_DRIVER__.viewTree.findByTestId('drag-status').then(r => r.success ? r.data.text : '')",
+  )
+}
 
 test.describe('Pointer Paths', () => {
   test('dragPath() executes without error with valid path', async ({ device }) => {
@@ -36,6 +44,12 @@ test.describe('Pointer Paths', () => {
   })
 
   test('dragPath() generates pointer events', async ({ device }) => {
+    const backend = await device.getTouchBackendInfo()
+    test.skip(
+      backend.selected !== 'native-module',
+      'pointer trace events are emitted by the in-app native-module backend only',
+    )
+
     const events = await withTracing(device, async () => {
       await device.pointer.dragPath(DIAGONAL_PATH)
     })
@@ -55,6 +69,35 @@ test.describe('Pointer Paths', () => {
     expect(endTime - startTime).toBeGreaterThanOrEqual(100)
   })
 
+  test('dragPath() moves the app drag target', async ({ device }) => {
+    const target = device.getByTestId('drag-target')
+    await expectLocator(target).toBeVisible()
+
+    const bounds = await target.bounds()
+    expect(bounds).not.toBeNull()
+
+    const startX = bounds!.x + bounds!.width * 0.2
+    const endX = bounds!.x + bounds!.width * 0.8
+    const centerY = bounds!.y + bounds!.height / 2
+    const points = Array.from({ length: 12 }, (_, index) => {
+      const t = index / 11
+      return {
+        x: startX + (endX - startX) * t,
+        y: centerY,
+      }
+    })
+
+    await device.pointer.dragPath(points, { delay: 16 })
+
+    await expectLocator(device.getByTestId('drag-status')).toHaveText('Drag: ended', {
+      exact: false,
+    })
+    const status = await getDragStatus(device)
+    const moveMatch = /moves:\s*(\d+)/.exec(status)
+    expect(moveMatch).not.toBeNull()
+    expect(Number.parseInt(moveMatch![1]!, 10)).toBeGreaterThan(0)
+  })
+
   test('movePath() executes without error with valid path', async ({ device }) => {
     await device.pointer.movePath(ZIGZAG_PATH)
   })
@@ -69,6 +112,12 @@ test.describe('Pointer Paths', () => {
   })
 
   test('movePath() generates only move events (no down/up)', async ({ device }) => {
+    const backend = await device.getTouchBackendInfo()
+    test.skip(
+      backend.selected !== 'native-module',
+      'pointer trace events are emitted by the in-app native-module backend only',
+    )
+
     const events = await withTracing(device, async () => {
       await device.pointer.movePath(DIAGONAL_PATH)
     })

@@ -324,6 +324,8 @@ export type TouchBackendConfig = {
     enabled?: boolean
     host?: string
     port?: number
+    url?: string
+    authToken?: string
     connectTimeoutMs?: number
     requestTimeoutMs?: number
   }
@@ -332,6 +334,7 @@ export type TouchBackendConfig = {
     enabled?: boolean
     host?: string
     port?: number
+    authToken?: string
     connectTimeoutMs?: number
     requestTimeoutMs?: number
   }
@@ -339,22 +342,23 @@ export type TouchBackendConfig = {
   nativeModule?: {
     enabled?: boolean
   }
-  /** Enable CLI backend (idb/adb) */
+  /** Enable Android adb CLI backend */
   cli?: {
     enabled?: boolean
+    adbPath?: string
+    serial?: string
   }
 }
 
 /**
  * Locator for finding and interacting with RN views.
  *
- * IMPORTANT: Most Locator methods require native modules (Phase 3).
- * In Phase 1-2, use device.pointer.* with coordinates from device.evaluate().
- *
- * Methods will throw descriptive errors if called before native modules are available.
+ * Queries require the native view-tree module. Actions that synthesize input use
+ * the selected touch backend, which may be a platform companion, adb CLI, or the
+ * native touch module depending on backend selection.
  */
 export type Locator = {
-  /** Tap the element center. REQUIRES: RNDriverViewTree + RNDriverTouch (Phase 3) */
+  /** Tap the element center. REQUIRES: RNDriverViewTree + a selected touch backend. */
   tap(): Promise<void>
   /**
    * Type text into the element.

@@ -3,21 +3,29 @@
  *
  * Tests swipe, drag, tap, and other pointer operations.
  *
- * NOTE: These tests require RNDriverTouchInjector to be installed.
+ * NOTE: These tests require the platform touch companion for the official e2e lanes.
  */
 
 import { expect, expectLocator, test } from '@unrulysystems/rn-playwright-driver/test'
 
+async function getDragStatus(device: {
+  evaluate<T>(expression: string): Promise<T>
+}): Promise<string> {
+  return device.evaluate<string>(
+    "globalThis.__RN_DRIVER__.viewTree.findByTestId('drag-status').then(r => r.success ? r.data.text : '')",
+  )
+}
+
 test.describe('Gesture Interactions', () => {
   test('swipe performs smooth gesture', async ({ device }) => {
-    // Get screen dimensions from an element
-    const counter = device.getByTestId('count-display')
-    const bounds = await counter.bounds()
+    const target = device.getByTestId('drag-target')
+    await expectLocator(target).toBeVisible()
+
+    const bounds = await target.bounds()
     expect(bounds).not.toBeNull()
 
-    // Perform a vertical swipe
-    const startY = bounds!.y + 100
-    const endY = bounds!.y + 300
+    const startY = bounds!.y + bounds!.height * 0.25
+    const endY = bounds!.y + bounds!.height * 0.75
     const centerX = bounds!.x + bounds!.width / 2
 
     await device.pointer.swipe({
@@ -25,29 +33,34 @@ test.describe('Gesture Interactions', () => {
       to: { x: centerX, y: endY },
       duration: 300,
     })
+
+    await expect.poll(() => getDragStatus(device)).toMatch(/moves:\s*[1-9]\d*/)
   })
 
   test('swipe with custom duration', async ({ device }) => {
-    const counter = device.getByTestId('count-display')
-    const bounds = await counter.bounds()
+    const target = device.getByTestId('drag-target')
+    await expectLocator(target).toBeVisible()
+
+    const bounds = await target.bounds()
     expect(bounds).not.toBeNull()
 
+    const startY = bounds!.y + bounds!.height * 0.25
+    const endY = bounds!.y + bounds!.height * 0.75
     const centerX = bounds!.x + bounds!.width / 2
-    const centerY = bounds!.y + bounds!.height / 2
 
-    // Fast swipe
+    const duration = 500
+    const startedAt = Date.now()
+
     await device.pointer.swipe({
-      from: { x: centerX, y: centerY },
-      to: { x: centerX + 100, y: centerY },
-      duration: 100,
+      from: { x: centerX, y: startY },
+      to: { x: centerX, y: endY },
+      duration,
+      holdStart: 0,
+      holdEnd: 0,
     })
 
-    // Slow swipe
-    await device.pointer.swipe({
-      from: { x: centerX + 100, y: centerY },
-      to: { x: centerX, y: centerY },
-      duration: 500,
-    })
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(device.platform === 'ios' ? 150 : 400)
+    await expect.poll(() => getDragStatus(device)).toMatch(/Drag:\s*(started|ended)/)
   })
 
   test('drag performs interpolated movement', async ({ device }) => {
@@ -65,17 +78,6 @@ test.describe('Gesture Interactions', () => {
     )
   })
 
-  test('tap on element center (via locator)', async ({ device }) => {
-    const button = device.getByTestId('increment-button')
-    await expectLocator(button).toBeVisible()
-
-    // Tap the button using locator (native touch injection)
-    await button.tap()
-
-    // Verify the tap was registered by checking counter value changed
-    // (Actual verification depends on app state)
-  })
-
   test('pointer down/move/up sequence', async ({ device }) => {
     const counter = device.getByTestId('count-display')
     const bounds = await counter.bounds()
@@ -89,17 +91,5 @@ test.describe('Gesture Interactions', () => {
     await device.pointer.move(x + 10, y)
     await device.pointer.move(x + 20, y)
     await device.pointer.up()
-  })
-
-  test('multiple taps in sequence (via locator)', async ({ device }) => {
-    const incrementButton = device.getByTestId('increment-button')
-    await expectLocator(incrementButton).toBeVisible()
-
-    // Tap multiple times using locator (native touch injection)
-    await incrementButton.tap()
-    await device.waitForTimeout(100)
-    await incrementButton.tap()
-    await device.waitForTimeout(100)
-    await incrementButton.tap()
   })
 })

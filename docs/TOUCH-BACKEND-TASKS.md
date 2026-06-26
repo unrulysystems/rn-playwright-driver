@@ -4,42 +4,47 @@ Detailed implementation tasks for touch injection backends. See `NATIVE-MODULES-
 
 ## Status Overview
 
-| Component                           | Status                                 | Notes                                                                |
-| ----------------------------------- | -------------------------------------- | -------------------------------------------------------------------- |
-| TouchBackend interface              | ✅ Complete                            | `packages/driver/src/touch/backend.ts`                               |
-| Backend factory + types             | ✅ Complete                            | `packages/driver/src/touch/index.ts`                                 |
-| NativeModuleTouchBackend            | ✅ Complete                            | Driver-side client via CDP                                           |
-| XCTestTouchBackend                  | ✅ Complete                            | WebSocket client to companion                                        |
-| InstrumentationTouchBackend         | ✅ Complete                            | HTTP client to companion                                             |
-| CliTouchBackend                     | 🔶 Stub                                | Needs idb/adb implementation                                         |
-| XCTest Companion (iOS)              | ✅ Reference impl (manual integration) | `packages/xctest-companion/`                                         |
-| Instrumentation Companion (Android) | ✅ Reference impl (manual integration) | `packages/instrumentation-companion/`                                |
-| RNDriverTouchInjector (iOS)         | ✅ Implemented                         | DEBUG builds only; uses UIKit private touch synthesis                |
-| RNDriverTouchInjector (Android)     | ✅ Implemented                         | Requires Android instrumentation to provide `Instrumentation`        |
-| Harness touchNative bridge          | ✅ Complete                            | Loads `RNDriverTouchInjector` and exposes `capabilities.touchNative` |
+| Component                           | Status               | Notes                                                                |
+| ----------------------------------- | -------------------- | -------------------------------------------------------------------- |
+| TouchBackend interface              | ✅ Complete          | `packages/driver/src/touch/backend.ts`                               |
+| Backend factory + types             | ✅ Complete          | `packages/driver/src/touch/index.ts`                                 |
+| NativeModuleTouchBackend            | ✅ Complete          | Driver-side client via CDP                                           |
+| XCTestTouchBackend                  | ✅ Complete          | WebSocket client to companion                                        |
+| InstrumentationTouchBackend         | ✅ Complete          | HTTP client to companion                                             |
+| CliTouchBackend                     | ✅ Explicit fallback | Android adb input backend                                            |
+| XCTest Companion (iOS)              | ✅ Scaffold/plugin   | `packages/xctest-companion/`                                         |
+| Instrumentation Companion (Android) | ✅ Config plugin     | `packages/instrumentation-companion/`                                |
+| RNDriverTouchInjector (iOS)         | ✅ Implemented       | DEBUG builds only; uses UIKit private touch synthesis                |
+| RNDriverTouchInjector (Android)     | ✅ Implemented       | Requires Android instrumentation to provide `Instrumentation`        |
+| Harness touchNative bridge          | ✅ Complete          | Loads `RNDriverTouchInjector` and exposes `capabilities.touchNative` |
 
 ## Current Defaults
 
-`createTouchBackend()` currently defaults to `["native-module"]` on both iOS and Android. This means `device.connect()` fails fast when `@unrulysystems/rn-driver-touch` is absent from the tested app instead of silently falling back to a less capable path.
+`createTouchBackend()` currently defaults to the platform companion only:
+`["xctest"]` on iOS and `["instrumentation"]` on Android. Auto mode fails closed
+when the companion is unavailable instead of silently falling back to a less
+faithful backend.
 
-Use explicit configuration for companion runs:
+Use explicit configuration only for lower-fidelity escape hatches:
 
 ```ts
 createDevice({
   touch: {
-    order: ['instrumentation', 'native-module'],
-    instrumentation: { port: 9999 },
+    mode: 'force',
+    backend: 'native-module',
   },
 })
 ```
 
-`cli` remains a typed placeholder and should not appear in default orders until idb/adb execution, device selection, timeout handling, and shell escaping are implemented. The previous JS harness fallback has been removed from the current source surface.
+The previous JS harness fallback has been removed from the current source
+surface.
 
 ---
 
-## Tier 1: Native Module Touch Injector ✅
+## Lower-Fidelity: Native Module Touch Injector ✅
 
-In-app touch synthesis is the current default because it is packaged with the tested app and can be detected through the harness capability flag.
+In-app touch synthesis is available for fast local loops but is not the
+confidence path. It is scoped to the app process/current app windows.
 
 ### iOS implementation
 
@@ -57,14 +62,14 @@ In-app touch synthesis is the current default because it is packaged with the te
 
 ---
 
-## Tier 2: Companion Processes (OS-level) ✅
+## Tier 1: Companion Processes ✅
 
-Both companion processes are implemented as reference code. Integrate into your app's test target to use.
+Companion processes are the confidence path for pointer input.
 
 ### XCTest Companion (iOS)
 
 - **Location**: `packages/xctest-companion/ios/RNDriverTouchCompanion.swift`
-- **Status**: Reference impl (manual integration)
+- **Status**: Scaffold/plugin
 - **Features**: hello, tap, down/move/up, swipe, longPress, typeText
 - **Protocol**: WebSocket on port 9999
   - Request: `{ id, type: "tap", x, y }`
@@ -73,12 +78,12 @@ Both companion processes are implemented as reference code. Integrate into your 
 
 **Usage**:
 
-Integrate `RNDriverTouchCompanion.swift` into your app's UI test target, then run your test scheme to start the companion server. See `packages/xctest-companion/README.md` for details.
+Install the XCTest companion package/plugin or run `rn-driver-xctest-scaffold`; the scaffold copies the Swift files, creates/updates the app UI test target, and writes a shared companion scheme. See `packages/xctest-companion/README.md` for details.
 
 ### Instrumentation Companion (Android)
 
 - **Location**: `packages/instrumentation-companion/android/src/main/java/com/rndriver/touchcompanion/RNDriverTouchCompanion.kt`
-- **Status**: Reference impl (manual integration)
+- **Status**: Config plugin
 - **Features**: hello, tap, down/move/up, swipe, longPress, typeText
 - **Protocol**: HTTP POST /command on port 9999
   - Request: `{ type: "tap", x, y }`
@@ -93,9 +98,9 @@ adb shell am instrument -w \
   com.your.test/com.rndriver.touchcompanion.RNDriverTouchCompanion
 ```
 
-## Tier 3: CLI Backend (idb/adb)
+## Explicit Fallback: CLI Backend (adb)
 
-Fallback for when companions aren't running but CLI tools are available.
+Lower-fidelity Android fallback for diagnostics when adb input is sufficient.
 
 ### Task: Implement CliTouchBackend
 
@@ -108,17 +113,17 @@ Fallback for when companions aren't running but CLI tools are available.
   - Implement typeText: `idb ui text "<text>"`
   - Handle coordinate system (idb uses points)
 
-- [ ] **Android (adb)**
-  - Detect adb availability: `which adb`
+- [x] **Android (adb)**
+  - Detect adb availability with `adb get-state`
   - Implement tap: `adb shell input tap <x> <y>`
   - Implement swipe: `adb shell input swipe <x1> <y1> <x2> <y2> <duration_ms>`
   - Implement typeText: `adb shell input text "<text>"`
-  - Convert dp to pixels using device density
+  - Convert logical points to pixels using device density
 
-- [ ] **Process spawning**
-  - Use `child_process.spawn` for non-blocking execution
+- [x] **Process spawning**
+  - Use bounded `execFile` calls for adb execution
   - Parse stdout/stderr for error detection
-  - Handle timeouts
+  - Handle command timeouts
 
 ---
 
@@ -151,12 +156,12 @@ Fallback for when companions aren't running but CLI tools are available.
 
 ### Task: Prepare companion packages for npm
 
-- [ ] **xctest-companion**
-  - Add proper package.json with bin scripts
-  - Add Xcode project for building
-  - Document integration with app's test target
+- [x] **xctest-companion**
+  - Package includes `app.plugin.js`, `bin/rn-driver-xctest-scaffold`, Swift companion sources, runtime config placeholder, and scaffold helper
+  - Scaffold creates/updates the app UI test target and shared companion scheme
+  - README documents integration with the app's test target
 
-- [ ] **instrumentation-companion**
+- [x] **instrumentation-companion**
   - Add proper package.json
   - Add Gradle build setup
   - Document APK building and installation
@@ -181,25 +186,15 @@ Fallback for when companions aren't running but CLI tools are available.
 ### iOS with XCTest Companion
 
 ```bash
-# Terminal 1: Start companion
-# Integrate RNDriverTouchCompanion.swift into your app's UI test target
-# Then run your UI test scheme to start the companion server
-
-# Terminal 2: Run tests (auto-selects xctest backend if companion is running)
-cd example
-bun run test:e2e
+cd examples/basic-app
+bun run test:e2e:ios
 ```
 
 ### Android with Instrumentation Companion
 
 ```bash
-# Terminal 1: Start companion
-# Integrate RNDriverTouchCompanion.kt into your androidTest target
-# Then run: adb shell am instrument -w <your.test.pkg>/com.rndriver.touchcompanion.RNDriverTouchCompanion
-
-# Terminal 2: Run tests (auto-selects instrumentation backend if companion is running)
-cd example
-bun run test:e2e
+cd examples/basic-app
+bun run test:e2e:android
 ```
 
 ### Force Specific Backend
@@ -215,9 +210,10 @@ const device = createDevice({
 })
 ```
 
-### Default (native-module)
+### Default companion-backed e2e
 
 ```bash
-cd example
-bun run test:e2e  # Default backend order resolves to native-module
+cd examples/basic-app
+bun run test:e2e:android
+bun run test:e2e:ios
 ```

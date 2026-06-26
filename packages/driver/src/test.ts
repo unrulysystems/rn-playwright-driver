@@ -1,18 +1,11 @@
+import { readFileSync } from 'node:fs'
 import { test as base } from '@playwright/test'
 import { createDevice, type RNDevice, type RNDeviceOptions } from './device'
+import { parsePositiveInteger, touchOptionsFromEnv } from './test-env'
 import type { Device } from './types'
 
 const DEFAULT_METRO_URL = 'http://localhost:8081'
 const DEFAULT_TIMEOUT = 30_000
-
-/**
- * Parse timeout string, returning undefined if invalid.
- */
-function parseTimeout(value: string | undefined): number | undefined {
-  if (!value) return undefined
-  const parsed = Number.parseInt(value, 10)
-  return Number.isNaN(parsed) || parsed <= 0 ? undefined : parsed
-}
 
 /**
  * Extended test fixtures for React Native testing.
@@ -37,6 +30,14 @@ export type RNWorkerFixtures = {
  * - RN_DEVICE_ID: Device ID to connect to
  * - RN_DEVICE_NAME: Device name to match (substring, case-insensitive)
  * - RN_TIMEOUT: Request timeout in ms (default: 30000)
+ * - RN_TOUCH_BACKEND: Force touch backend ('cli', 'instrumentation', 'native-module', or 'xctest')
+ * - RN_TOUCH_CLI_ADB_PATH: adb executable path for RN_TOUCH_BACKEND=cli
+ * - RN_TOUCH_ADB_SERIAL: adb serial for RN_TOUCH_BACKEND=cli (defaults to ANDROID_SERIAL or RN_DEVICE_ID)
+ * - RN_TOUCH_INSTRUMENTATION_PORT: Instrumentation companion port when RN_TOUCH_BACKEND=instrumentation (default: 9999)
+ * - RN_TOUCH_INSTRUMENTATION_TOKEN: Required auth token for the Android instrumentation companion
+ * - RN_TOUCH_INSTRUMENTATION_TOKEN_FILE: File containing the auth token when RN_TOUCH_INSTRUMENTATION_TOKEN is unset
+ * - RN_TOUCH_XCTEST_HOST / RN_TOUCH_XCTEST_PORT / RN_TOUCH_XCTEST_URL: XCTest companion endpoint
+ * - RN_TOUCH_XCTEST_TOKEN / RN_TOUCH_XCTEST_TOKEN_FILE: XCTest companion auth token
  * Usage in test files:
  * ```ts
  * import { test, expect } from '@unrulysystems/rn-playwright-driver/test';
@@ -54,7 +55,7 @@ export const test = base.extend<RNTestFixtures, RNWorkerFixtures>({
     async ({}, use) => {
       const options: RNDeviceOptions = {
         metroUrl: process.env.RN_METRO_URL ?? DEFAULT_METRO_URL,
-        timeout: parseTimeout(process.env.RN_TIMEOUT) ?? DEFAULT_TIMEOUT,
+        timeout: parsePositiveInteger(process.env.RN_TIMEOUT) ?? DEFAULT_TIMEOUT,
       }
 
       // Only set optional fields if they have values
@@ -66,6 +67,11 @@ export const test = base.extend<RNTestFixtures, RNWorkerFixtures>({
       const deviceName = process.env.RN_DEVICE_NAME
       if (deviceName) {
         options.deviceName = deviceName
+      }
+
+      const touch = touchOptionsFromEnv(process.env, (path) => readFileSync(path, 'utf8'), deviceId)
+      if (touch) {
+        options.touch = touch
       }
 
       await use(options)

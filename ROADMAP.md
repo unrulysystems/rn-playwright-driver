@@ -66,14 +66,14 @@ Kernel-level touch injection via companion process. Enables system UI interactio
 - [x] **XCTest Companion (iOS)**: WebSocket server using XCUICoordinate for IOHIDEvent injection
 - [x] **Instrumentation Companion (Android)**: HTTP server using UiAutomation.injectInputEvent()
 - [x] Driver backend clients (XCTestTouchBackend, InstrumentationTouchBackend)
-- [ ] Add package-level companion launch/build scripts before advertising as turnkey
+- [x] Android companion package includes an Expo config plugin for androidTest integration
 
 ### Tier 3: CLI Backend (idb/adb)
 
-Future fallback to spawning idb/adb CLI commands for touch injection.
+Fallback to spawning idb/adb CLI commands for touch injection.
 
 - [ ] CliTouchBackend with idb support
-- [ ] CliTouchBackend with adb support
+- [x] CliTouchBackend with adb support
 
 ### Touch Backend Infrastructure
 
@@ -82,8 +82,8 @@ Future fallback to spawning idb/adb CLI commands for touch injection.
 - [x] Backend factory with auto-selection
 - [x] Pointer class refactored to use TouchBackend
 - [x] Harness touchNative bridge types
-- [ ] Integration tests for each backend tier
-- [ ] Optional env parser for `RN_TOUCH_BACKEND` / ordered backend preferences in the Playwright fixture
+- [x] Android device smoke tests for adb CLI and instrumentation backends
+- [x] Env parser for forcing `RN_TOUCH_BACKEND` and `RN_TOUCH_INSTRUMENTATION_PORT`
 
 ## Medium Effort
 

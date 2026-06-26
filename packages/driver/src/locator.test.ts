@@ -9,9 +9,9 @@
  */
 
 import type { ElementInfo, NativeResult } from '@unrulysystems/rn-driver-shared-types'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createLocator, type Locator } from './locator'
-import type { Capabilities, ScrollOptions, WindowMetrics } from './types'
+import type { ScrollOptions, TouchBackendInfo, WindowMetrics } from './types'
 
 const METRICS: WindowMetrics = {
   width: 400,
@@ -22,14 +22,9 @@ const METRICS: WindowMetrics = {
   orientation: 'portrait',
 }
 
-const CAPABILITIES: Capabilities = {
-  apiVersion: 1,
-  viewTree: true,
-  viewTreeTap: true,
-  screenshot: true,
-  screenshotCaptureElement: true,
-  lifecycle: true,
-  touchNative: true,
+const CLI_TOUCH_BACKEND: TouchBackendInfo = {
+  selected: 'cli',
+  available: ['cli'],
 }
 
 function clamp(value: number, lo: number, hi: number): number {
@@ -170,8 +165,11 @@ class FakeDevice {
     }
   }
 
-  async capabilities(): Promise<Capabilities> {
-    return CAPABILITIES
+  async getTouchBackendInfo(): Promise<TouchBackendInfo> {
+    return {
+      selected: 'native-module',
+      available: ['native-module'],
+    }
   }
 
   /** Current on-screen bounds, for assertions. */
@@ -191,6 +189,62 @@ async function expectLocatorError(promise: Promise<unknown>, code: string): Prom
   // resolved promise would skip the code check entirely.
   await expect(promise).rejects.toMatchObject({ name: 'LocatorError', code })
 }
+
+describe('Locator.tap', () => {
+  const ELEMENT: ElementInfo = {
+    handle: 'element_button',
+    testId: 'button',
+    text: null,
+    role: null,
+    label: null,
+    bounds: { x: 10, y: 20, width: 80, height: 40 },
+    visible: true,
+    enabled: true,
+  }
+
+  function tapDevice(touchBackendInfo: TouchBackendInfo | null): {
+    device: Parameters<typeof createLocator>[0]
+    tap: ReturnType<typeof vi.fn>
+  } {
+    const tap = vi.fn(async () => undefined)
+    const device = {
+      evaluate: async <T>(): Promise<T> => ({ success: true, data: ELEMENT }) as T,
+      pointer: { tap },
+      waitForTimeout: async () => undefined,
+      getTouchBackendInfo: async () => {
+        if (!touchBackendInfo) {
+          throw new Error('Device not connected. Call connect() first.')
+        }
+        return touchBackendInfo
+      },
+      getWindowMetrics: async () => METRICS,
+      scroll: async () => undefined,
+      platform: 'android' as const,
+    }
+    return { device, tap }
+  }
+
+  it('allows tap through a selected non-native touch backend when the native module is absent', async () => {
+    const { device, tap } = tapDevice(CLI_TOUCH_BACKEND)
+    const locator = createLocator(device, { type: 'testId', value: 'button' })
+
+    await locator.tap()
+
+    expect(tap).toHaveBeenCalledWith(50, 40)
+  })
+
+  it('throws NOT_SUPPORTED when no touch backend is selected', async () => {
+    const { device, tap } = tapDevice(null)
+    const locator = createLocator(device, { type: 'testId', value: 'button' })
+
+    await expect(locator.tap()).rejects.toMatchObject({
+      name: 'LocatorError',
+      code: 'NOT_SUPPORTED',
+      message: expect.stringContaining('No touch backend is available'),
+    })
+    expect(tap).not.toHaveBeenCalled()
+  })
+})
 
 describe('Locator.scrollIntoView', () => {
   it('does not scroll when the element is already in the viewport', async () => {
@@ -374,7 +428,10 @@ describe('Locator.fill', () => {
       }) as <T>(expression: string) => Promise<T>,
       pointer: { tap: async () => undefined },
       waitForTimeout: async () => undefined,
-      capabilities: async () => CAPABILITIES,
+      getTouchBackendInfo: async (): Promise<TouchBackendInfo> => ({
+        selected: 'native-module',
+        available: ['native-module'],
+      }),
       getWindowMetrics: async () => METRICS,
       scroll: async () => undefined,
       platform: 'ios' as const,

@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 // Tall filler blocks between the controls and the below-the-fold target. Eight
@@ -11,13 +11,33 @@ const FILLER_IDS = Array.from({ length: 8 }, (_, i) => `filler-${i}`)
 
 export default function App() {
   const [count, setCount] = useState(0)
+  const [dragPhase, setDragPhase] = useState('idle')
+  const [dragMoves, setDragMoves] = useState(0)
+  const scrollRef = useRef<ScrollView>(null)
   // Controlled TextInput fixture for the Locator.fill() e2e (#11). The mirror
   // Text below echoes React state, so a successful fill (which must fire the
   // synthetic change, not just setNativeProps) is observable on-device.
   const [name, setName] = useState('')
 
+  useEffect(() => {
+    const globals = globalThis as typeof globalThis & {
+      __RN_DRIVER_EXAMPLE__?: { scrollToTop: () => void }
+    }
+    globals.__RN_DRIVER_EXAMPLE__ = {
+      scrollToTop: () => scrollRef.current?.scrollTo({ y: 0, animated: false }),
+    }
+    return () => {
+      delete globals.__RN_DRIVER_EXAMPLE__
+    }
+  }, [])
+
   return (
-    <ScrollView testID="scroll-view" style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      ref={scrollRef}
+      testID="scroll-view"
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.title} testID="title">
         RN Playwright Driver Example
       </Text>
@@ -76,6 +96,24 @@ export default function App() {
       >
         <Text style={styles.buttonText}>Reset</Text>
       </Pressable>
+
+      <View
+        style={styles.dragTarget}
+        testID="drag-target"
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={() => {
+          setDragPhase('started')
+          setDragMoves(0)
+        }}
+        onResponderMove={() => setDragMoves((moves) => moves + 1)}
+        onResponderRelease={() => setDragPhase('ended')}
+      >
+        <Text style={styles.dragTargetText}>Drag target</Text>
+        <Text style={styles.dragStatus} testID="drag-status">
+          Drag: {dragPhase} moves: {dragMoves}
+        </Text>
+      </View>
 
       {/* Filler pushes the target below the fold so scrolling is required. */}
       {FILLER_IDS.map((id) => (
@@ -154,6 +192,26 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  dragTarget: {
+    width: '100%',
+    minHeight: 96,
+    marginTop: 12,
+    marginBottom: 20,
+    borderRadius: 10,
+    backgroundColor: '#1D9A8A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dragTargetText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  dragStatus: {
+    color: '#fff',
+    fontSize: 16,
   },
   filler: {
     width: '100%',

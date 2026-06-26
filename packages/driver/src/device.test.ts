@@ -7,10 +7,39 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RNDevice, TimeoutError, UncaughtExceptionError } from './device'
 import type { ConsoleMessage, PageError } from './types'
 
+type MockTarget = {
+  id: string
+  title: string
+  webSocketDebuggerUrl: string
+  deviceName?: string
+}
+
 // Store mock evaluate + onEvent + connect for tests to access
 let mockEvaluateFn: ReturnType<typeof vi.fn>
 let mockOnEventFn: ReturnType<typeof vi.fn>
 let mockConnectFn: ReturnType<typeof vi.fn>
+let mockSelectedTarget: MockTarget
+
+function defaultTarget(): MockTarget {
+  return {
+    id: 'test-target',
+    title: 'Test App',
+    webSocketDebuggerUrl: 'ws://localhost:8081/debugger',
+  }
+}
+
+function isPlatformProbe(expr: string): boolean {
+  return expr.includes('Platform') && expr.includes('OS')
+}
+
+function mockDefaultPlatform(platform: 'ios' | 'android' = 'ios'): void {
+  mockEvaluateFn.mockImplementation((expr: string) => {
+    if (isPlatformProbe(expr)) {
+      return Promise.resolve(platform)
+    }
+    return Promise.resolve(undefined)
+  })
+}
 
 // Mock the CDP client with a class
 vi.mock('./cdp/client', () => {
@@ -42,18 +71,8 @@ function fireCdpEvent(method: string, params: Record<string, unknown>): void {
 
 // Mock CDP discovery
 vi.mock('./cdp/discovery', () => ({
-  discoverTargets: vi.fn().mockResolvedValue([
-    {
-      id: 'test-target',
-      title: 'Test App',
-      webSocketDebuggerUrl: 'ws://localhost:8081/debugger',
-    },
-  ]),
-  selectTarget: vi.fn().mockReturnValue({
-    id: 'test-target',
-    title: 'Test App',
-    webSocketDebuggerUrl: 'ws://localhost:8081/debugger',
-  }),
+  discoverTargets: vi.fn().mockImplementation(() => Promise.resolve([mockSelectedTarget])),
+  selectTarget: vi.fn().mockImplementation(() => mockSelectedTarget),
 }))
 
 // Mock touch backend
@@ -88,18 +107,104 @@ describe('RNDevice Core Primitives', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
 
     device = new RNDevice({ timeout: 1000 })
 
     // Default mock for platform detection
-    mockEvaluateFn.mockImplementation((expr: string) => {
-      if (expr.includes('Platform.OS')) {
-        return Promise.resolve('ios')
-      }
-      return Promise.resolve(undefined)
-    })
+    mockDefaultPlatform('ios')
 
     await device.connect()
+  })
+
+  describe('platform detection', () => {
+    async function connectWithPlatformProbe(
+      target: MockTarget,
+      probe: () => Promise<unknown>,
+    ): Promise<RNDevice> {
+      vi.clearAllMocks()
+      mockSelectedTarget = target
+      const platformDevice = new RNDevice({ timeout: 1000 })
+      mockEvaluateFn.mockImplementation((expr: string) => {
+        if (isPlatformProbe(expr)) {
+          return probe()
+        }
+        return Promise.resolve(undefined)
+      })
+
+      await platformDevice.connect()
+      return platformDevice
+    }
+
+    it('detects Android from target name metadata', async () => {
+      const platformDevice = await connectWithPlatformProbe(
+        { ...defaultTarget(), title: 'Pixel_8_API_35' },
+        () => Promise.reject(new Error('probe should not run')),
+      )
+
+      expect(platformDevice.platform).toBe('android')
+    })
+
+    it('detects Android from generic emulator device metadata', async () => {
+      const platformDevice = await connectWithPlatformProbe(
+        {
+          ...defaultTarget(),
+          deviceName: 'sdk_gphone64_arm64 - 15 - API 35',
+        },
+        () => Promise.reject(new Error('probe should not run')),
+      )
+
+      expect(platformDevice.platform).toBe('android')
+    })
+
+    it('detects iOS from target name metadata', async () => {
+      const platformDevice = await connectWithPlatformProbe(
+        { ...defaultTarget(), title: 'iPhone 16 Pro' },
+        () => Promise.reject(new Error('probe should not run')),
+      )
+
+      expect(platformDevice.platform).toBe('ios')
+    })
+
+    it('uses Platform.OS when target name metadata is unknown', async () => {
+      const platformDevice = await connectWithPlatformProbe(defaultTarget(), () =>
+        Promise.resolve('android'),
+      )
+
+      expect(platformDevice.platform).toBe('android')
+    })
+
+    it('throws when target name metadata is unknown and Platform.OS probe fails', async () => {
+      vi.clearAllMocks()
+      mockSelectedTarget = defaultTarget()
+      const platformDevice = new RNDevice({ timeout: 1000 })
+      mockEvaluateFn.mockImplementation((expr: string) => {
+        if (isPlatformProbe(expr)) {
+          return Promise.reject(new Error('runtime unavailable'))
+        }
+        return Promise.resolve(undefined)
+      })
+
+      await expect(platformDevice.connect()).rejects.toThrow(
+        'Could not detect platform: CDP target name unrecognized and Platform.OS probe failed',
+      )
+    })
+
+    it('throws when target name metadata is unknown and Platform.OS is unsupported', async () => {
+      vi.clearAllMocks()
+      mockSelectedTarget = defaultTarget()
+      const platformDevice = new RNDevice({ timeout: 1000 })
+      mockEvaluateFn.mockImplementation((expr: string) => {
+        if (isPlatformProbe(expr)) {
+          return Promise.resolve('web')
+        }
+        return Promise.resolve(undefined)
+      })
+
+      await expect(platformDevice.connect()).rejects.toThrow(
+        'Could not detect platform: CDP target name unrecognized and Platform.OS probe returned an unsupported value',
+      )
+    })
   })
 
   describe('getWindowMetrics', () => {
@@ -346,8 +451,9 @@ describe('RNDevice runtime events', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
     device = new RNDevice({ timeout: 1000 })
-    mockEvaluateFn.mockResolvedValue(undefined)
+    mockDefaultPlatform('ios')
     await device.connect()
   })
 
@@ -446,8 +552,14 @@ describe('RNDevice runtime events', () => {
 describe('RNDevice failOnUncaughtException', () => {
   it('rejects the next operation with the captured exception, once', async () => {
     vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
     const device = new RNDevice({ timeout: 1000, failOnUncaughtException: true })
-    mockEvaluateFn.mockResolvedValue('ok')
+    mockEvaluateFn.mockImplementation((expr: string) => {
+      if (isPlatformProbe(expr)) {
+        return Promise.resolve('ios')
+      }
+      return Promise.resolve('ok')
+    })
     await device.connect()
 
     fireCdpEvent('Runtime.exceptionThrown', {
@@ -461,8 +573,14 @@ describe('RNDevice failOnUncaughtException', () => {
 
   it('clears buffered exceptions on disconnect so a reconnect is not poisoned', async () => {
     vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
     const device = new RNDevice({ timeout: 1000, failOnUncaughtException: true })
-    mockEvaluateFn.mockResolvedValue('ok')
+    mockEvaluateFn.mockImplementation((expr: string) => {
+      if (isPlatformProbe(expr)) {
+        return Promise.resolve('ios')
+      }
+      return Promise.resolve('ok')
+    })
     await device.connect()
 
     fireCdpEvent('Runtime.exceptionThrown', {
@@ -479,8 +597,14 @@ describe('RNDevice failOnUncaughtException', () => {
 
   it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {
     vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
     const device = new RNDevice({ timeout: 1000, failOnUncaughtException: true })
-    mockEvaluateFn.mockResolvedValue('ok')
+    mockEvaluateFn.mockImplementation((expr: string) => {
+      if (isPlatformProbe(expr)) {
+        return Promise.resolve('ios')
+      }
+      return Promise.resolve('ok')
+    })
     await device.connect()
 
     // Drain happens one-per-operation; without a cap, a storm between operations

@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="com.rndriver.touchcompanion">
+  <uses-permission android:name="android.permission.INTERNET" />
+  <instrumentation
+    android:name="com.rndriver.touchcompanion.RNDriverTouchCompanion"
+    android:targetPackage="${applicationId}"
+    android:functionalTest="false"
+    android:handleProfiling="false"
+    android:label="RN Driver Touch Companion" />
+</manifest>

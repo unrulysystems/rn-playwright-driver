@@ -1,0 +1,95 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'maven-publish'
+
+group = 'com.rndriver.touchcompanion'
+version = '0.1.2'
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+
+  dependencies {
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24"
+  }
+}
+
+afterEvaluate {
+  publishing {
+    publications {
+      release(MavenPublication) {
+        from components.release
+      }
+    }
+    repositories {
+      maven {
+        url = mavenLocal().url
+      }
+    }
+  }
+}
+
+android {
+  namespace "com.rndriver.touchcompanion"
+  compileSdkVersion safeExtGet("compileSdkVersion", 34)
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 23)
+    targetSdkVersion safeExtGet("targetSdkVersion", 34)
+    testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    manifestPlaceholders = [
+      applicationId: safeExtGet("applicationId", "com.rndriver.touchcompanion.target")
+    ]
+  }
+
+  publishing {
+    singleVariant("release") {
+      withSourcesJar()
+    }
+  }
+
+  lintOptions {
+    abortOnError false
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = JavaVersion.VERSION_17.majorVersion
+  }
+}
+
+repositories {
+  google()
+  mavenCentral()
+}
+
+dependencies {
+  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getKotlinVersion()}"
+  implementation "androidx.test:runner:${getAndroidXTestRunnerVersion()}"
+  implementation "androidx.test:core:${getAndroidXTestCoreVersion()}"
+}
+
+def getKotlinVersion() {
+  def kotlin_version = rootProject.ext.has("kotlinVersion") ? rootProject.ext.get("kotlinVersion") : project.properties["kotlinVersion"]
+  return kotlin_version ?: "1.9.24"
+}
+
+def getAndroidXTestRunnerVersion() {
+  def version = rootProject.ext.has("androidXTestRunnerVersion") ? rootProject.ext.get("androidXTestRunnerVersion") : project.properties["androidXTestRunnerVersion"]
+  return version ?: "1.6.2"
+}
+
+def getAndroidXTestCoreVersion() {
+  def version = rootProject.ext.has("androidXTestCoreVersion") ? rootProject.ext.get("androidXTestCoreVersion") : project.properties["androidXTestCoreVersion"]
+  return version ?: "1.6.1"
+}
+
+def safeExtGet(prop, fallback) {
+  rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}

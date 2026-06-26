@@ -4,12 +4,14 @@ export type TouchBackendOptions = {
   host?: string
   port?: number
   url?: string
+  authToken?: string
   connectTimeoutMs?: number
   requestTimeoutMs?: number
 }
 
 export type ResolvedTouchBackendOptions = {
   url: string
+  authToken?: string
   connectTimeoutMs: number
   requestTimeoutMs: number
 }
@@ -29,6 +31,7 @@ export function resolveTouchBackendOptions(
   const url = options?.url ?? buildUrl(host, port)
   return {
     url,
+    ...(options?.authToken === undefined ? {} : { authToken: options.authToken }),
     connectTimeoutMs: options?.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS,
     requestTimeoutMs: options?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
   }

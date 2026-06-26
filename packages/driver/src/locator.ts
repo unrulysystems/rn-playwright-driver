@@ -6,12 +6,12 @@ import { buildHarnessCall } from './harness-expressions'
 import { computeScrollIntoViewStep, isSamePosition, scrollForDirection } from './scroll'
 import { waitForStable } from './wait-for-stable'
 import type {
-  Capabilities,
   ElementBounds,
   Locator,
   ScrollIntoViewOptions,
   ScrollOptions,
   TapOptions,
+  TouchBackendInfo,
   WaitForOptions,
   WaitForState,
   WindowMetrics,
@@ -44,7 +44,7 @@ interface Evaluator {
     tap(x: number, y: number, options?: TapOptions): Promise<void>
   }
   waitForTimeout(ms: number): Promise<void>
-  capabilities(): Promise<Capabilities>
+  getTouchBackendInfo(): Promise<TouchBackendInfo>
   /** Window metrics, used to decide when an element is within the viewport. */
   getWindowMetrics(): Promise<WindowMetrics>
   /** Content-delta scroll, used to bring elements into view. */
@@ -97,16 +97,17 @@ export class LocatorImpl implements Locator {
 
   /**
    * Tap the element center.
-   * Requires RNDriverTouchInjector native module (no JS fallback).
+   * Requires a selected touch backend.
    * Auto-waits for element to be visible and enabled.
    */
   async tap(): Promise<void> {
     const info = await this.waitForActionable()
-    const capabilities = await this.device.capabilities()
 
-    if (!capabilities.touchNative) {
+    try {
+      await this.device.getTouchBackendInfo()
+    } catch {
       throw new LocatorError(
-        'RNDriverTouchInjector native module not installed. Install @unrulysystems/rn-driver-touch and rebuild your app.',
+        'No touch backend is available. Start the platform touch companion or configure an explicit lower-fidelity backend.',
         'NOT_SUPPORTED',
       )
     }

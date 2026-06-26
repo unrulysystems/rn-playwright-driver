@@ -1,6 +1,10 @@
 # CI Setup Guide
 
-This guide covers setting up CI pipelines for React Native E2E tests with rn-playwright-driver.
+This guide covers setting up CI pipelines for React Native E2E tests with
+rn-playwright-driver. The release confidence path is companion-backed input:
+Android runs the instrumentation companion and iOS runs the XCTest companion.
+`native-module` and `cli` are explicit lower-fidelity escape hatches, not CI
+release gates.
 
 ## Prerequisites
 
@@ -111,6 +115,21 @@ npx expo start --port 8081
 
 The debug endpoint should be available at `http://localhost:8081/json`.
 
+## Companion E2E Gates
+
+The example app owns repeatable scripts that build the app, start Metro, start
+the platform companion, run the relevant touch suite, and clean up forwarded
+ports/processes:
+
+```bash
+cd examples/basic-app
+bun run test:e2e:android # RN_TOUCH_BACKEND=instrumentation
+bun run test:e2e:ios     # RN_TOUCH_BACKEND=xctest
+```
+
+Those commands are the official example confidence gates. They replace older
+dual/native-module lanes for release validation.
+
 ## GitHub Actions Example
 
 ```yaml
@@ -128,44 +147,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
+          bun-version: latest
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Boot iOS Simulator
         run: |
-          xcrun simctl boot "iPhone 15 Pro"
+          xcrun simctl boot "iPhone 15 Pro" || true
+          xcrun simctl bootstatus "iPhone 15 Pro" -b
 
-      - name: Install Expo CLI
-        run: npm install -g expo-cli
-
-      - name: Build iOS app
-        run: expo run:ios --no-bundler --device "iPhone 15 Pro"
-
-      - name: Start Metro
-        run: npx expo start &
-        env:
-          CI: true
-
-      - name: Wait for Metro
-        run: npx wait-on http://localhost:8081/json --timeout 60000
-
-      - name: Run E2E tests
-        run: bun run test:e2e
+      - name: Run XCTest companion E2E
+        working-directory: examples/basic-app
+        run: bun run test:e2e:ios
 
   android-e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
+          bun-version: latest
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -177,14 +184,9 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
-      - name: Create AVD
-        run: |
-          echo "y" | sdkmanager "system-images;android-34;google_apis;x86_64"
-          echo "no" | avdmanager create avd -n test_avd -k "system-images;android-34;google_apis;x86_64" --force
-
-      - name: Start Emulator
+      - name: Run instrumentation companion E2E
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -192,10 +194,8 @@ jobs:
           arch: x86_64
           profile: pixel_6
           script: |
-            npx expo run:android --no-bundler
-            npx expo start &
-            npx wait-on http://localhost:8081/json --timeout 60000
-            bun run test:e2e
+            cd examples/basic-app
+            bun run test:e2e:android
 ```
 
 ## Environment Variables
@@ -206,6 +206,23 @@ jobs:
 | `RN_DEVICE_ID`   | Device ID to match    | _unset_                 |
 | `RN_DEVICE_NAME` | Device name substring | _unset_                 |
 | `RN_TIMEOUT`     | Request timeout (ms)  | `30000`                 |
+
+| Variable                              | Description                                       | Default        |
+| ------------------------------------- | ------------------------------------------------- | -------------- |
+| `RN_TOUCH_BACKEND`                    | Forced touch backend for CI scripts               | script-set     |
+| `RN_TOUCH_INSTRUMENTATION_PORT`       | Local Android companion forward port              | `9999`         |
+| `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` | Local file containing the Android companion token | script-created |
+| `RN_TOUCH_XCTEST_PORT`                | Local XCTest companion WebSocket port             | `9999`         |
+| `RN_TOUCH_XCTEST_TOKEN_FILE`          | Local file containing the XCTest companion token  | script-created |
+
+## iOS XCTest Caveat
+
+XCTest is the iOS confidence backend because it drives platform input outside
+the app process. Its low-level `down`/`move`/`up` behavior is necessarily
+coarser than Android instrumentation for continuous pointer streams: the
+companion buffers the sequence into XCTest gestures where XCTest requires a
+complete gesture. Treat tap, drag, swipe, path, and locator interactions as the
+release gate; keep native stream-level assertions platform-aware.
 
 ## Troubleshooting
 

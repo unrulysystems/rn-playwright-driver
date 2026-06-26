@@ -143,6 +143,7 @@ export class RNDevice implements Device {
       await this._touchBackend.dispose()
       this._touchBackend = null
     }
+    this._touchBackendInfo = null
     await this.cdp.disconnect()
   }
 
@@ -465,22 +466,35 @@ export class RNDevice implements Device {
     if (name.includes('iphone') || name.includes('ipad') || name.includes('ios')) {
       return 'ios'
     }
-    if (name.includes('android') || name.includes('pixel') || name.includes('samsung')) {
+    if (
+      name.includes('android') ||
+      name.includes('pixel') ||
+      name.includes('samsung') ||
+      name.includes('gphone')
+    ) {
       return 'android'
     }
 
-    // Fall back to JS detection
+    // Fall back to the app runtime as the authoritative source. If the probe
+    // cannot produce a supported RN platform, fail loudly so Android never
+    // accidentally takes the iOS backend path.
     try {
-      const platform = await this.evaluate<string>("require('react-native').Platform.OS")
+      const platform = await this.evaluate<unknown>(
+        "(() => { const { Platform } = require('react-native'); return Platform?.OS })()",
+      )
       if (platform === 'ios' || platform === 'android') {
         return platform
       }
-    } catch {
-      // Ignore evaluation errors
+    } catch (error) {
+      throw new Error(
+        `Could not detect platform: CDP target name unrecognized and Platform.OS probe failed (${error instanceof Error ? error.message : String(error)})`,
+        { cause: error },
+      )
     }
 
-    // Default to iOS
-    return 'ios'
+    throw new Error(
+      'Could not detect platform: CDP target name unrecognized and Platform.OS probe returned an unsupported value',
+    )
   }
 }
 

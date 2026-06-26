@@ -11,28 +11,28 @@ This document describes the complete architecture for Phase 3 native modules in 
 
 ## Quick Reference
 
-| Decision             | Choice                                                                                                                            |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Repository structure | Monorepo (`packages/driver`, `packages/view-tree`, etc.)                                                                          |
-| Touch injection      | Default backend: native module. Opt-in backends: companion (OS-level) and CLI stub. No harness fallback exists in current source. |
-| Element handles      | Random IDs (`element_{16-char-hex}`)                                                                                              |
-| View tree queries    | Fresh traversal (no caching)                                                                                                      |
-| Native module API    | Expo Modules API (Swift + Kotlin)                                                                                                 |
-| Coordinates          | Logical points (not pixels)                                                                                                       |
-| Result type          | `NativeResult<T>` with error codes                                                                                                |
+| Decision             | Choice                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Repository structure | Monorepo (`packages/driver`, `packages/view-tree`, etc.)                                                                                                           |
+| Touch injection      | Default backend: platform companion (`xctest` on iOS, `instrumentation` on Android). Native module and Android adb CLI are explicit lower-fidelity escape hatches. |
+| Element handles      | Random IDs (`element_{16-char-hex}`)                                                                                                                               |
+| View tree queries    | Fresh traversal (no caching)                                                                                                                                       |
+| Native module API    | Expo Modules API (Swift + Kotlin)                                                                                                                                  |
+| Coordinates          | Logical points (not pixels)                                                                                                                                        |
+| Result type          | `NativeResult<T>` with error codes                                                                                                                                 |
 
 ### Packages
 
-| Package                                                         | Purpose                                       | Status                                 |
-| --------------------------------------------------------------- | --------------------------------------------- | -------------------------------------- |
-| `@unrulysystems/rn-playwright-driver`                           | Test driver (no native code)                  | ✅ Complete                            |
-| `@unrulysystems/rn-driver-shared-types`                         | Shared types across driver and native modules | ✅ Complete                            |
-| `@unrulysystems/rn-driver-view-tree`                            | Element queries, bounds, visibility           | ✅ Complete                            |
-| `@unrulysystems/rn-driver-screenshot`                           | Screen/element capture                        | ✅ Complete                            |
-| `@unrulysystems/rn-driver-lifecycle`                            | App state control                             | 🔶 Partial                             |
-| `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS OS-level touch injection                  | ✅ Reference impl (manual integration) |
-| `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android OS-level touch injection              | ✅ Reference impl (manual integration) |
-| `@unrulysystems/rn-driver-touch`                                | In-app touch synthesis                        | ✅ Implemented, DEBUG/E2E-oriented     |
+| Package                                                         | Purpose                                       | Status                             |
+| --------------------------------------------------------------- | --------------------------------------------- | ---------------------------------- |
+| `@unrulysystems/rn-playwright-driver`                           | Test driver (no native code)                  | ✅ Complete                        |
+| `@unrulysystems/rn-driver-shared-types`                         | Shared types across driver and native modules | ✅ Complete                        |
+| `@unrulysystems/rn-driver-view-tree`                            | Element queries, bounds, visibility           | ✅ Complete                        |
+| `@unrulysystems/rn-driver-screenshot`                           | Screen/element capture                        | ✅ Complete                        |
+| `@unrulysystems/rn-driver-lifecycle`                            | App state control                             | 🔶 Partial                         |
+| `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS companion touch injection                 | ✅ Scaffold/plugin                 |
+| `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android companion touch injection             | ✅ Config plugin                   |
+| `@unrulysystems/rn-driver-touch`                                | In-app touch synthesis                        | ✅ Explicit lower-fidelity backend |
 
 ### Current Touch Backend Priority
 
@@ -40,10 +40,15 @@ The source default in `packages/driver/src/touch/index.ts` is:
 
 | Platform | Default `auto` order |
 | -------- | -------------------- |
-| iOS      | `native-module`      |
-| Android  | `native-module`      |
+| iOS      | `xctest`             |
+| Android  | `instrumentation`    |
 
-Companion backends are implemented and useful when the test environment starts them explicitly, but they are not selected by default. To use them, pass `DeviceOptions.touch.order` such as `["xctest", "native-module"]` or force a backend with `mode: "force"`. The `cli` backend is a stub and should not be advertised as a working fallback until `idb`/`adb` spawning is implemented.
+Auto mode is companion-first and fail-closed. If the platform companion is not
+running, the driver reports setup diagnostics instead of falling back to
+lower-fidelity input. To use `native-module` or `cli`, pass an explicit
+`DeviceOptions.touch.order` or force a backend with `mode: "force"`. The `cli`
+backend is implemented for Android through adb input commands and is
+intentionally limited to gestures adb can faithfully express.
 
 The old JS harness touch fallback and R3F touch-handler routing are no longer part of the release surface. R3F testing was moved out of this repo into the Scenic monorepo — `@unrulysystems/scenic-three` owns the `<ScenicBridge>` install (`TestBridge` successor: hit-testing, `dispatchPointer`, locators) and `@unrulysystems/scenic-native` owns the test-side `device.scenic` assertion layer over this driver's `device.evaluate` transport.
 
@@ -806,11 +811,13 @@ All packages live in a single repository:
 
 Touch synthesis uses native backends, selected by `TouchBackendType`
 (`xctest | instrumentation | native-module | cli`; default order resolves to
-`native-module`). The Phase-2 JS harness touch fallback has been removed (see the
-release-surface note above) — there is no JS touch-handler routing.
+`xctest` on iOS and `instrumentation` on Android). The Phase-2 JS harness touch
+fallback has been removed (see the release-surface note above) — there is no JS
+touch-handler routing.
 
-- OS-level injection exercises the real gesture pipeline, not synthetic React events
-- `cli` is a typed placeholder until idb/adb execution is implemented
+- Companion injection exercises the platform test-runner/device input pipeline,
+  not synthetic React events.
+- `native-module` and `cli` are explicit lower-fidelity escape hatches
 - The backend is overridable via `createDevice({ touch: { mode: 'force', backend } })`
 
 ### 3. Random IDs for Element Handles
@@ -908,7 +915,7 @@ class RNDriverViewTreeModule : Module() {
 
 ## Touch Injection Architecture
 
-The driver supports multiple touch injection backends, organized in tiers by capability level. This enables OS-level touch injection (like idb/adb) while maintaining fallback options for simpler setups.
+The driver supports multiple touch injection backends, organized in tiers by capability level. The confidence path uses platform companions for OS-level input, with Android adb CLI and in-app native-module paths available as explicit lower-fidelity fallbacks.
 
 ### Two-Channel Design
 
@@ -993,10 +1000,11 @@ type TouchBackendConfig = {
 
 **Auto-selection logic** (default):
 
-The driver tries backends in platform-specific order until one successfully initializes:
+The driver tries the platform companion in auto mode and fails closed if it
+cannot initialize:
 
-- **iOS**: `xctest` → `native-module` → `cli`
-- **Android**: `instrumentation` → `native-module` → `cli`
+- **iOS**: `xctest`
+- **Android**: `instrumentation`
 
 For each backend:
 
@@ -1168,7 +1176,7 @@ type TouchResponse =
 
 #### Setup
 
-The XCTest companion is a reference implementation to integrate into your app's UI test target. See `packages/xctest-companion/README.md` for integration instructions.
+The XCTest companion package provides the server file, runner test case, and scaffold/plugin helpers that create or update the app UI test target and shared companion scheme. See `packages/xctest-companion/README.md` for integration instructions.
 
 Once integrated into your test target, run your UI test scheme to start the companion server.
 
@@ -1288,12 +1296,12 @@ interface TouchBackend {
 
 ### Backend Implementations
 
-| Backend         | Class                         | Connection                             |
-| --------------- | ----------------------------- | -------------------------------------- |
-| XCTest          | `XCTestTouchBackend`          | WebSocket to companion                 |
-| Instrumentation | `InstrumentationTouchBackend` | HTTP to companion                      |
-| Native Module   | `NativeModuleTouchBackend`    | CDP evaluate to harness                |
-| CLI             | `CliTouchBackend`             | Stub; idb/adb spawning not implemented |
+| Backend         | Class                         | Connection                    |
+| --------------- | ----------------------------- | ----------------------------- |
+| XCTest          | `XCTestTouchBackend`          | WebSocket to companion        |
+| Instrumentation | `InstrumentationTouchBackend` | HTTP to companion             |
+| Native Module   | `NativeModuleTouchBackend`    | CDP evaluate to harness       |
+| CLI             | `CliTouchBackend`             | Android adb command execution |
 
 ### Package Structure
 
@@ -1306,7 +1314,7 @@ packages/
 │           ├── native-module-backend.ts # RNDriverTouchInjector implementation
 │           ├── xctest-backend.ts       # XCTest companion client
 │           ├── instrumentation-backend.ts # Instrumentation companion client
-│           ├── cli-backend.ts          # idb/adb CLI wrapper
+│           ├── cli-backend.ts          # Android adb CLI wrapper
 │           └── index.ts                # Factory + exports
 │
 ├── rn-driver-touch/                     # @unrulysystems/rn-driver-touch

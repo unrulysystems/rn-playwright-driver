@@ -102,6 +102,7 @@ async function connectBackend(
     type: 'hello',
     protocolVersion: 1,
     client: 'rn-playwright-driver',
+    ...(options.authToken === undefined ? {} : { authToken: options.authToken }),
   })
   socket.emitMessage({ id: 1, ok: true })
   await initPromise
@@ -132,6 +133,21 @@ describe('XCTestTouchBackend', () => {
     const { socket } = await connectBackend({ host: '127.0.0.2', port: 7777 })
 
     expect(socket.url).toBe('ws://127.0.0.2:7777')
+  })
+
+  it('sends the configured auth token on each request', async () => {
+    const { backend, socket } = await connectBackend({ authToken: 'xctest-token' })
+
+    const promise = backend.tap(1, 2)
+    expect(lastSent(socket)).toEqual({
+      id: 2,
+      type: 'tap',
+      x: 1,
+      y: 2,
+      authToken: 'xctest-token',
+    })
+    socket.emitMessage({ id: 2, ok: true })
+    await promise
   })
 
   it('serializes websocket command payloads with request IDs', async () => {

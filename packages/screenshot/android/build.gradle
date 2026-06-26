@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'maven-publish'
 
 group = 'expo.modules.rndriverscreenshot'
-version = '0.1.0'
+version = '0.1.1'
 
 buildscript {
   def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
@@ -71,7 +71,7 @@ repositories {
 
 dependencies {
   implementation project(':expo-modules-core')
-  implementation project(':0xbigboss-rn-driver-view-tree')
+  implementation project(':unrulysystems-rn-driver-view-tree')
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getKotlinVersion()}"
 }
 
