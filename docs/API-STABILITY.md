@@ -98,7 +98,7 @@ These types are stable:
 
 ### Touch Backend Configuration
 
-Touch backend names and the `TouchBackendConfig` shape are currently stable enough for app/test configuration, with one important behavior note: `auto` mode defaults to `native-module` only on both iOS and Android. XCTest and Instrumentation companions are available only when explicitly selected with `touch.order` or `mode: "force"`.
+Touch backend names and the `TouchBackendConfig` shape are currently stable enough for app/test configuration, with one important behavior note: `auto` mode is companion-first and fail-closed. It selects `xctest` on iOS and `instrumentation` on Android; lower-fidelity backends such as `native-module` and `cli` require explicit `touch.order` or `mode: "force"`.
 
 ### Errors
 
@@ -135,17 +135,15 @@ import '@unrulysystems/rn-playwright-driver/harness/dev'
 
 ### Companion Backends
 
-The `xctest` and `instrumentation` touch backends are experimental. Their
-driver-side clients are implemented. Android instrumentation companion packaging
-is published, but automatic companion lifecycle management is not part of the
-stable release surface yet.
+The `xctest` and `instrumentation` touch backends are the confidence path for
+pointer input. Their driver-side clients are implemented; scripts and companion
+packages own local lifecycle management for example e2e runs.
 
 ### CLI Touch Backend
 
 The `cli` backend type is experimental. Android adb command execution is
 implemented and covered by device-backed tests, but it should be treated as an
-adb-limited backend rather than a full replacement for companion or native
-injection.
+adb-limited backend rather than a full replacement for companion input.
 
 ## Internal API
 

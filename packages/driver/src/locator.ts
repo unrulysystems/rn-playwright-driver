@@ -97,7 +97,7 @@ export class LocatorImpl implements Locator {
 
   /**
    * Tap the element center.
-   * Requires any selected touch backend (cli/instrumentation/native-module).
+   * Requires a selected touch backend.
    * Auto-waits for element to be visible and enabled.
    */
   async tap(): Promise<void> {
@@ -107,7 +107,7 @@ export class LocatorImpl implements Locator {
       await this.device.getTouchBackendInfo()
     } catch {
       throw new LocatorError(
-        'No touch backend is available. Configure the adb cli backend, run a touch companion, or install the native-module backend.',
+        'No touch backend is available. Start the platform touch companion or configure an explicit lower-fidelity backend.',
         'NOT_SUPPORTED',
       )
     }

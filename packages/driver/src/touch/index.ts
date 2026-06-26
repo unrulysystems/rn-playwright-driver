@@ -14,9 +14,9 @@ function defaultOrderForPlatform(
 ): readonly [TouchBackendType, ...TouchBackendType[]] {
   switch (platform) {
     case 'ios':
-      return ['native-module']
+      return ['xctest']
     case 'android':
-      return ['native-module']
+      return ['instrumentation']
     default: {
       const _exhaustive: never = platform
       throw new Error(`Unsupported platform: ${String(_exhaustive)}`)
@@ -88,11 +88,12 @@ export async function createTouchBackend(
   const attemptSummary = attempted
     .map((attempt) => `${attempt.backend}: ${attempt.error.message}`)
     .join(' | ')
+  const errorBackend = attempted[0]?.backend ?? platformDefault[0]
   throw new TouchBackendUnavailableError(
-    'native-module',
+    errorBackend,
     attemptSummary.length > 0
       ? `No touch backend available. Attempts: ${attemptSummary}`
-      : 'No touch backend available. Install @unrulysystems/rn-driver-touch or configure XCTest/Instrumentation.',
+      : 'No touch backend available. Start the platform touch companion or configure an explicit lower-fidelity backend.',
   )
 }
 

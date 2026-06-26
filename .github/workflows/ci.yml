@@ -53,5 +53,8 @@ jobs:
       - name: Build driver package
         run: bun run --filter '@unrulysystems/rn-playwright-driver' build
 
-  # E2E tests require a real device/simulator and are run locally or on self-hosted runners
-  # See docs/CI.md for iOS Simulator and Android Emulator setup
+  # E2E tests require a real device/simulator and are run locally or on self-hosted runners.
+  # Official example confidence gates:
+  # - cd examples/basic-app && bun run test:e2e:android  # Android instrumentation companion
+  # - cd examples/basic-app && bun run test:e2e:ios      # iOS XCTest companion
+  # See docs/CI.md for iOS Simulator and Android Emulator setup.

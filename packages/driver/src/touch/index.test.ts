@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type TouchBackendContext, TouchBackendUnavailableError } from './backend'
 import { type AdbExec, CliTouchBackend } from './cli-backend'
 import { createTouchBackend } from './index'
+import { XCTestTouchBackend } from './xctest-backend'
 
 function createContext(hasNativeModule: boolean, platform: 'ios' | 'android'): TouchBackendContext {
   const evaluateMock = vi.fn((_expression: string) => hasNativeModule)
@@ -30,26 +31,37 @@ describe('createTouchBackend', () => {
     vi.restoreAllMocks()
   })
 
-  it('selects the native module backend by default when the app exposes the capability', async () => {
+  it('selects the XCTest backend by default on iOS', async () => {
+    const xctestInit = vi
+      .spyOn(XCTestTouchBackend.prototype, 'init')
+      .mockResolvedValueOnce(undefined)
+
     const result = await createTouchBackend(createContext(true, 'ios'))
 
-    expect(result.backend.name).toBe('native-module')
+    expect(result.backend.name).toBe('xctest')
     expect(result.selection).toEqual({
-      backend: 'native-module',
-      available: ['native-module'],
+      backend: 'xctest',
+      available: ['xctest'],
     })
     expect(result.attempted).toEqual([])
+    expect(xctestInit).toHaveBeenCalledTimes(1)
   })
 
-  it('uses the native module backend as the Android auto order', async () => {
+  it('selects the instrumentation backend by default on Android when auth is configured', async () => {
     const cliInit = vi.spyOn(CliTouchBackend.prototype, 'init').mockResolvedValueOnce(undefined)
+    vi.mocked(fetch).mockImplementationOnce(async (_url, init) => {
+      expect(init?.headers).toMatchObject({ 'x-rn-driver-auth': 'test-token' })
+      return okResponse()
+    })
 
-    const result = await createTouchBackend(createContext(true, 'android'))
+    const result = await createTouchBackend(createContext(true, 'android'), {
+      instrumentation: { authToken: 'test-token' },
+    })
 
-    expect(result.backend.name).toBe('native-module')
+    expect(result.backend.name).toBe('instrumentation')
     expect(result.selection).toEqual({
-      backend: 'native-module',
-      available: ['native-module'],
+      backend: 'instrumentation',
+      available: ['instrumentation'],
     })
     expect(result.attempted).toEqual([])
     expect(cliInit).not.toHaveBeenCalled()
@@ -66,15 +78,19 @@ describe('createTouchBackend', () => {
   })
 
   it('does not select the cli backend on iOS', async () => {
+    const xctestInit = vi
+      .spyOn(XCTestTouchBackend.prototype, 'init')
+      .mockResolvedValueOnce(undefined)
     const cliInit = vi.spyOn(CliTouchBackend.prototype, 'init').mockResolvedValueOnce(undefined)
 
     const result = await createTouchBackend(createContext(true, 'ios'), {
-      order: ['cli', 'native-module'],
+      order: ['cli', 'xctest'],
     })
 
-    expect(result.backend.name).toBe('native-module')
-    expect(result.selection.available).toEqual(['native-module'])
+    expect(result.backend.name).toBe('xctest')
+    expect(result.selection.available).toEqual(['xctest'])
     expect(cliInit).not.toHaveBeenCalled()
+    expect(xctestInit).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to instrumentation after native module initialization fails', async () => {
@@ -148,9 +164,9 @@ describe('createTouchBackend', () => {
         cli: { enabled: false },
       }),
     ).rejects.toMatchObject({
-      backend: 'native-module',
+      backend: 'xctest',
       message:
-        'No touch backend available. Install @unrulysystems/rn-driver-touch or configure XCTest/Instrumentation.',
+        'No touch backend available. Start the platform touch companion or configure an explicit lower-fidelity backend.',
     })
   })
 })

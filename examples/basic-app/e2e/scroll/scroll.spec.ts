@@ -6,8 +6,7 @@
  * driver can reach, assert, and screenshot below-the-fold content on a real
  * device — the gap issue #7 was filed for.
  *
- * NOTE: requires RNDriverTouchInjector (native-module touch backend) in the app
- * build, and the scrollable App.tsx screen.
+ * NOTE: requires a touch backend and the scrollable App.tsx screen.
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -19,14 +18,15 @@ import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 const ARTIFACT_DIR = join(process.cwd(), 'test-results', 'scroll')
 
 test.describe('Scroll API', () => {
+  test.beforeEach(async ({ device }) => {
+    await device.evaluate<void>('globalThis.__RN_DRIVER_EXAMPLE__?.scrollToTop?.()')
+    await device.waitForTimeout(250)
+    await device.getByTestId('title').waitFor({ state: 'visible' })
+  })
+
   test('scrollIntoView brings a below-the-fold element into view and screenshots it', async ({
     device,
   }) => {
-    // Reset to the top so the target is genuinely below the fold regardless of
-    // where a prior test left the scroll position (the app is a single live
-    // instance shared across tests).
-    await device.getByTestId('title').scrollIntoView()
-
     const metrics = await device.getWindowMetrics()
     const target = device.getByTestId('below-fold-target')
 
@@ -54,10 +54,6 @@ test.describe('Scroll API', () => {
   })
 
   test('device.scroll moves content by a delta and back', async ({ device }) => {
-    // Reset near the top so there is room to scroll down, regardless of where a
-    // prior test left the scroll position.
-    await device.getByTestId('title').scrollIntoView()
-
     const ref = device.getByTestId('count-display')
     const start = await ref.bounds()
     expect(start).not.toBeNull()

@@ -98,6 +98,11 @@ export class Pointer {
    * Long press at coordinates.
    */
   async longPress(x: number, y: number, options?: LongPressOptions): Promise<void> {
+    if (options?.holdStart === undefined && options?.holdEnd === undefined) {
+      await this.getBackend().longPress(x, y, options ?? {})
+      return
+    }
+
     const holdStart = Math.max(0, options?.holdStart ?? DEFAULT_FRAME_MS)
     const holdEnd = Math.max(0, options?.holdEnd ?? DEFAULT_FRAME_MS)
     const duration = Math.max(0, options?.duration ?? DEFAULT_LONG_PRESS_DURATION)
@@ -155,7 +160,8 @@ export class Pointer {
    * Drag from one point to another with interpolation.
    */
   async drag(from: Point, to: Point, options?: DragOptions): Promise<void> {
-    const backendSwipeDuration = backendSwipeDurationFor(options)
+    const backendSwipeDuration =
+      options?.duration === undefined ? null : backendSwipeDurationFor(options)
     if (backendSwipeDuration !== null) {
       await this.getBackend().swipe(from, to, backendSwipeDuration)
       return
@@ -481,7 +487,10 @@ function backendSwipeDurationFor(options?: DragOptions | SwipeOptions): number |
   if (options?.steps !== undefined || options?.easing !== undefined) {
     return null
   }
-  if ((options?.holdStart ?? 0) > 0 || (options?.holdEnd ?? 0) > 0) {
+  if (options?.holdStart === undefined || options?.holdEnd === undefined) {
+    return null
+  }
+  if (options.holdStart > 0 || options.holdEnd > 0) {
     return null
   }
   return Math.max(0, options?.duration ?? DEFAULT_SWIPE_DURATION)

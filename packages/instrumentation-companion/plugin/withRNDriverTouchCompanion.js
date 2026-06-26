@@ -52,7 +52,13 @@ function withRNDriverTouchCompanion(config) {
       await fs.promises.mkdir(path.dirname(javaDest), { recursive: true })
       await fs.promises.mkdir(path.dirname(manifestDest), { recursive: true })
       await fs.promises.copyFile(source, javaDest)
-      await fs.promises.writeFile(manifestDest, androidTestManifest(applicationId))
+      const existingManifest = await readFileIfExists(manifestDest)
+      await fs.promises.writeFile(
+        manifestDest,
+        existingManifest
+          ? addCompanionToAndroidTestManifest(existingManifest, applicationId)
+          : androidTestManifest(applicationId),
+      )
 
       return dangerousConfig
     },
@@ -63,6 +69,17 @@ function withRNDriverTouchCompanion(config) {
 
 function getAndroidPackage(config, manifest) {
   return config.android?.package || manifest?.$?.package || null
+}
+
+async function readFileIfExists(filePath) {
+  try {
+    return await fs.promises.readFile(filePath, 'utf8')
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      return null
+    }
+    throw error
+  }
 }
 
 function addAndroidTestGradleConfig(contents) {
@@ -141,6 +158,37 @@ function androidTestManifest(applicationId) {
 `
 }
 
+function addCompanionToAndroidTestManifest(contents, applicationId) {
+  let next = contents
+  const internetPermission = '<uses-permission android:name="android.permission.INTERNET" />'
+
+  if (!next.includes('android.permission.INTERNET')) {
+    const manifestOpenEnd = next.indexOf('>')
+    if (manifestOpenEnd < 0) {
+      throw new Error('Could not find opening <manifest> tag in androidTest AndroidManifest.xml')
+    }
+    next = `${next.slice(0, manifestOpenEnd + 1)}\n  ${internetPermission}${next.slice(manifestOpenEnd + 1)}`
+  }
+
+  if (!next.includes(COMPANION_CLASS)) {
+    const closingManifest = next.lastIndexOf('</manifest>')
+    if (closingManifest < 0) {
+      throw new Error('Could not find closing </manifest> tag in androidTest AndroidManifest.xml')
+    }
+    const instrumentation = `  <instrumentation
+    android:name="${COMPANION_CLASS}"
+    android:targetPackage="${applicationId}"
+    android:functionalTest="false"
+    android:handleProfiling="false"
+    android:label="RN Driver Touch Companion" />
+`
+    next = `${next.slice(0, closingManifest).trimEnd()}\n${instrumentation}${next.slice(closingManifest)}`
+  }
+
+  return next
+}
+
 module.exports = withRNDriverTouchCompanion
 module.exports.addAndroidTestGradleConfig = addAndroidTestGradleConfig
 module.exports.androidTestManifest = androidTestManifest
+module.exports.addCompanionToAndroidTestManifest = addCompanionToAndroidTestManifest

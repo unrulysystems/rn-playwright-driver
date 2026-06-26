@@ -22,6 +22,7 @@
         "@unrulysystems/rn-driver-view-tree": "workspace:*",
         "@unrulysystems/rn-playwright-driver": "workspace:*",
         "@unrulysystems/rn-playwright-driver-instrumentation-companion": "workspace:*",
+        "@unrulysystems/rn-playwright-driver-xctest-companion": "workspace:*",
         "expo": "~54.0.30",
         "expo-status-bar": "~3.0.9",
         "react": "19.1.0",
@@ -40,9 +41,9 @@
     },
     "packages/driver": {
       "name": "@unrulysystems/rn-playwright-driver",
-      "version": "0.5.1",
+      "version": "0.6.0",
       "bin": {
-        "rn-inspect": "./bin/inspect.ts",
+        "rn-inspect": "bin/inspect.ts",
       },
       "dependencies": {
         "@unrulysystems/rn-driver-shared-types": "^0.1.0",
@@ -74,7 +75,7 @@
     },
     "packages/instrumentation-companion": {
       "name": "@unrulysystems/rn-playwright-driver-instrumentation-companion",
-      "version": "0.1.0",
+      "version": "0.1.2",
       "dependencies": {
         "@expo/config-plugins": "~54.0.4",
       },
@@ -120,7 +121,7 @@
     },
     "packages/screenshot": {
       "name": "@unrulysystems/rn-driver-screenshot",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@unrulysystems/rn-driver-shared-types": "^0.1.0",
       },
@@ -147,7 +148,7 @@
     },
     "packages/view-tree": {
       "name": "@unrulysystems/rn-driver-view-tree",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@unrulysystems/rn-driver-shared-types": "^0.1.0",
       },
@@ -167,6 +168,16 @@
     "packages/xctest-companion": {
       "name": "@unrulysystems/rn-playwright-driver-xctest-companion",
       "version": "0.1.0",
+      "bin": {
+        "rn-driver-xctest-scaffold": "bin/scaffold.js",
+      },
+      "dependencies": {
+        "@expo/config-plugins": "~54.0.4",
+        "xcode": "^3.0.1",
+      },
+      "peerDependencies": {
+        "expo": "*",
+      },
     },
   },
   "packages": {

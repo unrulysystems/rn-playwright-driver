@@ -28,6 +28,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["@unrulysystems/rn-playwright-driver-instrumentation-companion"]
+    "plugins": [
+      "@unrulysystems/rn-playwright-driver-instrumentation-companion",
+      "@unrulysystems/rn-playwright-driver-xctest-companion"
+    ]
   }
 }

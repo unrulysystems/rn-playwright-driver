@@ -61,7 +61,6 @@ test.describe('Touch Backend Info', () => {
   })
 
   test('backend selection follows platform defaults or forced env override', async ({ device }) => {
-    const caps = await device.capabilities()
     const info = await device.getTouchBackendInfo()
     const forcedBackend = process.env.RN_TOUCH_BACKEND
 
@@ -70,8 +69,13 @@ test.describe('Touch Backend Info', () => {
       return
     }
 
-    if (device.platform === 'ios' && caps.touchNative) {
-      expect(info.selected).toBe('native-module')
+    if (device.platform === 'ios') {
+      expect(info.selected).toBe('xctest')
+      return
+    }
+
+    if (device.platform === 'android') {
+      expect(info.selected).toBe('instrumentation')
       return
     }
 

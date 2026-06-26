@@ -22,6 +22,7 @@ type PxPoint = {
 }
 
 const DEFAULT_ADB_PATH = 'adb'
+const DEFAULT_ADB_COMMAND_TIMEOUT_MS = 10_000
 const WINDOW_METRICS_EXPRESSION = 'globalThis.__RN_DRIVER__.getWindowMetrics()'
 const SDK_PROPERTY = 'ro.build.version.sdk'
 const MOTION_EVENT_MIN_API = 30
@@ -250,19 +251,24 @@ export class CliTouchBackend implements TouchBackend {
 function createDefaultAdbExec(adbPath: string): AdbExec {
   return (args) =>
     new Promise((resolve, reject) => {
-      execFile(adbPath, args, (error: ExecFileException | null, stdout, stderr) => {
-        if (error === null) {
-          resolve({ stdout, stderr, code: 0 })
-          return
-        }
+      execFile(
+        adbPath,
+        args,
+        { timeout: DEFAULT_ADB_COMMAND_TIMEOUT_MS, killSignal: 'SIGKILL' },
+        (error: ExecFileException | null, stdout, stderr) => {
+          if (error === null) {
+            resolve({ stdout, stderr, code: 0 })
+            return
+          }
 
-        if (typeof error.code === 'number') {
-          resolve({ stdout, stderr, code: error.code })
-          return
-        }
+          if (typeof error.code === 'number') {
+            resolve({ stdout, stderr, code: error.code })
+            return
+          }
 
-        reject(error)
-      })
+          reject(error)
+        },
+      )
     })
 }
 

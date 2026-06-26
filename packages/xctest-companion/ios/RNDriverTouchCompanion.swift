@@ -1,39 +1,104 @@
 import CryptoKit
+import Darwin
 import Foundation
-import Network
 import UIKit
 import XCTest
 
 private let defaultPort: UInt16 = 9999
+private let debugLoggingEnabled = ProcessInfo.processInfo.environment["RN_TOUCH_XCTEST_DEBUG"] == "1"
+
+private func debugLog(_ message: String) {
+  if debugLoggingEnabled {
+    NSLog("RNDriverTouchCompanion: \(message)")
+  }
+}
 
 final class RNDriverTouchCompanionServer {
   private let port: UInt16
-  private var listener: NWListener?
+  private let authToken: String
+  private var listenerSocket: Int32 = -1
+  private var sessions: [WebSocketSession] = []
   private let queue = DispatchQueue(label: "rn-driver.touch-companion")
 
   private var pendingPath: [CGPoint] = []
   private var pendingDownTime: Date?
 
-  init(port: UInt16 = defaultPort) {
+  init(port: UInt16 = defaultPort, authToken: String) {
     self.port = port
+    self.authToken = authToken
   }
 
   func start() throws {
-    let listener = try NWListener(using: .tcp, on: NWEndpoint.Port(rawValue: port)!)
-    listener.newConnectionHandler = { [weak self] connection in
-      self?.handle(connection)
+    let socketFd = socket(AF_INET, SOCK_STREAM, 0)
+    guard socketFd >= 0 else {
+      throw socketError("socket")
     }
-    listener.start(queue: queue)
-    self.listener = listener
+
+    var reuse: Int32 = 1
+    setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout<Int32>.size))
+
+    var address = sockaddr_in()
+    address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+    address.sin_family = sa_family_t(AF_INET)
+    address.sin_port = port.bigEndian
+    address.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
+
+    let bindResult = withUnsafePointer(to: &address) { pointer in
+      pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { socketAddress in
+        bind(socketFd, socketAddress, socklen_t(MemoryLayout<sockaddr_in>.size))
+      }
+    }
+
+    guard bindResult == 0 else {
+      close(socketFd)
+      throw socketError("bind")
+    }
+
+    guard listen(socketFd, SOMAXCONN) == 0 else {
+      close(socketFd)
+      throw socketError("listen")
+    }
+
+    listenerSocket = socketFd
+    debugLog("listening on 127.0.0.1:\(port)")
+
+    queue.async { [weak self] in
+      self?.acceptLoop(socketFd)
+    }
   }
 
-  private func handle(_ connection: NWConnection) {
-    let session = WebSocketSession(connection: connection, queue: queue)
+  private func acceptLoop(_ socketFd: Int32) {
+    while true {
+      let clientFd = accept(socketFd, nil, nil)
+      if clientFd < 0 {
+        if errno == EINTR {
+          continue
+        }
+        return
+      }
+
+      handle(clientFd)
+    }
+  }
+
+  private func handle(_ clientFd: Int32) {
+    debugLog("accepted connection")
+    var noSigPipe: Int32 = 1
+    setsockopt(clientFd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+
+    let session = WebSocketSession(socketFd: clientFd)
+    sessions.append(session)
     session.onText = { [weak self, weak session] text in
       guard let session else { return }
       self?.handleMessage(text, session: session)
     }
     session.start()
+  }
+
+  private func socketError(_ operation: String) -> NSError {
+    NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: [
+      NSLocalizedDescriptionKey: "\(operation) failed: \(String(cString: strerror(errno)))"
+    ])
   }
 
   private func handleMessage(_ text: String, session: WebSocketSession) {
@@ -48,6 +113,11 @@ final class RNDriverTouchCompanionServer {
       let type = dict["type"] as? String
     else {
       session.sendError(id: nil, message: "Invalid message")
+      return
+    }
+
+    if dict["authToken"] as? String != authToken {
+      session.sendError(id: id, message: "Unauthorized")
       return
     }
 
@@ -88,8 +158,9 @@ final class RNDriverTouchCompanionServer {
       case "swipe":
         let from = try parsePoint(dict, key: "from")
         let to = try parsePoint(dict, key: "to")
+        let durationMs = try parseDouble(dict, key: "durationMs")
         performOnMain {
-          self.drag(from: from, to: to, holdSeconds: 0)
+          self.drag(from: from, to: to, holdSeconds: 0, durationSeconds: durationMs / 1000.0)
         }
         session.sendOk(id: id)
       case "longPress":
@@ -122,7 +193,9 @@ final class RNDriverTouchCompanionServer {
   }
 
   private func coordinate(for point: CGPoint) -> XCUICoordinate {
-    let origin = XCUIScreen.main.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+    let app = XCUIApplication()
+    app.activate()
+    let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
     return origin.withOffset(CGVector(dx: point.x, dy: point.y))
   }
 
@@ -134,8 +207,27 @@ final class RNDriverTouchCompanionServer {
     coordinate(for: point).press(forDuration: durationSeconds)
   }
 
-  private func drag(from: CGPoint, to: CGPoint, holdSeconds: Double) {
-    coordinate(for: from).press(forDuration: holdSeconds, thenDragTo: coordinate(for: to))
+  private func drag(
+    from: CGPoint,
+    to: CGPoint,
+    holdSeconds: Double,
+    durationSeconds: Double? = nil
+  ) {
+    let start = coordinate(for: from)
+    let end = coordinate(for: to)
+    guard let durationSeconds, durationSeconds > 0 else {
+      start.press(forDuration: holdSeconds, thenDragTo: end)
+      return
+    }
+
+    let distance = hypot(to.x - from.x, to.y - from.y)
+    let velocity = XCUIGestureVelocity(max(1.0, distance / CGFloat(durationSeconds)))
+    start.press(
+      forDuration: holdSeconds,
+      thenDragTo: end,
+      withVelocity: velocity,
+      thenHoldForDuration: 0,
+    )
   }
 
   private func flushPendingPath() {
@@ -198,21 +290,26 @@ final class RNDriverTouchCompanionServer {
 }
 
 private final class WebSocketSession {
-  private let connection: NWConnection
-  private let queue: DispatchQueue
+  private let socketFd: Int32
   private var buffer = Data()
   private var isWebSocket = false
+  private var isClosed = false
 
   var onText: ((String) -> Void)?
 
-  init(connection: NWConnection, queue: DispatchQueue) {
-    self.connection = connection
-    self.queue = queue
+  init(socketFd: Int32) {
+    self.socketFd = socketFd
+  }
+
+  deinit {
+    closeSession()
   }
 
   func start() {
-    connection.start(queue: queue)
-    receive()
+    Thread.detachNewThread { [self] in
+      debugLog("session reader started fd=\(socketFd)")
+      receiveLoop()
+    }
   }
 
   func sendOk(id: Int, result: [String: Any]? = nil) {
@@ -258,27 +355,32 @@ private final class WebSocketSession {
     }
 
     frame.append(payload)
-    connection.send(content: frame, completion: .contentProcessed { _ in })
+    sendAll(frame)
   }
 
-  private func receive() {
-    connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) {
-      [weak self] data, _, isComplete, error in
-      guard let self else { return }
-      if let data {
-        self.buffer.append(data)
+  private func receiveLoop() {
+    var bytes = [UInt8](repeating: 0, count: 65_536)
+
+    while !isClosed {
+      debugLog("waiting for bytes fd=\(socketFd)")
+      let count = bytes.withUnsafeMutableBytes { rawBuffer in
+        recv(socketFd, rawBuffer.baseAddress, rawBuffer.count, 0)
+      }
+      if count <= 0 {
+        debugLog("recv closed fd=\(socketFd) count=\(count) errno=\(errno)")
+        closeSession()
+        return
       }
 
-      if !self.isWebSocket {
-        self.handleHandshakeIfPossible()
+      debugLog("received \(count) bytes")
+      buffer.append(contentsOf: bytes.prefix(count))
+
+      if !isWebSocket {
+        handleHandshakeIfPossible()
       }
 
-      if self.isWebSocket {
-        self.handleFrames()
-      }
-
-      if error == nil, !isComplete {
-        self.receive()
+      if isWebSocket {
+        handleFrames()
       }
     }
   }
@@ -287,22 +389,33 @@ private final class WebSocketSession {
     guard let range = buffer.range(of: Data("\r\n\r\n".utf8)) else {
       return
     }
+    debugLog("handling websocket handshake")
 
     let requestData = buffer.subdata(in: 0..<range.upperBound)
     buffer.removeSubrange(0..<range.upperBound)
 
     guard let request = String(data: requestData, encoding: .utf8) else {
+      debugLog("websocket handshake request was not utf8")
       return
     }
 
-    guard let keyLine = request.split(separator: "\n").first(where: { line in
+    var lines = request.components(separatedBy: "\r\n")
+    if lines.count <= 1 {
+      lines = request.components(separatedBy: "\n")
+    }
+
+    guard let keyLine = lines.first(where: { line in
       line.lowercased().hasPrefix("sec-websocket-key")
     }) else {
+      debugLog("websocket handshake missing key")
       return
     }
 
-    let parts = keyLine.split(separator: ":")
-    guard parts.count >= 2 else { return }
+    let parts = keyLine.split(separator: ":", maxSplits: 1)
+    guard parts.count >= 2 else {
+      debugLog("websocket handshake malformed key line")
+      return
+    }
     let key = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
     let accept = websocketAccept(for: key)
 
@@ -311,7 +424,8 @@ private final class WebSocketSession {
       "Connection: Upgrade\r\n" +
       "Sec-WebSocket-Accept: \(accept)\r\n\r\n"
 
-    connection.send(content: response.data(using: .utf8), completion: .contentProcessed { _ in })
+    debugLog("sending websocket handshake bytes=\(response.utf8.count)")
+    sendAll(response.data(using: .utf8) ?? Data())
     isWebSocket = true
   }
 
@@ -356,13 +470,13 @@ private final class WebSocketSession {
 
       buffer.removeSubrange(0..<frameLength)
 
-      switch opcode {
+    switch opcode {
       case 0x1:
         if let text = String(data: payload, encoding: .utf8) {
           onText?(text)
         }
       case 0x8:
-        connection.cancel()
+        closeSession()
         return
       case 0x9:
         sendPong(payload)
@@ -383,7 +497,7 @@ private final class WebSocketSession {
       frame.append(UInt8(payload.count & 0xFF))
     }
     frame.append(payload)
-    connection.send(content: frame, completion: .contentProcessed { _ in })
+    sendAll(frame)
   }
 
   private func websocketAccept(for key: String) -> String {
@@ -392,12 +506,28 @@ private final class WebSocketSession {
     let hash = Insecure.SHA1.hash(data: Data(combined.utf8))
     return Data(hash).base64EncodedString()
   }
-}
 
-final class RNDriverTouchCompanionTests: XCTestCase {
-  func testRunServer() throws {
-    let server = RNDriverTouchCompanionServer()
-    try server.start()
-    RunLoop.current.run()
+  private func sendAll(_ data: Data) {
+    data.withUnsafeBytes { rawBuffer in
+      guard let baseAddress = rawBuffer.baseAddress else { return }
+
+      var sent = 0
+      while sent < data.count {
+        let result = Darwin.send(socketFd, baseAddress.advanced(by: sent), data.count - sent, 0)
+        if result <= 0 {
+          debugLog("send failed fd=\(socketFd) result=\(result) errno=\(errno)")
+          closeSession()
+          return
+        }
+        debugLog("sent bytes fd=\(socketFd) count=\(result)")
+        sent += result
+      }
+    }
+  }
+
+  private func closeSession() {
+    guard !isClosed else { return }
+    isClosed = true
+    close(socketFd)
   }
 }

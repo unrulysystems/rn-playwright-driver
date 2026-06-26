@@ -16,15 +16,17 @@ import {
 export type XCTestBackendOptions = TouchBackendOptions
 const PROTOCOL_VERSION = 1
 
+type TouchRequestBase = { id: number; authToken?: string }
+
 type TouchRequest =
-  | { id: number; type: 'hello'; protocolVersion: number; client: string }
-  | { id: number; type: 'tap'; x: number; y: number }
-  | { id: number; type: 'down'; x: number; y: number }
-  | { id: number; type: 'move'; x: number; y: number }
-  | { id: number; type: 'up' }
-  | { id: number; type: 'swipe'; from: Point; to: Point; durationMs: number }
-  | { id: number; type: 'longPress'; x: number; y: number; durationMs: number }
-  | { id: number; type: 'typeText'; text: string }
+  | (TouchRequestBase & { type: 'hello'; protocolVersion: number; client: string })
+  | (TouchRequestBase & { type: 'tap'; x: number; y: number })
+  | (TouchRequestBase & { type: 'down'; x: number; y: number })
+  | (TouchRequestBase & { type: 'move'; x: number; y: number })
+  | (TouchRequestBase & { type: 'up' })
+  | (TouchRequestBase & { type: 'swipe'; from: Point; to: Point; durationMs: number })
+  | (TouchRequestBase & { type: 'longPress'; x: number; y: number; durationMs: number })
+  | (TouchRequestBase & { type: 'typeText'; text: string })
 
 type TouchResponse =
   | { id: number; ok: true; result?: unknown }
@@ -47,9 +49,11 @@ class WsRpcClient {
   private nextId = 1
   private readonly pending = new Map<number, PendingRequest>()
   private readonly requestTimeoutMs: number
+  private readonly authToken: string | undefined
 
-  constructor(requestTimeoutMs: number) {
+  constructor(requestTimeoutMs: number, authToken?: string) {
     this.requestTimeoutMs = requestTimeoutMs
+    this.authToken = authToken
   }
 
   async connect(url: string, timeoutMs: number): Promise<void> {
@@ -107,7 +111,10 @@ class WsRpcClient {
     }
 
     const id = this.nextId++
-    const message: TouchRequest = { ...payload, id } as TouchRequest
+    const message: TouchRequest =
+      this.authToken === undefined
+        ? ({ ...payload, id } as TouchRequest)
+        : ({ ...payload, id, authToken: this.authToken } as TouchRequest)
 
     const responsePromise = new Promise<unknown>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
@@ -176,7 +183,7 @@ export class XCTestTouchBackend implements TouchBackend {
     this.url = resolved.url
     this.connectTimeoutMs = resolved.connectTimeoutMs
     this.requestTimeoutMs = resolved.requestTimeoutMs
-    this.client = new WsRpcClient(this.requestTimeoutMs)
+    this.client = new WsRpcClient(this.requestTimeoutMs, resolved.authToken)
   }
 
   async init(): Promise<void> {

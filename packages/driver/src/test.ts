@@ -31,10 +31,13 @@ export type RNWorkerFixtures = {
  * - RN_DEVICE_NAME: Device name to match (substring, case-insensitive)
  * - RN_TIMEOUT: Request timeout in ms (default: 30000)
  * - RN_TOUCH_BACKEND: Force touch backend ('cli', 'instrumentation', 'native-module', or 'xctest')
+ * - RN_TOUCH_CLI_ADB_PATH: adb executable path for RN_TOUCH_BACKEND=cli
  * - RN_TOUCH_ADB_SERIAL: adb serial for RN_TOUCH_BACKEND=cli (defaults to ANDROID_SERIAL or RN_DEVICE_ID)
  * - RN_TOUCH_INSTRUMENTATION_PORT: Instrumentation companion port when RN_TOUCH_BACKEND=instrumentation (default: 9999)
  * - RN_TOUCH_INSTRUMENTATION_TOKEN: Required auth token for the Android instrumentation companion
  * - RN_TOUCH_INSTRUMENTATION_TOKEN_FILE: File containing the auth token when RN_TOUCH_INSTRUMENTATION_TOKEN is unset
+ * - RN_TOUCH_XCTEST_HOST / RN_TOUCH_XCTEST_PORT / RN_TOUCH_XCTEST_URL: XCTest companion endpoint
+ * - RN_TOUCH_XCTEST_TOKEN / RN_TOUCH_XCTEST_TOKEN_FILE: XCTest companion auth token
  * Usage in test files:
  * ```ts
  * import { test, expect } from '@unrulysystems/rn-playwright-driver/test';

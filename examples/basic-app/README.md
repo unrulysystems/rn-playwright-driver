@@ -38,11 +38,16 @@ This performs a native build and starts Metro. Leave it running while you execut
 
 ## Run E2E tests
 
-From `example/` (with Metro + device/simulator running):
+From `examples/basic-app/`, use the companion-backed platform gates:
 
 ```bash
-bun run test:e2e
+bun run test:e2e:android
+bun run test:e2e:ios
 ```
+
+These scripts build the native app, start Metro, start the platform touch
+companion, and run the touch-oriented Playwright specs with
+`RN_TOUCH_BACKEND=instrumentation` or `RN_TOUCH_BACKEND=xctest`.
 
 ## Driver configuration
 
@@ -52,6 +57,7 @@ The driver reads these environment variables at test runtime:
 - `RN_DEVICE_ID`
 - `RN_DEVICE_NAME`
 - `RN_TIMEOUT` (ms)
+- `RN_TOUCH_BACKEND` (`instrumentation` on Android, `xctest` on iOS for the e2e gates)
 
 Example:
 

@@ -3,7 +3,7 @@
  *
  * Tests startTracing(), stopTracing(), and trace event collection.
  *
- * NOTE: Pointer tracing requires RNDriverTouchInjector to be installed.
+ * NOTE: Pointer tracing requires the selected touch backend to support pointer commands.
  */
 
 import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
@@ -118,6 +118,14 @@ test.describe('Tracing', () => {
 
   // Pointer-specific tracing tests
   test.describe('Pointer Tracing', () => {
+    test.beforeEach(async ({ device }) => {
+      const backend = await device.getTouchBackendInfo()
+      test.skip(
+        backend.selected !== 'native-module',
+        'pointer trace events are emitted by the in-app native-module backend only',
+      )
+    })
+
     test('pointer events are traced', async ({ device }) => {
       const events = await withTracing(device, async () => {
         await device.pointer.tap(100, 100)

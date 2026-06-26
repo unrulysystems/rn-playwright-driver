@@ -32,20 +32,38 @@ describe('Pointer Path Methods', () => {
   })
 
   describe('drag', () => {
-    it('should delegate a simple drag to the backend swipe primitive', async () => {
+    it('should use the documented streaming path for default drags', async () => {
       await pointer.drag({ x: 0, y: 0 }, { x: 10, y: 10 })
 
-      expect(mockBackend.swipe).toHaveBeenCalledWith({ x: 0, y: 0 }, { x: 10, y: 10 }, 300)
-      expect(mockBackend.down).not.toHaveBeenCalled()
-      expect(mockBackend.move).not.toHaveBeenCalled()
-      expect(mockBackend.up).not.toHaveBeenCalled()
-      expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled()
+      expect(mockBackend.swipe).not.toHaveBeenCalled()
+      expect(mockBackend.down).toHaveBeenCalledWith(0, 0)
+      expect(mockBackend.move).toHaveBeenCalledTimes(10)
+      expect(mockBackend.move).toHaveBeenLastCalledWith(10, 10)
+      expect(mockBackend.up).toHaveBeenCalledTimes(1)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(2)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, FRAME_MS)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, FRAME_MS)
     })
 
-    it('should delegate duration-only drags to the backend swipe primitive', async () => {
+    it('should use the documented streaming path for duration-only drags', async () => {
       await pointer.drag({ x: 0, y: 0 }, { x: 10, y: 10 }, { duration: 125 })
 
+      expect(mockBackend.swipe).not.toHaveBeenCalled()
+      expect(mockBackend.down).toHaveBeenCalledWith(0, 0)
+      expect(mockBackend.move).toHaveBeenCalled()
+      expect(mockBackend.move).toHaveBeenLastCalledWith(10, 10)
+      expect(mockBackend.up).toHaveBeenCalledTimes(1)
+    })
+
+    it('should delegate duration drags when holds are explicitly disabled', async () => {
+      await pointer.drag(
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+        { duration: 125, holdStart: 0, holdEnd: 0 },
+      )
+
       expect(mockBackend.swipe).toHaveBeenCalledWith({ x: 0, y: 0 }, { x: 10, y: 10 }, 125)
+      expect(mockBackend.down).not.toHaveBeenCalled()
     })
 
     it('should apply custom holdStart/holdEnd delays', async () => {
@@ -97,14 +115,45 @@ describe('Pointer Path Methods', () => {
     })
   })
 
+  describe('longPress', () => {
+    it('should delegate default long presses to the backend primitive', async () => {
+      await pointer.longPress(5, 6)
+
+      expect(mockBackend.longPress).toHaveBeenCalledWith(5, 6, {})
+      expect(mockBackend.down).not.toHaveBeenCalled()
+      expect(mockBackend.up).not.toHaveBeenCalled()
+      expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled()
+    })
+
+    it('should use the streaming path when custom longPress holds are requested', async () => {
+      await pointer.longPress(5, 6, { duration: 750, holdStart: 10, holdEnd: 20 })
+
+      expect(mockBackend.longPress).not.toHaveBeenCalled()
+      expect(mockBackend.down).toHaveBeenCalledWith(5, 6)
+      expect(mockBackend.up).toHaveBeenCalledTimes(1)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenCalledTimes(3)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(1, 10)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(2, 750)
+      expect(mockTimeoutProvider.waitForTimeout).toHaveBeenNthCalledWith(3, 20)
+    })
+  })
+
   describe('swipe', () => {
-    it('should delegate a simple swipe to the backend swipe primitive', async () => {
+    it('should use the documented streaming path for default swipes', async () => {
       await pointer.swipe({ from: { x: 1, y: 2 }, to: { x: 3, y: 4 } })
+
+      expect(mockBackend.swipe).not.toHaveBeenCalled()
+      expect(mockBackend.down).toHaveBeenCalledWith(1, 2)
+      expect(mockBackend.move).toHaveBeenCalled()
+      expect(mockBackend.move).toHaveBeenLastCalledWith(3, 4)
+      expect(mockBackend.up).toHaveBeenCalledTimes(1)
+    })
+
+    it('should delegate swipes when holds are explicitly disabled', async () => {
+      await pointer.swipe({ from: { x: 1, y: 2 }, to: { x: 3, y: 4 }, holdStart: 0, holdEnd: 0 })
 
       expect(mockBackend.swipe).toHaveBeenCalledWith({ x: 1, y: 2 }, { x: 3, y: 4 }, 300)
       expect(mockBackend.down).not.toHaveBeenCalled()
-      expect(mockBackend.move).not.toHaveBeenCalled()
-      expect(mockBackend.up).not.toHaveBeenCalled()
     })
 
     it('should use the streaming path when custom swipe holds are requested', async () => {

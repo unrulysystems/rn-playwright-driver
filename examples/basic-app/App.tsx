@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 // Tall filler blocks between the controls and the below-the-fold target. Eight
@@ -13,13 +13,31 @@ export default function App() {
   const [count, setCount] = useState(0)
   const [dragPhase, setDragPhase] = useState('idle')
   const [dragMoves, setDragMoves] = useState(0)
+  const scrollRef = useRef<ScrollView>(null)
   // Controlled TextInput fixture for the Locator.fill() e2e (#11). The mirror
   // Text below echoes React state, so a successful fill (which must fire the
   // synthetic change, not just setNativeProps) is observable on-device.
   const [name, setName] = useState('')
 
+  useEffect(() => {
+    const globals = globalThis as typeof globalThis & {
+      __RN_DRIVER_EXAMPLE__?: { scrollToTop: () => void }
+    }
+    globals.__RN_DRIVER_EXAMPLE__ = {
+      scrollToTop: () => scrollRef.current?.scrollTo({ y: 0, animated: false }),
+    }
+    return () => {
+      delete globals.__RN_DRIVER_EXAMPLE__
+    }
+  }, [])
+
   return (
-    <ScrollView testID="scroll-view" style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      ref={scrollRef}
+      testID="scroll-view"
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.title} testID="title">
         RN Playwright Driver Example
       </Text>

@@ -4,6 +4,7 @@ import android.app.Instrumentation
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
+import android.view.InputDevice
 import android.view.MotionEvent
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -21,6 +22,8 @@ import kotlin.concurrent.thread
 private const val DEFAULT_PORT = 9999
 private const val TAG = "RNDriverTouchCompanion"
 private const val ARG_AUTH_TOKEN = "rnDriverAuthToken"
+private const val ARG_AUTH_TOKEN_FILE = "rnDriverAuthTokenFile"
+private const val ARG_PORT = "rnDriverPort"
 private const val AUTH_HEADER = "x-rn-driver-auth"
 private const val SOCKET_TIMEOUT_MS = 2_000
 private const val MAX_HEADER_BYTES = 16 * 1024
@@ -29,22 +32,32 @@ private const val MAX_BODY_BYTES = 1024 * 1024
 class RNDriverTouchCompanion : Instrumentation() {
   private var server: TouchCompanionServer? = null
   private var authToken: String? = null
+  private var port: Int = DEFAULT_PORT
   private val keepAlive = CountDownLatch(1)
 
   override fun onCreate(arguments: Bundle?) {
     super.onCreate(arguments)
+    port = arguments?.getString(ARG_PORT)?.toIntOrNull()?.takeIf { it in 1..65_535 } ?: DEFAULT_PORT
     authToken = arguments?.getString(ARG_AUTH_TOKEN)?.takeIf { it.isNotBlank() }
+      ?: arguments?.getString(ARG_AUTH_TOKEN_FILE)?.let(::readAuthTokenFile)
     start()
   }
 
   override fun onStart() {
     super.onStart()
     val token = checkNotNull(authToken) {
-      "RNDriverTouchCompanion requires -e $ARG_AUTH_TOKEN <token>"
+      "RNDriverTouchCompanion requires -e $ARG_AUTH_TOKEN <token> or -e $ARG_AUTH_TOKEN_FILE <target-app-file>"
     }
-    server = TouchCompanionServer(this, authToken = token)
+    server = TouchCompanionServer(this, port = port, authToken = token)
     server?.start()
     keepAlive.await()
+  }
+
+  private fun readAuthTokenFile(fileName: String): String? {
+    if (fileName.isBlank() || fileName.contains('/')) return null
+    return targetContext.openFileInput(fileName).bufferedReader().use { reader ->
+      reader.readText().trim().takeIf { it.isNotBlank() }
+    }
   }
 }
 
@@ -58,10 +71,11 @@ private class TouchCompanionServer(
 
   fun start() {
     if (serverThread != null) return
+    val serverSocket = ServerSocket()
+    serverSocket.bind(InetSocketAddress(InetAddress.getLoopbackAddress(), port))
+    Log.i(TAG, "Touch companion listening on 127.0.0.1:$port")
     serverThread = thread(name = "rn-driver-touch-server", isDaemon = true) {
-      ServerSocket().use { serverSocket ->
-        serverSocket.bind(InetSocketAddress(InetAddress.getLoopbackAddress(), port))
-        Log.i(TAG, "Touch companion listening on 127.0.0.1:$port")
+      serverSocket.use {
         while (!Thread.currentThread().isInterrupted) {
           val socket = serverSocket.accept()
           try {
@@ -206,8 +220,8 @@ private class TouchCompanionServer(
     val downTime = SystemClock.uptimeMillis()
     val xPx = (x * density).toFloat()
     val yPx = (y * density).toFloat()
-    injectEvent(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, xPx, yPx, 0))
-    injectEvent(MotionEvent.obtain(downTime, downTime + 50, MotionEvent.ACTION_UP, xPx, yPx, 0))
+    injectEvent(motionEvent(downTime, downTime, MotionEvent.ACTION_DOWN, xPx, yPx))
+    injectEvent(motionEvent(downTime, downTime + 50, MotionEvent.ACTION_UP, xPx, yPx))
   }
 
   private var activeDownTime: Long? = null
@@ -221,7 +235,7 @@ private class TouchCompanionServer(
     activeDownTime = downTime
     lastX = xPx
     lastY = yPx
-    injectEvent(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, xPx, yPx, 0))
+    injectEvent(motionEvent(downTime, downTime, MotionEvent.ACTION_DOWN, xPx, yPx))
   }
 
   private fun injectMove(x: Double, y: Double) {
@@ -231,13 +245,13 @@ private class TouchCompanionServer(
     val yPx = (y * density).toFloat()
     lastX = xPx
     lastY = yPx
-    injectEvent(MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, xPx, yPx, 0))
+    injectEvent(motionEvent(downTime, eventTime, MotionEvent.ACTION_MOVE, xPx, yPx))
   }
 
   private fun injectUp() {
     val downTime = activeDownTime ?: return
     val eventTime = SystemClock.uptimeMillis()
-    injectEvent(MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_UP, lastX, lastY, 0))
+    injectEvent(motionEvent(downTime, eventTime, MotionEvent.ACTION_UP, lastX, lastY))
     activeDownTime = null
   }
 
@@ -255,34 +269,58 @@ private class TouchCompanionServer(
     val endX = (toX * density).toFloat()
     val endY = (toY * density).toFloat()
 
-    injectEvent(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, startX, startY, 0))
+    injectEvent(motionEvent(downTime, downTime, MotionEvent.ACTION_DOWN, startX, startY))
 
     for (i in 1..steps) {
       val t = i.toFloat() / steps
       val x = startX + (endX - startX) * t
       val y = startY + (endY - startY) * t
       val eventTime = downTime + (durationMs * t).toLong()
-      injectEvent(MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, x, y, 0))
+      val sleepMs = eventTime - SystemClock.uptimeMillis()
+      if (sleepMs > 0) {
+        SystemClock.sleep(sleepMs)
+      }
+      injectEvent(motionEvent(downTime, eventTime, MotionEvent.ACTION_MOVE, x, y))
     }
 
     val endTime = downTime + durationMs
-    injectEvent(MotionEvent.obtain(downTime, endTime, MotionEvent.ACTION_UP, endX, endY, 0))
+    val sleepMs = endTime - SystemClock.uptimeMillis()
+    if (sleepMs > 0) {
+      SystemClock.sleep(sleepMs)
+    }
+    injectEvent(motionEvent(downTime, endTime, MotionEvent.ACTION_UP, endX, endY))
   }
 
   private fun injectLongPress(x: Double, y: Double, durationMs: Long) {
     val downTime = SystemClock.uptimeMillis()
     val xPx = (x * density).toFloat()
     val yPx = (y * density).toFloat()
-    injectEvent(MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, xPx, yPx, 0))
+    injectEvent(motionEvent(downTime, downTime, MotionEvent.ACTION_DOWN, xPx, yPx))
     SystemClock.sleep(durationMs)
     val upTime = SystemClock.uptimeMillis()
-    injectEvent(MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, xPx, yPx, 0))
+    injectEvent(motionEvent(downTime, upTime, MotionEvent.ACTION_UP, xPx, yPx))
   }
 
+  private fun motionEvent(
+    downTime: Long,
+    eventTime: Long,
+    action: Int,
+    x: Float,
+    y: Float,
+  ): MotionEvent =
+    MotionEvent.obtain(downTime, eventTime, action, x, y, 0).apply {
+      source = InputDevice.SOURCE_TOUCHSCREEN
+    }
+
   private fun injectEvent(event: MotionEvent) {
-    val uiAutomation = instrumentation.uiAutomation
-    uiAutomation.injectInputEvent(event, true)
-    event.recycle()
+    try {
+      val injected = instrumentation.uiAutomation.injectInputEvent(event, true)
+      if (!injected) {
+        instrumentation.sendPointerSync(event)
+      }
+    } finally {
+      event.recycle()
+    }
   }
 
   private fun okResponse(result: JSONObject? = null): String {

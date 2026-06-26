@@ -58,8 +58,9 @@ RN_TOUCH_INSTRUMENTATION_TOKEN="$(openssl rand -hex 16)"
 export RN_TOUCH_INSTRUMENTATION_TOKEN_FILE="$(mktemp -t rn-driver-touch-token.XXXXXX)"
 chmod 600 "$RN_TOUCH_INSTRUMENTATION_TOKEN_FILE"
 printf '%s' "$RN_TOUCH_INSTRUMENTATION_TOKEN" >"$RN_TOUCH_INSTRUMENTATION_TOKEN_FILE"
+adb shell run-as <app> sh -c 'cat > files/rn-driver-touch-token && chmod 600 files/rn-driver-touch-token' <"$RN_TOUCH_INSTRUMENTATION_TOKEN_FILE"
 adb forward tcp:9999 tcp:9999
-adb shell am instrument -e rnDriverAuthToken "$RN_TOUCH_INSTRUMENTATION_TOKEN" -w <app>.test/com.rndriver.touchcompanion.RNDriverTouchCompanion
+adb shell am instrument -e rnDriverAuthTokenFile rn-driver-touch-token -e rnDriverPort 9999 -w <app>.test/com.rndriver.touchcompanion.RNDriverTouchCompanion
 ```
 
 Configure the driver to force the instrumentation backend:
@@ -79,10 +80,10 @@ const device = createDevice({
 
 The test fixture also accepts `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` directly
 when `RN_TOUCH_BACKEND=instrumentation`. Prefer the file form for local scripts
-so the Playwright process environment carries only a path. The value is still a
-local capability token rather than a durable secret: Android instrumentation
-requires passing it as the `rnDriverAuthToken` argument to `adb shell am
-instrument`.
+so the Playwright process environment carries only a path. Prefer
+`rnDriverAuthTokenFile` for the instrumentation process as well; it names a file
+in the target app's private `files/` directory and avoids exposing the token in
+the long-lived `adb shell am instrument` process arguments.
 
 ## Raw Assets
 
@@ -116,7 +117,9 @@ dependencies {
 ## Protocol
 
 POST `/command` with a JSON body and the `x-rn-driver-auth` header matching
-the `rnDriverAuthToken` instrumentation argument.
+the configured companion auth token. Prefer `rnDriverAuthTokenFile`; use the
+inline `rnDriverAuthToken` instrumentation argument only when a token file is
+not practical.
 
 | Command     | Body                                                                                                 |
 | ----------- | ---------------------------------------------------------------------------------------------------- |
