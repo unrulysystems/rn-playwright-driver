@@ -7,6 +7,8 @@ APP_BUNDLE_ID="${APP_BUNDLE_ID:-com.unrulyfall.example}"
 DEVICE_DESTINATION="${IOS_DESTINATION:-}"
 TOUCH_PORT="${RN_TOUCH_XCTEST_PORT:-9999}"
 TOUCH_AUTH_TOKEN="${RN_TOUCH_XCTEST_TOKEN:-}"
+TOUCH_LAUNCH_MODE="${RN_TOUCH_XCTEST_LAUNCH:-launch}"
+APP_LAUNCH_URL="${RN_TOUCH_XCTEST_APP_LAUNCH_URL:-}"
 TOUCH_AUTH_TOKEN_FILE=""
 TOUCH_CONFIG_FILE=""
 METRO_HOST="${METRO_HOST:-127.0.0.1}"
@@ -306,6 +308,17 @@ socket.once("error", () => {
   return 1
 }
 
+open_host_launch_url() {
+  if [[ -z "$APP_LAUNCH_URL" ]]; then
+    return 0
+  fi
+
+  local udid
+  udid="$(destination_simulator_udid)" || fail "IOS_DESTINATION must include a simulator id, got: ${DEVICE_DESTINATION}"
+  echo "Opening host launch URL for XCTest attach mode"
+  xcrun simctl openurl "$udid" "$APP_LAUNCH_URL"
+}
+
 wait_for_hermes_target() {
   for _ in {1..45}; do
     if curl -fsS "${METRO_URL}/json" 2>/dev/null | grep -Eq 'Hermes|React Native'; then
@@ -347,6 +360,7 @@ TOUCH_CONFIG_FILE="${RN_TOUCH_XCTEST_CONFIG_FILE:-$(mktemp -t rn-driver-xctest-c
 RN_TOUCH_XCTEST_CONFIG_FILE="$TOUCH_CONFIG_FILE" \
   RN_TOUCH_XCTEST_CONFIG_PORT="$TOUCH_PORT" \
   RN_TOUCH_XCTEST_CONFIG_TOKEN_FILE="$TOUCH_AUTH_TOKEN_FILE" \
+  RN_TOUCH_XCTEST_CONFIG_LAUNCH="$TOUCH_LAUNCH_MODE" \
   node <<'NODE'
 const fs = require('node:fs')
 
@@ -360,6 +374,9 @@ fs.writeFileSync(
   JSON.stringify({
     port: Number.parseInt(process.env.RN_TOUCH_XCTEST_CONFIG_PORT || '9999', 10),
     authTokenFile: process.env.RN_TOUCH_XCTEST_CONFIG_TOKEN_FILE,
+    ...(process.env.RN_TOUCH_XCTEST_CONFIG_LAUNCH
+      ? { launch: process.env.RN_TOUCH_XCTEST_CONFIG_LAUNCH }
+      : {}),
   }),
 )
 fs.chmodSync(configFile, 0o600)
@@ -404,6 +421,7 @@ RN_TOUCH_XCTEST_PORT="$TOUCH_PORT" \
   >"$XCTEST_LOG" 2>&1 &
 XCTEST_PID="$!"
 wait_for_xctest
+open_host_launch_url
 wait_for_hermes_target
 
 echo "Running iOS e2e with RN_TOUCH_BACKEND=xctest"

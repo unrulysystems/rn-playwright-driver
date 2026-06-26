@@ -61,7 +61,9 @@ pod install --project-directory=ios
 ```
 
 Create a per-run token file and runtime config. The config points XCTest at the
-token file; the token itself stays out of command arguments:
+token file; the token itself stays out of command arguments. `launch` defaults to
+`"launch"` for plain Expo apps. Use `"attach"` when a host script opens the app
+itself, such as an Expo dev-client deep link.
 
 ```bash
 export RN_TOUCH_XCTEST_PORT="${RN_TOUCH_XCTEST_PORT:-9999}"
@@ -75,6 +77,33 @@ printf '{"port":%s,"authTokenFile":"%s"}' \
   >"$RN_TOUCH_XCTEST_CONFIG_FILE"
 cp "$RN_TOUCH_XCTEST_CONFIG_FILE" \
   "ios/<AppName>UITests/RNDriverTouchCompanionRuntimeConfig.json"
+```
+
+For Expo development builds (`expo-dev-client`), write `"launch":"attach"` to
+the runtime config, start the companion UI test, then open the app with the
+development-client URL from the host:
+
+```bash
+printf '{"port":%s,"authTokenFile":"%s","launch":"attach"}' \
+  "$RN_TOUCH_XCTEST_PORT" \
+  "$RN_TOUCH_XCTEST_TOKEN_FILE" \
+  >"$RN_TOUCH_XCTEST_CONFIG_FILE"
+
+xcrun simctl openurl <UDID> \
+  'exp+<scheme>://expo-development-client/?url=http://127.0.0.1:8081'
+```
+
+The companion also accepts `RN_TOUCH_XCTEST_LAUNCH=attach` or
+`RN_TOUCH_XCTEST_LAUNCH_MODE=attach` when the XCTest environment propagates host
+environment variables. The runtime config is preferred for scripts because Xcode
+scheme environment propagation can be inconsistent.
+
+The example script exposes the same attach flow with environment variables:
+
+```bash
+RN_TOUCH_XCTEST_LAUNCH=attach \
+RN_TOUCH_XCTEST_APP_LAUNCH_URL='exp+<scheme>://expo-development-client/?url=http://127.0.0.1:8081' \
+bun run test:e2e:ios
 ```
 
 Build the app, then start the companion UI test in the background:
@@ -116,10 +145,22 @@ contents to the driver with `RN_TOUCH_XCTEST_TOKEN_FILE`. The generated XCTest
 test reads `RN_TOUCH_XCTEST_TOKEN` when Xcode provides it, or a runtime config
 file named by `RN_TOUCH_XCTEST_CONFIG_FILE`. When Xcode does not propagate test
 environment variables, it falls back to the bundled
-`RNDriverTouchCompanionRuntimeConfig.json` resource. The config contains `port`
-and `authTokenFile` fields; the token itself stays in the separate 0600 file.
+`RNDriverTouchCompanionRuntimeConfig.json` resource. The config contains `port`,
+`authTokenFile`, and optional `launch` fields; the token itself stays in the
+separate 0600 file.
 The example e2e script writes a randomized per-run config and copies it into the
 generated UI test target before build.
+
+## Launch modes
+
+- `launch` (default): the companion calls `XCUIApplication().launch()` before
+  starting the WebSocket server. Use this for plain Expo/RN apps that connect to
+  Metro on cold launch.
+- `activate`: the companion foregrounds the app with `activate()` before
+  starting the server.
+- `attach`: the companion starts the server without launching or activating the
+  app. Use this for Expo dev-client apps where the host must open a deep link to
+  load the Metro bundle.
 
 ## Protocol
 

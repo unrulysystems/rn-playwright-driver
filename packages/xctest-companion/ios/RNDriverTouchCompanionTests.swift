@@ -8,15 +8,15 @@ final class RNDriverTouchCompanionTests: XCTestCase {
 
     let environment = ProcessInfo.processInfo.environment
     let envAuthToken = environment["RN_TOUCH_XCTEST_TOKEN"].flatMap { $0.isEmpty ? nil : $0 }
-    let runtimeConfig = envAuthToken == nil ? try loadRuntimeConfig(environment: environment) : RuntimeConfig()
+    let runtimeConfig = try loadRuntimeConfig(environment: environment)
     let port = runtimeConfig.port ?? UInt16(environment["RN_TOUCH_XCTEST_PORT"] ?? "") ?? 9999
     let authToken = try XCTUnwrap(
       envAuthToken ?? runtimeConfig.authToken,
       "RN_TOUCH_XCTEST_TOKEN is required so the touch companion cannot accept unauthenticated input."
     )
+    let launchMode = try resolveLaunchMode(environment: environment, runtimeConfig: runtimeConfig)
 
-    let app = XCUIApplication()
-    app.launch()
+    prepareApp(launchMode: launchMode)
 
     let server = RNDriverTouchCompanionServer(port: port, authToken: authToken)
     try server.start()
@@ -29,9 +29,44 @@ final class RNDriverTouchCompanionTests: XCTestCase {
   }
 }
 
+private enum LaunchMode: String {
+  case launch
+  case activate
+  case attach
+}
+
 private struct RuntimeConfig {
   var port: UInt16?
   var authToken: String?
+  var launchMode: LaunchMode?
+}
+
+private func prepareApp(launchMode: LaunchMode) {
+  let app = XCUIApplication()
+  switch launchMode {
+  case .launch:
+    app.launch()
+  case .activate:
+    app.activate()
+  case .attach:
+    // Host-launched apps, such as Expo dev-client apps opened by deep link,
+    // should not be relaunched by XCTest. Touch commands activate the target
+    // app when they need coordinates or keyboard input.
+    return
+  }
+}
+
+private func resolveLaunchMode(
+  environment: [String: String],
+  runtimeConfig: RuntimeConfig
+) throws -> LaunchMode {
+  if let launchMode = try parseLaunchMode(environment["RN_TOUCH_XCTEST_LAUNCH"]) {
+    return launchMode
+  }
+  if let launchMode = try parseLaunchMode(environment["RN_TOUCH_XCTEST_LAUNCH_MODE"]) {
+    return launchMode
+  }
+  return runtimeConfig.launchMode ?? .launch
 }
 
 private func loadRuntimeConfig(environment: [String: String]) throws -> RuntimeConfig {
@@ -51,7 +86,8 @@ private func loadRuntimeConfig(environment: [String: String]) throws -> RuntimeC
 
   let port = parsePort(payload["port"])
   let authToken = try parseAuthToken(payload)
-  return RuntimeConfig(port: port, authToken: authToken)
+  let launchMode = try parseLaunchMode(payload["launchMode"] ?? payload["launch"])
+  return RuntimeConfig(port: port, authToken: authToken, launchMode: launchMode)
 }
 
 private func resolveRuntimeConfigFile(environment: [String: String]) -> String? {
@@ -86,4 +122,24 @@ private func parseAuthToken(_ payload: [String: Any]) throws -> String? {
   let token = try String(contentsOfFile: tokenFile, encoding: .utf8)
     .trimmingCharacters(in: .whitespacesAndNewlines)
   return token.isEmpty ? nil : token
+}
+
+private func parseLaunchMode(_ value: Any?) throws -> LaunchMode? {
+  guard let value else {
+    return nil
+  }
+
+  guard let string = value as? String, !string.isEmpty else {
+    throw NSError(domain: "RNDriverTouchCompanion", code: 3, userInfo: [
+      NSLocalizedDescriptionKey: "launch must be one of: launch, activate, attach"
+    ])
+  }
+
+  guard let launchMode = LaunchMode(rawValue: string) else {
+    throw NSError(domain: "RNDriverTouchCompanion", code: 4, userInfo: [
+      NSLocalizedDescriptionKey: "Unsupported launch mode '\(string)'. Expected one of: launch, activate, attach"
+    ])
+  }
+
+  return launchMode
 }
