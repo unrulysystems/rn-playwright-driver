@@ -1,5 +1,12 @@
 # @unrulysystems/rn-playwright-driver-instrumentation-companion
 
+## 0.2.1
+
+### Patch Changes
+
+- Refresh the npm package README with companion-backed Android onboarding
+  guidance.
+
 ## 0.2.0
 
 ### Minor Changes

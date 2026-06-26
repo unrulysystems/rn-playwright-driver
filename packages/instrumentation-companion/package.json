@@ -1,6 +1,6 @@
 {
   "name": "@unrulysystems/rn-playwright-driver-instrumentation-companion",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Android Instrumentation HTTP companion for RN Playwright driver touch injection",
   "keywords": [
     "android",

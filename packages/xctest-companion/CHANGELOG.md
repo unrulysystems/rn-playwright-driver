@@ -1,5 +1,11 @@
 # @unrulysystems/rn-playwright-driver-xctest-companion
 
+## 0.2.1
+
+### Patch Changes
+
+- Refresh the npm package README with companion-backed iOS onboarding guidance.
+
 ## 0.2.0
 
 ### Minor Changes

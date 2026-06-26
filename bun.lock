@@ -41,7 +41,7 @@
     },
     "packages/driver": {
       "name": "@unrulysystems/rn-playwright-driver",
-      "version": "0.6.0",
+      "version": "0.7.1",
       "bin": {
         "rn-inspect": "bin/inspect.ts",
       },
@@ -75,7 +75,7 @@
     },
     "packages/instrumentation-companion": {
       "name": "@unrulysystems/rn-playwright-driver-instrumentation-companion",
-      "version": "0.1.2",
+      "version": "0.2.1",
       "dependencies": {
         "@expo/config-plugins": "~54.0.4",
       },
@@ -167,7 +167,7 @@
     },
     "packages/xctest-companion": {
       "name": "@unrulysystems/rn-playwright-driver-xctest-companion",
-      "version": "0.1.0",
+      "version": "0.2.1",
       "bin": {
         "rn-driver-xctest-scaffold": "bin/scaffold.js",
       },

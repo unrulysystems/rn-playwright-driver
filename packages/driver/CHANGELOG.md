@@ -1,5 +1,11 @@
 # @unrulysystems/rn-playwright-driver
 
+## 0.7.1
+
+### Patch Changes
+
+- Refresh the npm package README with companion-backed E2E onboarding guidance.
+
 ## 0.7.0
 
 ### Minor Changes
