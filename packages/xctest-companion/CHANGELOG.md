@@ -1,5 +1,11 @@
 # @unrulysystems/rn-playwright-driver-xctest-companion
 
+## 0.2.2
+
+### Patch Changes
+
+- [`39f7f7c`](https://github.com/unrulysystems/rn-playwright-driver/commit/39f7f7cb68a6dc77e4e34ecdc6984fa02c58266c) Thanks [@alleneubank](https://github.com/alleneubank)! - Add XCTest companion attach launch mode for host-launched Expo dev-client apps.
+
 ## 0.2.1
 
 ### Patch Changes
