@@ -25,6 +25,7 @@
   "files": [
     "bin",
     "dist",
+    "LICENSE",
     "README.md"
   ],
   "main": "dist/index.js",

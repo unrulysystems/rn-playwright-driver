@@ -27,8 +27,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build packages
-        run: |
-          bun run --filter '@unrulysystems/rn-playwright-driver' build
+        run: bun run build
 
       # Auth for the PUBLIC npm registry. Requires an NPM_TOKEN repo secret: a
       # granular automation token with publish scope (2FA-bypass for CI). Until
@@ -64,15 +63,27 @@ jobs:
         with:
           script: |
             const publishedPackages = ${{ steps.changesets.outputs.publishedPackages }};
+            const packageDirectories = {
+              '@unrulysystems/rn-playwright-driver': 'driver',
+              '@unrulysystems/rn-playwright-driver-runner': 'runner',
+              '@unrulysystems/rn-playwright-driver-xctest-companion': 'xctest-companion',
+              '@unrulysystems/rn-playwright-driver-instrumentation-companion': 'instrumentation-companion',
+              '@unrulysystems/rn-driver-touch': 'rn-driver-touch',
+              '@unrulysystems/rn-driver-view-tree': 'view-tree',
+              '@unrulysystems/rn-driver-screenshot': 'screenshot',
+              '@unrulysystems/rn-driver-lifecycle': 'lifecycle',
+              '@unrulysystems/rn-driver-shared-types': 'shared-types',
+            };
             for (const pkg of publishedPackages) {
               const tagName = `${pkg.name}@${pkg.version}`;
+              const packageDirectory = packageDirectories[pkg.name] ?? pkg.name.replace(/^@[^/]+\//, '');
               try {
                 await github.rest.repos.createRelease({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   tag_name: tagName,
                   name: tagName,
-                  body: `## ${pkg.name}@${pkg.version}\n\nSee [CHANGELOG](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/packages/${pkg.name.replace(/^@[^/]+\//, '').replace('rn-playwright-', '').replace('rn-driver-', '')}/CHANGELOG.md) for details.`,
+                  body: `## ${pkg.name}@${pkg.version}\n\nSee [CHANGELOG](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/packages/${packageDirectory}/CHANGELOG.md) for details.`,
                   draft: false,
                   prerelease: false,
                 });

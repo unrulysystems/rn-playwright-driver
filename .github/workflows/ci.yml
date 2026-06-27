@@ -50,8 +50,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build driver package
-        run: bun run --filter '@unrulysystems/rn-playwright-driver' build
+      - name: Build packages
+        run: bun run build
 
   # E2E tests require a real device/simulator and are run locally or on self-hosted runners.
   # Official example confidence gates:

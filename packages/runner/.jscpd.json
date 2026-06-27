@@ -1,0 +1,8 @@
+{
+  "threshold": 6,
+  "reporters": ["console"],
+  "ignore": ["**/node_modules/**", "**/dist/**", "**/*.d.ts", "**/bun.lockb"],
+  "format": ["typescript"],
+  "minLines": 5,
+  "minTokens": 50
+}

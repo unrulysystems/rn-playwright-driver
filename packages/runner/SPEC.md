@@ -45,9 +45,9 @@ tasks, launch kind) into a deterministic, ordered execution plan. It then sets
 the driver's documented environment-variable contract and invokes Playwright.
 
 The core driver stays orchestration-free and renderer-agnostic (CLAUDE.md
-"optional integrations are separate packages"). The runner depends on the driver
-and orchestrates the companion packages; neither the driver nor the companions
-depend on the runner.
+"optional integrations are separate packages"). The runner targets the driver's
+documented `RN_*` environment-variable contract and orchestrates the companion
+packages; neither the driver nor the companions depend on the runner.
 
 ## Domain model
 
@@ -295,9 +295,10 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
   `@unrulysystems/rn-playwright-driver-runner` under `packages/runner`, built
   with tsup (dual ESM/CJS + types) consistent with the driver.
 - **REQ-PKG-002** The core driver package gains **no** dependency on the runner
-  or the companions. The runner depends on the driver (for the env contract /
-  shared types); it invokes companion scaffolds via their bins from the app's
-  `node_modules` rather than hard-importing them.
+  or the companions. The runner does not import the driver package; it targets
+  the documented driver environment-variable contract and invokes companion
+  scaffolds via their bins from the app's `node_modules` rather than
+  hard-importing them.
 - **REQ-PKG-003** The runner exposes a `rn-driver` bin and the
   `defineRnDriverConfig` export.
 
@@ -344,26 +345,26 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 
 - [ ] `defineRnDriverConfig` + `loadConfig` load and validate `rn-driver.config.ts`;
       malformed config fails with a field-named, actionable error (`REQ-CFG-*`).
-- [ ] `planIos`/`planAndroid` are pure and unit-tested to emit the expected
+- [x] `planIos`/`planAndroid` are pure and unit-tested to emit the expected
       ordered Steps for representative configs, including `--skip-build` and both
       launch kinds (`REQ-IOS-*`, `REQ-AND-*`).
-- [ ] Plan execution against a mocked `ProcessRunner` asserts step order,
+- [x] Plan execution against a mocked `ProcessRunner` asserts step order,
       readiness gating, cleanup-on-failure, and that no token value appears in any
       `CommandSpec.args`/`env` (REQ-SEC-001, `REQ-CLEAN-*`).
-- [ ] `rn-driver test --platform ios --dry-run` and `--platform android --dry-run`
+- [x] `rn-driver test --platform ios --dry-run` and `--platform android --dry-run`
       print the full plan and exit 0 with no side effects (REQ-CLI-002).
-- [ ] FU-1/2/3 behaviors are encoded and unit-asserted: dev-client uses
+- [x] FU-1/2/3 behaviors are encoded and unit-asserted: dev-client uses
       `simctl launch --initialUrl` with terminate-first; the 300s companion
       readiness default is configurable; the companion port is freed at startup
       and in cleanup (REQ-IOS-007/008, REQ-CLEAN-002).
-- [ ] Example app migrated to `rn-driver.config.ts`; `bun run test:e2e:ios` and
+- [x] Example app migrated to `rn-driver.config.ts`; `bun run test:e2e:ios` and
       `bun run test:e2e:android` pass through the runner on a real
       simulator/emulator (the independent oracle).
-- [ ] Re-run idempotency: two consecutive runner invocations both pass without
+- [x] Re-run idempotency: two consecutive runner invocations both pass without
       manual port/process cleanup between them (REQ-CLEAN-001).
-- [ ] `bun run check` (typecheck + lint + format + unit tests) is green for the
+- [x] `bun run check` (typecheck + lint + format + unit tests) is green for the
       new package.
-- [ ] README/docs config examples typecheck against the exported config schema.
+- [x] README/docs config examples typecheck against the exported config schema.
 
 ## Open items
 
