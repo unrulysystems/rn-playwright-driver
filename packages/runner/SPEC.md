@@ -97,21 +97,34 @@ interface SecretRef {
 } // secrets travel by file path, never by value
 ```
 
-### The environment-variable contract (runner output → driver input)
+### The environment-variable contract (runner output -> driver input)
 
 The runner's job ends by setting the variables the Playwright fixture already
 reads (`packages/driver/src/test-env.ts`, README "Configuration"). The runner
 does not invent a new driver API; it produces this contract:
 
-| Variable                                                               | Set by runner for                            |
-| ---------------------------------------------------------------------- | -------------------------------------------- |
-| `RN_METRO_URL`                                                         | both                                         |
-| `RN_DEVICE_ID` / `RN_DEVICE_NAME`                                      | both (Hermes target disambiguation)          |
-| `RN_TIMEOUT`                                                           | both (from config)                           |
-| `RN_TOUCH_BACKEND`                                                     | `xctest` (ios) / `instrumentation` (android) |
-| `RN_TOUCH_XCTEST_PORT`, `RN_TOUCH_XCTEST_TOKEN_FILE`                   | ios                                          |
-| `RN_TOUCH_INSTRUMENTATION_PORT`, `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` | android                                      |
-| `ANDROID_SERIAL`                                                       | android                                      |
+| Variable                                                               | Scope   | Meaning                                            |
+| ---------------------------------------------------------------------- | ------- | -------------------------------------------------- |
+| `RN_METRO_URL`                                                         | both    | Metro URL resolved by the runner                   |
+| `RN_DEVICE_NAME`                                                       | both    | Hermes target device-name pin                      |
+| `RN_TIMEOUT`                                                           | both    | Driver request timeout from config/defaults        |
+| `RN_TOUCH_BACKEND`                                                     | both    | `xctest` (iOS) / `instrumentation` (Android)       |
+| `RN_TOUCH_XCTEST_PORT`, `RN_TOUCH_XCTEST_TOKEN_FILE`                   | iOS     | XCTest companion port and token-file path          |
+| `RN_TOUCH_INSTRUMENTATION_PORT`, `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` | Android | Instrumentation companion port and token-file path |
+| `ANDROID_SERIAL`                                                       | Android | adb device pin                                     |
+
+The CLI `--device` option pins simulator/emulator selection before this output
+contract is produced. Token/config files are referenced by path only; token
+values never enter env.
+
+### Prebuild and app-config environment
+
+`expo prebuild` is a runner-owned build step. It executes inside the runner
+process and therefore inherits the runner process environment. The intended
+stable marker for app config that conditionally includes test-only plugins or
+native settings is `RN_E2E=1`; this is a documented future contract, not current
+runtime behavior until the runner emits it explicitly. Apps must not depend on
+transient Playwright setup state for prebuild decisions.
 
 ## Requirements
 
@@ -169,6 +182,21 @@ does not invent a new driver API; it produces this contract:
 - **REQ-METRO-004** Metro started by the runner is owned by the runner and is
   terminated in cleanup; reused Metro is never terminated.
 
+### Prebuild environment — `REQ-PREBUILD-*`
+
+- **REQ-PREBUILD-001** `expo prebuild --platform <ios|android>` runs as a
+  runner-owned build step inside the runner process and inherits the runner
+  process environment.
+- **REQ-PREBUILD-002** The stable app-config marker for test-only Expo
+  config/plugins is intended to be `RN_E2E=1`. Until the runner explicitly emits
+  it, this is a planned contract, not an implemented env var.
+- **REQ-PREBUILD-003** Prebuild-time app configuration must not rely on
+  Playwright `globalSetup` or `globalTeardown`, because those hooks run after the
+  runner has already resolved and executed pre-Playwright lifecycle steps.
+- **REQ-PREBUILD-004** Priming knobs such as `RN_E2E_PRIMED=1` or
+  `prebuild.clean` are not implemented runner controls. They remain future
+  design space unless added by a later SPEC/API change.
+
 ### iOS XCTest lifecycle — `REQ-IOS-*`
 
 - **REQ-IOS-001** Resolve the simulator: honor an explicit destination/udid;
@@ -202,7 +230,8 @@ kill`) **before** starting the companion, then start the companion UI test
     runner **terminates any running instance first** then cold-launches via
     `simctl launch <udid> <bundleId> --initialUrl <metro-http-url>`. It does
     **not** use `simctl openurl` (which trips an untappable SpringBoard
-    confirmation on fresh installs). _(FU-1)_
+    confirmation on fresh installs). `ios.launch.initialUrl` defaults to the
+    resolved Metro URL. _(FU-1)_
 - **REQ-IOS-009** Wait for a Hermes/React Native target whose `deviceName`
   matches the selected simulator (substring), within a bounded timeout, before
   invoking Playwright; emit diagnostics (Metro `/json`, companion log tail) on
@@ -213,9 +242,9 @@ write`), not hard-coded.
 
 ### Android instrumentation lifecycle — `REQ-AND-*`
 
-- **REQ-AND-001** Resolve the emulator/device serial: honor `RN_DEVICE_ID` /
-  `--device`; else the first booted `emulator-*`; verify `get-state == device`
-  and `sys.boot_completed == 1`.
+- **REQ-AND-001** Resolve the emulator/device serial: honor `--device`; else the
+  first booted `emulator-*`; verify `get-state == device` and
+  `sys.boot_completed == 1`.
 - **REQ-AND-002** Generate the native project (`expo prebuild --platform
 android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
   androidTest APKs via the configured Gradle tasks
@@ -224,8 +253,9 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
 - **REQ-AND-004** Configure debug host: `adb reverse tcp:<metroPort>`, write the
   app's `debug_http_host` shared-pref, and (if Metro is not on 8081) reverse 8081
   as well.
-- **REQ-AND-005** Launch the app (`am start -W -n <package>/<activity>`) with
-  bounded retries, waiting for the app's Hermes target after each attempt.
+- **REQ-AND-005** Launch a plain Android app (`am start -W -n
+<package>/<activity>`) with bounded retries, waiting for the app's Hermes
+  target after each attempt.
 - **REQ-AND-006** Start the instrumentation companion: `adb forward tcp:<port>`,
   then `am instrument -w` targeting the companion, passing the auth token by the
   **device-private token-file argument** (`rnDriverAuthTokenFile`), never the
@@ -236,6 +266,12 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
 - **REQ-AND-008** Select the Android Hermes target by `appId` + RN/Hermes
   signature + android device match, and pass its `deviceName` to the driver via
   `RN_DEVICE_NAME`.
+- **REQ-AND-009** Launch an Android `expo-dev-client` app through a validated
+  `android.scheme` deep link:
+  `<scheme>://expo-development-client/?url=<metro-url>`. The first launch
+  force-stops the package before `am start -a android.intent.action.VIEW -d
+<url>`; later retry/second launches re-issue the deep link without the
+  force-stop. `android.launch.initialUrl` defaults to the resolved Metro URL.
 
 ### Secure token handling — `REQ-SEC-*`
 
@@ -288,6 +324,10 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
 - **REQ-PW-002** The runner does not own assertions or fixtures; it only
   establishes the world and delegates pass/fail to Playwright + the driver
   fixture (independence: the runner is not its own oracle).
+- **REQ-PW-003** Runner-managed projects invoke specs through `rn-driver test`.
+  Their Playwright config does not own runner lifecycle with `globalSetup` or
+  `globalTeardown` that starts/stops Metro, launches the native app, starts/stops
+  companions, or deletes runner-owned companion state.
 
 ### Packaging & architecture — `REQ-PKG-*`
 
@@ -315,6 +355,8 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
 - The runner produces the existing driver env contract; it does not introduce a
   parallel driver configuration surface.
 - Cleanup never terminates a Metro the runner did not start.
+- Runner-managed Playwright hooks never compete with the runner for Metro,
+  native app launch, companion ownership, Hermes readiness, or cleanup.
 
 ## Non-goals (v1)
 
@@ -328,6 +370,8 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
 - Real-device (non-emulator/simulator) topologies beyond what the existing
   recipes support.
 - Replacing the companion packages; the runner orchestrates them.
+- App priming flags or prebuild-clean policy knobs (`RN_E2E_PRIMED=1`,
+  `prebuild.clean`). These are future API design, not v1 behavior.
 
 ## Risk tags
 
@@ -375,6 +419,8 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 - Whether the iOS scheme-env injection and runtime-config copy can be replaced by
   a single companion-side config mechanism is a future simplification, out of
   scope for v1.
+- Emitting `RN_E2E=1` from the runner is the intended stable prebuild/app-config
+  contract, but the current runtime does not implement that env injection yet.
 
 ## Traceability
 

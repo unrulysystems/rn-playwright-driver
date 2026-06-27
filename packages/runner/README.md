@@ -68,6 +68,8 @@ export default defineRnDriverConfig({
   android: {
     packageName: 'com.company.app',
     activity: '.MainActivity',
+    // Required only for expo-dev-client launch:
+    // scheme: 'companyapp',
     launch: { mode: 'launch', kind: 'plain' },
   },
   playwright: {
@@ -77,7 +79,34 @@ export default defineRnDriverConfig({
 ```
 
 A plain (non dev-client) Expo app uses `launch: { mode: 'launch', kind: 'plain' }`
-on iOS — the companion launches the app itself.
+on both platforms. The companion launches the app itself on iOS; Android launches
+the configured `packageName`/`activity` directly.
+
+For Expo dev-client, the host owns native app launch so the app starts on the
+test Metro instead of stopping at the launcher UI:
+
+```ts
+export default defineRnDriverConfig({
+  metro: { command: 'npx expo start --localhost --port 8081' },
+  ios: {
+    bundleId: 'com.company.app',
+    workspace: 'ios/App.xcworkspace',
+    appScheme: 'App',
+    launch: { mode: 'attach', kind: 'expo-dev-client' },
+  },
+  android: {
+    packageName: 'com.company.app',
+    activity: '.MainActivity',
+    scheme: 'companyapp',
+    launch: { mode: 'launch', kind: 'expo-dev-client' },
+  },
+})
+```
+
+`launch.initialUrl` defaults to the resolved Metro URL on iOS and Android. iOS
+uses `simctl launch --initialUrl`; Android uses the configured
+`android.scheme` to open
+`<scheme>://expo-development-client/?url=<resolved-metro-url>`.
 
 ## Run
 
@@ -127,6 +156,50 @@ Token material always travels by `0600` file path (the driver's
 `RN_TOUCH_*_TOKEN_FILE` contract); the value never enters argv, env, logs, or
 `--dry-run` output. Cleanup is defensive and idempotent — a crashed prior run
 never wedges the next (stale companion ports are freed at startup and teardown).
+
+### Playwright lifecycle boundary
+
+Invoke specs through `rn-driver test`, not a standalone `playwright test`
+command. The runner starts or reuses Metro, builds and launches the native app,
+starts the companion, waits for Hermes, sets the driver env contract, runs
+Playwright, and cleans up the state it owns.
+
+Runner-managed Playwright configs should not define app-level `globalSetup` or
+`globalTeardown` that starts/stops Metro, launches the native app, starts/stops a
+touch companion, or removes runner companion state. Keep those hooks for
+test-local concerns only. Specs should consume the environment that
+`rn-driver test` provides.
+
+### Runner env contract
+
+These names are the runner-owned surface between native lifecycle setup and
+Playwright/driver execution. Token values are never exposed; only file paths are.
+
+| Variable                                                               | Scope   | Meaning                                            |
+| ---------------------------------------------------------------------- | ------- | -------------------------------------------------- |
+| `RN_METRO_URL`                                                         | both    | Metro URL the app and driver should use            |
+| `RN_DEVICE_NAME`                                                       | both    | Hermes target device-name pin                      |
+| `RN_TIMEOUT`                                                           | both    | Driver request timeout                             |
+| `RN_TOUCH_BACKEND`                                                     | both    | `xctest` on iOS, `instrumentation` on Android      |
+| `RN_TOUCH_XCTEST_PORT`, `RN_TOUCH_XCTEST_TOKEN_FILE`                   | iOS     | XCTest companion port and token-file path          |
+| `RN_TOUCH_INSTRUMENTATION_PORT`, `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` | Android | Instrumentation companion port and token-file path |
+| `ANDROID_SERIAL`                                                       | Android | adb device pin for the selected emulator/device    |
+
+The runner also owns internal token/config file paths used to start companions
+and configure native test targets. Do not pass token values through argv, inline
+env, or docs.
+
+### Prebuild environment and priming
+
+`expo prebuild` runs inside the runner process, so it inherits the runner
+process environment. The intended stable marker for test-only Expo config,
+plugins, or native settings is `RN_E2E=1`; this package does not emit that marker
+yet, so treat it as the planned contract rather than current behavior.
+
+The implemented lifecycle already covers prebuild, Metro, app launch, companion
+startup, Hermes waits, Playwright env, and cleanup. Priming controls such as
+`RN_E2E_PRIMED=1` or a `prebuild.clean` option are future design space and are
+not available runner flags today.
 
 ## Requirements
 

@@ -51,7 +51,9 @@ The runner owns the whole native lifecycle — simulator/emulator selection, Met
 the touch companion, secure token passing, Hermes target wait, cleanup — then
 sets the driver's environment-variable contract (`RN_TOUCH_BACKEND` is
 `instrumentation` on Android, `xctest` on iOS) and invokes Playwright. You no
-longer set those variables by hand.
+longer set those variables by hand. The Playwright config should not use
+`globalSetup` or `globalTeardown` to start Metro, launch the app, manage the
+companion, or clean up runner-owned companion state.
 
 The previous hand-rolled shell recipes remain as escape hatches:
 
@@ -67,6 +69,17 @@ The runner sets the driver's runtime environment-variable contract for you
 companion port/token-file vars). To change them, edit `rn-driver.config.ts`
 (e.g. `timeoutMs`, `metro`, `ios`/`android` device selection) rather than
 exporting environment variables.
+
+This app is configured as a plain Expo/RN app, not an Expo dev-client app:
+`ios.launch.kind` and `android.launch.kind` are both `plain`. Dev-client projects
+need the runner package docs' extra launch config, including an Android
+`scheme`. `launch.initialUrl` defaults to the resolved Metro URL for dev-client
+launches.
+
+`expo prebuild` runs inside the runner process and inherits that process
+environment. The intended stable marker for test-only app config is `RN_E2E=1`,
+but the runner does not emit it yet; do not rely on it as implemented behavior in
+this example.
 
 ## Notes
 

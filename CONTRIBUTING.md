@@ -43,6 +43,18 @@ cd examples/basic-app
 nub run test:e2e
 ```
 
+Runner-managed E2E should go through `rn-driver test`, usually via the example
+app scripts. Do not add Playwright `globalSetup` or `globalTeardown` that starts
+or stops Metro, launches the native app, starts or stops the touch companion, or
+cleans up runner-owned companion state; the runner owns that lifecycle and passes
+the driver env contract into Playwright.
+
+If app config needs test-only native settings during `expo prebuild`, the
+intended stable marker is `RN_E2E=1`. The current runner does not emit that
+marker yet, so document any temporary app-local workaround clearly and keep it
+out of token/secret flows. Future priming knobs such as `RN_E2E_PRIMED=1` or
+`prebuild.clean` are not available runner flags today.
+
 See [`docs/CI.md`](docs/CI.md) for the iOS Simulator / Android Emulator setup.
 
 ## Changesets

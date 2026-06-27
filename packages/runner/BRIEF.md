@@ -27,6 +27,8 @@ failure, a message that names the stage that broke.
   just the example app.
 - **Faithfulness** — what `--dry-run` prints is exactly what executes; the planner
   is pure, so the audited plan is the real plan.
+- **Adopter clarity** — docs and examples make the runner-owned boundary obvious:
+  `rn-driver test` owns lifecycle; Playwright specs consume the env it provides.
 
 ## Floors (the gate, not the ceiling — each with its measurement)
 
@@ -52,6 +54,10 @@ failure, a message that names the stage that broke.
   having spawned nothing and touched no device. _Measured by:_ a test asserting
   the mock runner received zero effectful calls.
 - **`nub run check` green** for the new package (typecheck + lint + format + unit).
+- **Lifecycle docs stay aligned with implemented knobs.** README/SPEC examples do
+  not document future priming flags as available behavior and do not tell apps to
+  own Metro/app/companion setup in Playwright hooks. _Measured by:_ docs review
+  plus docs-example tests for config snippets.
 
 ## Oracle
 
@@ -79,8 +85,11 @@ failure, a message that names the stage that broke.
 - A silent fallback to a weaker touch backend when the companion is missing; a
   missing companion is a named stage failure with diagnostics.
 - A mid-run human prompt (an untappable SpringBoard "Open in app?" dialog, an
-  interactive Gradle/Xcode prompt). Dev-client launch uses `simctl launch
---initialUrl`, never `simctl openurl`.
+  interactive Gradle/Xcode prompt). Dev-client launch uses
+  `simctl launch --initialUrl`, never `simctl openurl`.
+- A runner-managed Playwright `globalSetup`/`globalTeardown` that starts or
+  stops Metro, launches the native app, starts or stops companions, or deletes
+  runner-owned companion state.
 - The core driver package acquiring a dependency on the runner or the companions.
 - Cleanup terminating a Metro the runner did not start.
 - Publishing, version-bumping, opening PRs, or filing/closing issues from the
@@ -92,12 +101,12 @@ failure, a message that names the stage that broke.
   under `packages/runner`; the core driver stays orchestration-free and
   renderer-agnostic. _Why:_ CLAUDE.md "optional integrations are separate
   packages to avoid polluting the dependency tree."
-- \*\*Dev-client launch = `simctl launch <udid> <bundle> --initialUrl <metro-http>`
-  - terminate-first.\** Not `simctl openurl`. *Why:\* FU-1 — `openurl` trips a
-    one-time untappable SpringBoard confirmation on fresh installs;
-    expo-dev-launcher reads `--initialUrl` from `NSProcessInfo` with no prompt; and
-    `simctl launch` ignores `--initialUrl` for an already-running instance, so the
-    prior instance must be terminated first.
+- **Dev-client launch = `simctl launch <udid> <bundle> --initialUrl <metro-http>`
+  with terminate-first.** Not `simctl openurl`. _Why:_ FU-1 — `openurl` trips a
+  one-time untappable SpringBoard confirmation on fresh installs;
+  expo-dev-launcher reads `--initialUrl` from `NSProcessInfo` with no prompt; and
+  `simctl launch` ignores `--initialUrl` for an already-running instance, so the
+  prior instance must be terminated first.
 - **Companion readiness default 300s, configurable.** _Why:_ FU-2 — the iOS
   companion binds its port only after `xcodebuild test` finishes _building_
   (JS bundle + codesign every run); 60s expires mid-build on non-trivial apps.
@@ -112,13 +121,26 @@ failure, a message that names the stage that broke.
   policy.
 - **The runner produces the existing driver env contract** (`test-env.ts`); it
   does not fork a second driver-configuration surface.
+- **Runner-managed specs are invoked through `rn-driver test`.** Playwright
+  config may still hold spec-local settings, but the native lifecycle belongs to
+  the runner, not app-level Playwright setup/teardown hooks.
+- **Android dev-client launch uses the app scheme.** The runner validates
+  `android.scheme` and opens
+  `<scheme>://expo-development-client/?url=<resolved-metro-url>`; `initialUrl`
+  defaults to the resolved Metro URL on both platforms.
+- **`RN_E2E=1` is the intended prebuild/app-config marker, not current runtime
+  behavior.** `expo prebuild` inherits the runner process env today; the runner
+  must explicitly emit `RN_E2E=1` before docs can claim it is implemented.
+- **Priming knobs are future design space.** `RN_E2E_PRIMED=1` and
+  `prebuild.clean` are not available runner flags unless a later SPEC/API change
+  adds them.
 - **Pure planner / effectful executor split.** Planning returns `Step[]` with no
   I/O; a `ProcessRunner` interface is the only OS boundary. _Why:_ this is the
   faithful, cheap, device-free harness — the whole testability story.
 - **`--platform all` is sequential (v1).** Parallel multi-device is a non-goal.
-- **Priority policy:** secret-safety > unattended-reliability > correctness-of-output
-  > ergonomics. A secret leak or a wedging-the-next-run defect can force a
-  > redesign; ergonomic polish cannot.
+- **Priority policy:** secret-safety over unattended-reliability over
+  correctness-of-output over ergonomics. A secret leak or a
+  wedging-the-next-run defect can force a redesign; ergonomic polish cannot.
 
 ## Boundary (requires the human)
 
