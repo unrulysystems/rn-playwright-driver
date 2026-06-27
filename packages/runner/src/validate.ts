@@ -130,6 +130,15 @@ function validateIos(ios: unknown, errors: string[]): void {
       'config.ios.launch: kind "expo-dev-client" requires mode "attach" (the host owns the launch)',
     )
   }
+  if (launch && launch.mode === 'attach' && launch.kind !== 'expo-dev-client') {
+    // The converse: in attach mode the companion does NOT launch the app, and the
+    // runner only host-launches dev clients (`simctl launch --initialUrl`). A
+    // plain app in attach mode would never start — the run would reach the Hermes
+    // wait with no app. A plain app must use launch/activate (companion launches).
+    errors.push(
+      'config.ios.launch: mode "attach" requires kind "expo-dev-client"; a plain app uses mode "launch" or "activate" (the companion launches it)',
+    )
+  }
 }
 
 function validateAndroid(android: unknown, errors: string[]): void {

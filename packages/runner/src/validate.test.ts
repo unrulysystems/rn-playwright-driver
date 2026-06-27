@@ -57,6 +57,17 @@ describe('validateConfig', () => {
     expect(validateConfig(config, ['ios']).ok).toBe(true)
   })
 
+  it('rejects a plain app in attach mode (no launch step would run)', () => {
+    const config = configFixture({
+      ios: { ...configFixture().ios!, launch: { mode: 'attach', kind: 'plain' } },
+    })
+    const result = validateConfig(config, ['ios'])
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('mode "attach" requires kind "expo-dev-client"'),
+    )
+  })
+
   it('rejects an invalid launch mode', () => {
     const config = configFixture()
     const result = validateConfig(

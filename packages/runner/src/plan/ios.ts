@@ -75,12 +75,17 @@ export function planIos(input: PlanIosInput): Plan {
     description: 'Scaffold XCTest companion target',
     action: {
       type: 'command',
+      // Pass the resolved UI-test scheme so a custom `ios.uitestScheme` scaffolds
+      // the SAME target that companion startup later builds (default is
+      // `${appScheme}UITests`).
       command: npx([
         'rn-driver-xctest-scaffold',
         '--ios-dir',
         'ios',
         '--project-name',
         ios.appScheme,
+        '--uitest-scheme',
+        resolved.uitestScheme,
       ]),
     },
     skippable: true,
@@ -308,6 +313,14 @@ export function planIos(input: PlanIosInput): Plan {
     },
     { type: 'kill-process', processKey: 'metro', description: 'Stop runner-owned Metro' },
     { type: 'remove-file', path: resolved.tokenFile, description: 'Remove per-run token file' },
+    // REQ-SEC-004: the per-run runtime config (port + token-file ref) is written
+    // into the UI-test target every run; remove it so no generated artifact is
+    // left in the app project.
+    {
+      type: 'remove-file',
+      path: resolved.runtimeConfigFile,
+      description: 'Remove per-run companion runtime config',
+    },
   ]
 
   return {

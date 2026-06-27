@@ -36,7 +36,11 @@ export interface MetroConfig {
   command?: string
   /** Host to bind/probe. Defaults to `127.0.0.1`. */
   host?: string
-  /** Preferred port. Probed upward for a free port unless `url` pins it. */
+  /**
+   * Metro port (default 8081). When the runner owns Metro it verifies this port
+   * is free and fails fast if occupied — it does NOT auto-probe a different port,
+   * because `command` pins the port the packager binds (REQ-METRO-003).
+   */
   port?: number
   /** Reuse an already-running packager at the resolved URL instead of starting one. */
   reuseExisting?: boolean

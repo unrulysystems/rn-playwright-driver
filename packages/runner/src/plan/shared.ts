@@ -12,7 +12,7 @@ export function npx(args: string[]): CommandSpec {
   return { command: 'npx', args }
 }
 
-export function shell(command: string): CommandSpec {
+function shell(command: string): CommandSpec {
   return { command: 'sh', args: ['-c', command] }
 }
 

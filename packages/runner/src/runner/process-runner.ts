@@ -79,6 +79,19 @@ export class NodeProcessRunner implements ProcessRunner {
     this.children.delete(handle.key)
   }
 
+  /**
+   * Best-effort synchronous teardown for signal handlers: SIGKILL every tracked
+   * child's process group so a Ctrl-C / SIGTERM does not orphan the detached
+   * Metro/companion processes (REQ-CLEAN-001, signal clause). Synchronous because
+   * a signal handler cannot await before `process.exit`.
+   */
+  killAll(): void {
+    for (const child of this.children.values()) {
+      if (child.pid !== undefined) killGroup(child.pid, 'SIGKILL')
+    }
+    this.children.clear()
+  }
+
   async writeFile(path: string, contents: string, mode?: number): Promise<void> {
     await fsWriteFile(path, contents)
     if (mode !== undefined) await chmod(path, mode)

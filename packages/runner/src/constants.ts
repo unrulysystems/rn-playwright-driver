@@ -6,6 +6,14 @@
  * The runner sets these and then invokes Playwright; it does not introduce a
  * parallel driver-configuration surface. Token material is always passed by
  * file path (`*_TOKEN_FILE`), never inline (`*_TOKEN`) — see secret-handling.
+ *
+ * DELIBERATE: this is a local copy of the driver's `RN_*` contract, NOT an import
+ * from the driver. The runner intentionally carries no npm dependency on the
+ * driver (one-way, contract-level coupling — see README/SPEC), so the small set
+ * of names is duplicated rather than shared. The tradeoff is silent drift if the
+ * driver renames a variable; that is bounded by the contract being a published,
+ * stable interface (`packages/driver/src/test-env.ts`) and is exercised by the
+ * live e2e oracle, which fails if a name stops matching.
  */
 export const ENV = {
   metroUrl: 'RN_METRO_URL',

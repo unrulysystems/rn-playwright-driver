@@ -106,15 +106,26 @@ describe('planAndroid', () => {
     )
   })
 
-  it('adds a default-port reverse only when Metro is off 8081', () => {
+  it('adds a default-port reverse only when Metro is off 8081, and cleans BOTH up', () => {
     const onDefault = planAndroid(inputFor())
     expect(stepIds(onDefault)).not.toContain('android.reverse-default')
+    const onDefaultCleanup = onDefault.cleanup.flatMap((c) =>
+      c.type === 'command' ? [c.command.args.join(' ')] : [],
+    )
+    // On default 8081 there is exactly one reverse --remove (no fallback).
+    expect(onDefaultCleanup.filter((c) => c.includes('reverse --remove'))).toHaveLength(1)
 
     const metro = resolveMetro({ url: 'http://127.0.0.1:8088' })
     const offDefault = planAndroid(
       inputFor({ metro, resolved: placeholderAndroid(androidConfigFixture(), metro) }),
     )
     expect(stepIds(offDefault)).toContain('android.reverse-default')
+    const offDefaultCleanup = offDefault.cleanup.flatMap((c) =>
+      c.type === 'command' ? [c.command.args.join(' ')] : [],
+    )
+    // REQ-CLEAN-003: both the 8088 reverse AND the fallback 8081 reverse are removed.
+    expect(offDefaultCleanup.some((c) => c.includes('reverse --remove tcp:8088'))).toBe(true)
+    expect(offDefaultCleanup.some((c) => c.includes('reverse --remove tcp:8081'))).toBe(true)
   })
 
   it('REQ-AND-005: both Hermes waits carry a bounded am-start retry', () => {

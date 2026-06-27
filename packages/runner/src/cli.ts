@@ -1,4 +1,4 @@
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, readFile } from 'node:fs/promises'
 import net from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -87,13 +87,37 @@ export async function run(argv: string[]): Promise<number> {
 
   const runner = new NodeProcessRunner()
   const logDir = await mkdtemp(path.join(tmpdir(), 'rn-driver-logs-'))
-  let exitCode = 0
-  for (const platform of platforms) {
-    runner.log(`\n=== platform: ${platform} ===`)
-    const code = await runPlatform(platform, config, { runner, logDir, flags, specs, passthrough })
-    if (code !== 0) exitCode = code
+
+  // Signal cleanup (REQ-CLEAN-001): SIGINT/SIGTERM otherwise terminate the process
+  // before executePlan's async finally runs, orphaning the detached Metro/companion.
+  const onSignal = (signal: NodeJS.Signals): void => {
+    process.stderr.write(`\nReceived ${signal} — terminating runner-owned processes…\n`)
+    runner.killAll()
+    process.exit(130)
   }
-  return exitCode
+  const onSigint = (): void => onSignal('SIGINT')
+  const onSigterm = (): void => onSignal('SIGTERM')
+  process.on('SIGINT', onSigint)
+  process.on('SIGTERM', onSigterm)
+
+  try {
+    let exitCode = 0
+    for (const platform of platforms) {
+      runner.log(`\n=== platform: ${platform} ===`)
+      const code = await runPlatform(platform, config, {
+        runner,
+        logDir,
+        flags,
+        specs,
+        passthrough,
+      })
+      if (code !== 0) exitCode = code
+    }
+    return exitCode
+  } finally {
+    process.removeListener('SIGINT', onSigint)
+    process.removeListener('SIGTERM', onSigterm)
+  }
 }
 
 interface RunContext {
@@ -161,6 +185,10 @@ async function runPlatform(
         `\nFAILED [${platform}] at stage [${error.stage}] ${error.stepId}: ${error.message}\n`,
       )
       process.stderr.write(`Logs: ${ctx.logDir}\n`)
+      // REQ-CLI-003/REQ-DIAG-002: surface the tail of the relevant background log
+      // so a Metro/companion-side failure is visible without opening the log dir.
+      await printLogTail(ctx.logDir, 'metro')
+      await printLogTail(ctx.logDir, 'companion')
       return STAGE_EXIT_CODES[error.stage]
     }
     throw error
@@ -217,6 +245,21 @@ async function metroRunning(metroUrl: string): Promise<boolean> {
     return (await response.text()).includes('packager-status:running')
   } catch {
     return false
+  }
+}
+
+/** Print the last `lines` of a background log (Metro/companion) if it exists. */
+async function printLogTail(logDir: string, key: string, lines = 20): Promise<void> {
+  try {
+    const content = await readFile(path.join(logDir, `${key}.log`), 'utf8')
+    const tail = content
+      .split('\n')
+      .filter((line) => line.length > 0)
+      .slice(-lines)
+    if (tail.length > 0)
+      process.stderr.write(`\n--- ${key} log (last ${tail.length} lines) ---\n${tail.join('\n')}\n`)
+  } catch {
+    // No log captured for this key (e.g. it never started); nothing to show.
   }
 }
 

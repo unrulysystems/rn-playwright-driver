@@ -230,6 +230,18 @@ export function planAndroid(input: PlanAndroidInput): Plan {
       command: adb(serial, ['reverse', '--remove', `tcp:${metro.port}`]),
       description: 'Remove metro reverse',
     },
+    // Mirror android.reverse-default: when Metro is off 8081 the plan also adds a
+    // `tcp:8081 -> tcp:<port>` fallback reverse, so cleanup must remove BOTH or a
+    // stale 8081 mapping wedges the next run (REQ-CLEAN-003).
+    ...(metro.port === DEFAULTS.metroPort
+      ? []
+      : [
+          {
+            type: 'command' as const,
+            command: adb(serial, ['reverse', '--remove', `tcp:${DEFAULTS.metroPort}`]),
+            description: 'Remove fallback 8081 metro reverse',
+          },
+        ]),
     {
       type: 'command',
       command: adb(serial, ['forward', '--remove', `tcp:${resolved.touchPort}`]),

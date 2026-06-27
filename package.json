@@ -13,8 +13,8 @@
     "format:check": "oxfmt --check .",
     "test": "bun run --filter '@unrulysystems/*' test",
     "typecheck": "bun run --filter '@unrulysystems/*' typecheck && bun run --filter 'examples-*' typecheck",
-    "knip": "bun run --filter '@unrulysystems/rn-playwright-driver' knip && bun run --filter 'examples-*' knip",
-    "cpd": "bun run --filter '@unrulysystems/rn-playwright-driver' cpd && bun run --filter 'examples-*' cpd",
+    "knip": "bun run --filter '@unrulysystems/rn-playwright-driver' knip && bun run --filter '@unrulysystems/rn-playwright-driver-runner' knip && bun run --filter 'examples-*' knip",
+    "cpd": "bun run --filter '@unrulysystems/rn-playwright-driver' cpd && bun run --filter '@unrulysystems/rn-playwright-driver-runner' cpd && bun run --filter 'examples-*' cpd",
     "check": "bun run typecheck && bun run lint && bun run format:check && bun run test",
     "prepare": "lefthook install"
   },
