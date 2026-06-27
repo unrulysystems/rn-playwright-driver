@@ -44,6 +44,8 @@ export interface ResolvedAndroidTarget {
   /** Filename the token is installed under in the app's private `files/` dir. */
   readonly deviceTokenFileName: string
   readonly instrumentationTarget: string
+  /** Metro URL handed to the dev launcher deep link. */
+  readonly initialUrl: string
 }
 
 export function resolveMetro(
@@ -106,7 +108,7 @@ export function placeholderIos(ios: IosConfig, metro: ResolvedMetro): ResolvedIo
 
 export function placeholderAndroid(
   android: AndroidConfig,
-  _metro: ResolvedMetro,
+  metro: ResolvedMetro,
 ): ResolvedAndroidTarget {
   return {
     serial: '<android-serial>',
@@ -117,5 +119,6 @@ export function placeholderAndroid(
     tokenFile: SECRET_PLACEHOLDER,
     deviceTokenFileName: DEFAULTS.androidTokenFileName,
     instrumentationTarget: instrumentationTarget(android),
+    initialUrl: android.launch.initialUrl ?? metro.url,
   }
 }

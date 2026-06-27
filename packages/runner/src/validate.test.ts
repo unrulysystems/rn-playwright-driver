@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { configFixture, iosDevClientConfigFixture } from './fixtures'
+import {
+  androidConfigFixture,
+  androidDevClientConfigFixture,
+  configFixture,
+  iosDevClientConfigFixture,
+} from './fixtures'
 import { ConfigValidationError, assertValid, validateConfig } from './validate'
 
 describe('validateConfig', () => {
@@ -126,6 +131,53 @@ describe('validateConfig', () => {
     expect(result.errors).toContainEqual(
       expect.stringContaining('config.android.activity: expected an activity name'),
     )
+  })
+
+  it('rejects unknown Android scheme keys as typo protection', () => {
+    const config = configFixture()
+    const result = validateConfig(
+      { ...config, android: { ...config.android, schemes: ['boss'] } },
+      ['android'],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('config.android.schemes: unknown key'),
+    )
+  })
+
+  it('rejects invalid Android dev-client schemes', () => {
+    const config = configFixture({
+      android: androidDevClientConfigFixture({ scheme: 'Boss App' }),
+    })
+    const result = validateConfig(config, ['android'])
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('config.android.scheme: expected a valid URL scheme'),
+    )
+  })
+
+  it('requires an Android scheme for expo-dev-client launch', () => {
+    const config = configFixture({
+      android: androidConfigFixture({
+        launch: {
+          mode: 'launch',
+          kind: 'expo-dev-client',
+          initialUrl: 'http://127.0.0.1:8081',
+        },
+      }),
+    })
+    const result = validateConfig(config, ['android'])
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContainEqual(
+      expect.stringContaining(
+        'config.android.scheme: required when android.launch.kind is "expo-dev-client"',
+      ),
+    )
+  })
+
+  it('accepts an Android expo-dev-client config with a valid scheme', () => {
+    const config = configFixture({ android: androidDevClientConfigFixture() })
+    expect(validateConfig(config, ['android']).ok).toBe(true)
   })
 
   it('rejects non-primitive ios.defaults values', () => {

@@ -98,6 +98,8 @@ export interface AndroidConfig {
   packageName: string
   /** Launch activity, e.g. `.MainActivity`. */
   activity: string
+  /** App URL scheme used for Expo dev-client deep links, e.g. `myapp`. */
+  scheme?: string
   /** Gradle tasks that build the app + androidTest APKs. */
   gradleTasks?: string[]
   /** Built app APK path. Defaults to the standard debug output path. */

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { androidConfigFixture } from '../fixtures'
+import { androidConfigFixture, androidDevClientConfigFixture } from '../fixtures'
 import { planAndroid, type PlanAndroidInput } from './android'
 import { placeholderAndroid, resolveMetro } from './resolved'
-import type { Plan } from './types'
+import type { CommandSpec, Plan } from './types'
 
 function inputFor(overrides: Partial<PlanAndroidInput> = {}): PlanAndroidInput {
-  const android = androidConfigFixture()
+  const android = overrides.android ?? androidConfigFixture()
   const metro = resolveMetro({ command: 'npx expo start' })
   return {
     android,
@@ -21,6 +21,12 @@ function inputFor(overrides: Partial<PlanAndroidInput> = {}): PlanAndroidInput {
 }
 
 const stepIds = (plan: Plan): string[] => plan.steps.map((s) => s.id)
+
+function commandFor(plan: Plan, id: string): CommandSpec {
+  const action = plan.steps.find((s) => s.id === id)?.action
+  if (action?.type !== 'command') throw new Error(`expected ${id} to be a command step`)
+  return action.command
+}
 
 describe('planAndroid', () => {
   it('produces the Android lifecycle stages in order', () => {
@@ -136,6 +142,63 @@ describe('planAndroid', () => {
       if (action?.type === 'probe') {
         expect(action.retry?.max).toBeGreaterThan(0)
         expect(action.retry?.command.args.join(' ')).toContain('am start')
+      }
+    }
+  })
+
+  it('plain launch remains activity-based', () => {
+    const plan = planAndroid(inputFor())
+    expect(commandFor(plan, 'android.launch-1').args).toEqual([
+      '-s',
+      '<android-serial>',
+      'shell',
+      'am',
+      'start',
+      '-W',
+      '-n',
+      'com.unrulyfall.example/.MainActivity',
+    ])
+  })
+
+  it('dev-client launch uses one adb shell arg with a literally single-quoted URL', () => {
+    const android = androidDevClientConfigFixture()
+    const plan = planAndroid(
+      inputFor({ android, resolved: placeholderAndroid(android, resolveMetro(undefined)) }),
+    )
+    const args = commandFor(plan, 'android.launch-1').args
+    expect(args.slice(0, 3)).toEqual(['-s', '<android-serial>', 'shell'])
+    expect(args).toHaveLength(4)
+    const remote = args[3] ?? ''
+    expect(remote).toContain("-d 'boss://expo-development-client/?url=http://127.0.0.1:8081'")
+  })
+
+  it('dev-client launch-1 force-stops before deep-linking, but launch-2 does not', () => {
+    const android = androidDevClientConfigFixture()
+    const plan = planAndroid(
+      inputFor({ android, resolved: placeholderAndroid(android, resolveMetro(undefined)) }),
+    )
+    const launch1 = commandFor(plan, 'android.launch-1').args[3] ?? ''
+    const launch2 = commandFor(plan, 'android.launch-2').args[3] ?? ''
+    expect(launch1).toContain('am force-stop com.unrulyfall.example && am start')
+    expect(launch1).toContain('android.intent.action.VIEW')
+    expect(launch2).not.toContain('force-stop')
+    expect(launch2).toContain('am start -a android.intent.action.VIEW')
+  })
+
+  it('dev-client Hermes retries reissue the deep link', () => {
+    const android = androidDevClientConfigFixture()
+    const plan = planAndroid(
+      inputFor({ android, resolved: placeholderAndroid(android, resolveMetro(undefined)) }),
+    )
+    for (const id of ['android.hermes-1', 'android.hermes-2']) {
+      const action = plan.steps.find((s) => s.id === id)?.action
+      expect(action?.type).toBe('probe')
+      if (action?.type === 'probe') {
+        expect(action.retry?.command.args).toHaveLength(4)
+        expect(action.retry?.command.args[3]).toContain('android.intent.action.VIEW')
+        expect(action.retry?.command.args[3]).toContain(
+          "'boss://expo-development-client/?url=http://127.0.0.1:8081'",
+        )
       }
     }
   })

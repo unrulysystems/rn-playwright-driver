@@ -25,6 +25,7 @@ const IOS_KEYS = new Set([
 const ANDROID_KEYS = new Set([
   'packageName',
   'activity',
+  'scheme',
   'gradleTasks',
   'appApkPath',
   'testApkPath',
@@ -154,6 +155,8 @@ function validateAndroid(android: unknown, errors: string[]): void {
   // metacharacter survives validation (security, defense-in-depth).
   requireAndroidPackage('config.android.packageName', android.packageName, errors)
   requireAndroidActivity('config.android.activity', android.activity, errors)
+  if (android.scheme !== undefined)
+    requireAppScheme('config.android.scheme', android.scheme, errors)
   optionalString('config.android.appApkPath', android.appApkPath, errors)
   optionalString('config.android.testApkPath', android.testApkPath, errors)
   // instrumentationTarget crosses `adb shell am instrument … -w <target>`; like
@@ -168,7 +171,10 @@ function validateAndroid(android: unknown, errors: string[]): void {
     errors.push('config.android.gradleTasks: expected an array of strings')
   }
   validateCompanion('config.android.companion', android.companion, errors)
-  validateLaunch('config.android.launch', android.launch, errors)
+  const launch = validateLaunch('config.android.launch', android.launch, errors)
+  if (launch?.kind === 'expo-dev-client' && android.scheme === undefined) {
+    errors.push('config.android.scheme: required when android.launch.kind is "expo-dev-client"')
+  }
 }
 
 function validateCompanion(path: string, companion: unknown, errors: string[]): void {
@@ -234,6 +240,7 @@ const ANDROID_PACKAGE_RE = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/
 // Activity, e.g. `.MainActivity` or `com.company.app.MainActivity`. Optional
 // leading dot (relative form), then dot-joined identifier segments.
 const ANDROID_ACTIVITY_RE = /^\.?[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$/
+const APP_SCHEME_RE = /^[a-z][a-z0-9+.-]*$/
 
 function requireAndroidPackage(path: string, value: unknown, errors: string[]): void {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -251,6 +258,18 @@ function requireAndroidActivity(path: string, value: unknown, errors: string[]):
   }
   if (!ANDROID_ACTIVITY_RE.test(value))
     errors.push(`${path}: expected an activity name (e.g. .MainActivity)`)
+}
+
+function requireAppScheme(path: string, value: unknown, errors: string[]): void {
+  if (typeof value !== 'string' || value.trim() === '') {
+    errors.push(`${path}: required non-empty string`)
+    return
+  }
+  if (!APP_SCHEME_RE.test(value)) {
+    errors.push(
+      `${path}: expected a valid URL scheme (lowercase letter, then lowercase letters, digits, +, ., or -)`,
+    )
+  }
 }
 
 // `am instrument` target: `<pkg>.test/<runner-class>`. Identifier segments only,

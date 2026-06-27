@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { androidConfigFixture, iosConfigFixture } from '../fixtures'
+import { androidConfigFixture, androidDevClientConfigFixture, iosConfigFixture } from '../fixtures'
 import {
   instrumentationTarget,
   placeholderAndroid,
@@ -73,5 +73,25 @@ describe('placeholder resolvers (dry-run)', () => {
     const resolved = placeholderAndroid(android, resolveMetro(undefined))
     expect(resolved.tokenFile).toBe('<token-file>')
     expect(resolved.deviceTokenFileName).toBe('rn-driver-touch-token')
+  })
+
+  it('Android dev-client initialUrl falls back to the Metro url', () => {
+    const android = androidDevClientConfigFixture({
+      launch: { mode: 'launch', kind: 'expo-dev-client' },
+    })
+    const resolved = placeholderAndroid(android, resolveMetro({ url: 'http://127.0.0.1:8081' }))
+    expect(resolved.initialUrl).toBe('http://127.0.0.1:8081')
+  })
+
+  it('Android dev-client initialUrl honors the launch override', () => {
+    const android = androidDevClientConfigFixture({
+      launch: {
+        mode: 'launch',
+        kind: 'expo-dev-client',
+        initialUrl: 'http://10.0.2.2:9090',
+      },
+    })
+    const resolved = placeholderAndroid(android, resolveMetro({ url: 'http://127.0.0.1:8081' }))
+    expect(resolved.initialUrl).toBe('http://10.0.2.2:9090')
   })
 })

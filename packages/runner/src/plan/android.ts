@@ -152,9 +152,10 @@ export function planAndroid(input: PlanAndroidInput): Plan {
 
   // app-launch — first launch + wait for a Hermes target. The wait re-issues
   // `am start` on a transient registration miss (REQ-AND-005).
-  const launchCommand = launchCommandFor(android, serial)
-  push(launchStep('android.launch-1', android, serial))
-  push(hermesStep('android.hermes-1', android, metro, resolved, hermesDeviceName, launchCommand))
+  const launch1Command = launchCommandFor(android, resolved, serial, { forceStopBefore: true })
+  const launch2Command = launchCommandFor(android, resolved, serial, { forceStopBefore: false })
+  push(launchStep('android.launch-1', android, launch1Command))
+  push(hermesStep('android.hermes-1', android, metro, resolved, hermesDeviceName, launch1Command))
 
   // companion — forward the port (clearing any stale mapping first) and start
   // the instrumentation server, then wait for an authenticated hello.
@@ -216,8 +217,8 @@ export function planAndroid(input: PlanAndroidInput): Plan {
   })
 
   // app-launch — relaunch so the app picks up the live companion, wait again.
-  push(launchStep('android.launch-2', android, serial))
-  push(hermesStep('android.hermes-2', android, metro, resolved, hermesDeviceName, launchCommand))
+  push(launchStep('android.launch-2', android, launch2Command))
+  push(hermesStep('android.hermes-2', android, metro, resolved, hermesDeviceName, launch2Command))
 
   const cleanup: CleanupAction[] = [
     {
@@ -277,23 +278,42 @@ export function planAndroid(input: PlanAndroidInput): Plan {
   }
 }
 
-function launchCommandFor(android: AndroidConfig, serial: string): CommandSpec {
-  return adb(serial, [
-    'shell',
-    'am',
-    'start',
-    '-W',
-    '-n',
-    `${android.packageName}/${android.activity}`,
-  ])
+function launchCommandFor(
+  android: AndroidConfig,
+  resolved: ResolvedAndroidTarget,
+  serial: string,
+  opts: { forceStopBefore: boolean },
+): CommandSpec {
+  if (android.launch.kind === 'plain') {
+    return adb(serial, [
+      'shell',
+      'am',
+      'start',
+      '-W',
+      '-n',
+      `${android.packageName}/${android.activity}`,
+    ])
+  }
+
+  if (!android.scheme) {
+    throw new Error('android.scheme is required when android.launch.kind is "expo-dev-client"')
+  }
+
+  const launchScript = `am start -a android.intent.action.VIEW -d ${shellSingleQuote(
+    devClientUrl(android.scheme, resolved.initialUrl),
+  )}`
+  return adbShellScript(
+    serial,
+    opts.forceStopBefore ? `am force-stop ${android.packageName} && ${launchScript}` : launchScript,
+  )
 }
 
-function launchStep(id: string, android: AndroidConfig, serial: string): Step {
+function launchStep(id: string, android: AndroidConfig, command: CommandSpec): Step {
   return {
     id,
     stage: 'app-launch',
     description: `Launch ${android.packageName}/${android.activity}`,
-    action: { type: 'command', command: launchCommandFor(android, serial) },
+    action: { type: 'command', command },
   }
 }
 
@@ -332,6 +352,14 @@ function debugHostXml(host: string): string {
 
 function adb(serial: string, args: string[]): CommandSpec {
   return { command: 'adb', args: ['-s', serial, ...args] }
+}
+
+function devClientUrl(scheme: string, initialUrl: string): string {
+  return `${scheme}://expo-development-client/?url=${initialUrl}`
+}
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`
 }
 
 /**

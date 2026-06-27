@@ -58,7 +58,7 @@ export async function resolveIosTarget(
  */
 export async function resolveAndroidTarget(
   android: AndroidConfig,
-  _metro: ResolvedMetro,
+  metro: ResolvedMetro,
   opts: ResolveOptions,
 ): Promise<{ resolved: ResolvedAndroidTarget; deviceName: string }> {
   const serial = await selectSerial(opts.device)
@@ -78,6 +78,7 @@ export async function resolveAndroidTarget(
       tokenFile,
       deviceTokenFileName: DEFAULTS.androidTokenFileName,
       instrumentationTarget: instrumentationTarget(android),
+      initialUrl: android.launch.initialUrl ?? metro.url,
     },
     deviceName,
   }
@@ -137,7 +138,10 @@ export function pickSimulator(
   const byNewest = (a: SimDevice, b: SimDevice): number =>
     compareRuntime(runtimeVersion(b.runtime), runtimeVersion(a.runtime))
   const iphones = devices.filter((device) => device.name.startsWith('iPhone'))
+  // The package targets ES2022; copy before sorting instead of using ES2023 `toSorted`.
+  // oxlint-disable-next-line unicorn/no-array-sort
   const booted = iphones.filter((device) => device.state === 'Booted').sort(byNewest)
+  // oxlint-disable-next-line unicorn/no-array-sort
   const pick = booted[0] ?? [...iphones].sort(byNewest)[0]
   if (!pick) throw new Error('no available iPhone simulator found')
   return { udid: pick.udid, name: pick.name }

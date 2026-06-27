@@ -31,6 +31,16 @@ export function androidConfigFixture(overrides: Partial<AndroidConfig> = {}): An
   }
 }
 
+export function androidDevClientConfigFixture(
+  overrides: Partial<AndroidConfig> = {},
+): AndroidConfig {
+  return androidConfigFixture({
+    scheme: 'boss',
+    launch: { mode: 'launch', kind: 'expo-dev-client', initialUrl: 'http://127.0.0.1:8081' },
+    ...overrides,
+  })
+}
+
 export function configFixture(overrides: Partial<RnDriverConfig> = {}): RnDriverConfig {
   return {
     metro: { command: 'npx expo start --localhost --port 8081' },
