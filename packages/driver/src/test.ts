@@ -1,11 +1,16 @@
 import { readFileSync } from 'node:fs'
-import { test as base } from '@playwright/test'
+import { createRequire } from 'node:module'
+import { join } from 'node:path'
+import type * as PlaywrightTest from '@playwright/test'
 import { createDevice, type RNDevice, type RNDeviceOptions } from './device'
 import { parsePositiveInteger, touchOptionsFromEnv } from './test-env'
 import type { Device } from './types'
 
 const DEFAULT_METRO_URL = 'http://localhost:8081'
 const DEFAULT_TIMEOUT = 30_000
+const requireFromProject = createRequire(join(process.cwd(), 'package.json'))
+const playwright = requireFromProject('@playwright/test') as typeof PlaywrightTest
+const base = playwright.test
 
 /**
  * Extended test fixtures for React Native testing.
@@ -99,7 +104,7 @@ export const test = base.extend<RNTestFixtures, RNWorkerFixtures>({
 /**
  * Re-export expect from Playwright for convenience.
  */
-export { expect } from '@playwright/test'
+export const { expect } = playwright
 export type {
   AssertionOptions,
   LocatorAssertions,

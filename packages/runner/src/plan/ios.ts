@@ -78,8 +78,7 @@ export function planIos(input: PlanIosInput): Plan {
       // Pass the resolved UI-test scheme so a custom `ios.uitestScheme` scaffolds
       // the SAME target that companion startup later builds (default is
       // `${appScheme}UITests`).
-      command: npx([
-        'rn-driver-xctest-scaffold',
+      command: cmd('node_modules/.bin/rn-driver-xctest-scaffold', [
         '--ios-dir',
         'ios',
         '--project-name',

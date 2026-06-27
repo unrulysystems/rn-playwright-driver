@@ -130,6 +130,14 @@ describe('planIos', () => {
     expect(plan.steps.find((s) => s.id === 'ios.runtime-config')?.skippable).toBeFalsy()
   })
 
+  it('uses the workspace-local XCTest scaffold bin instead of resolving from npm', () => {
+    const plan = planIos(inputFor('plain'))
+    const scaffold = plan.steps.find((s) => s.id === 'ios.scaffold')?.action
+    expect(scaffold?.type === 'command' && scaffold.command.command).toBe(
+      'node_modules/.bin/rn-driver-xctest-scaffold',
+    )
+  })
+
   it('emits the driver env contract with a token FILE, never an inline token', () => {
     const plan = planIos(inputFor('plain'))
     expect(plan.driverEnv).toMatchObject({

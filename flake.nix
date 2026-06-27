@@ -42,6 +42,7 @@
         pkgs = import nixpkgs {
           inherit overlays system;
         };
+        androidJdk = pkgs.jdk17;
       in {
         formatter = pkgs.alejandra;
 
@@ -53,6 +54,7 @@
             pkgs.ripgrep
             pkgs.coreutils
             pkgs.lefthook
+            androidJdk
           ];
           # nub auto-provisions Node from .node-version on first run, so there is
           # no version-manager shell hook (fnm/corepack are gone).
@@ -64,7 +66,11 @@
               unset SDKROOT
               unset DEVELOPER_DIR
               export PATH=/usr/bin:$PATH
-            '');
+            '')
+            + ''
+              export JAVA_HOME=${androidJdk.home}
+              export PATH=$JAVA_HOME/bin:$PATH
+            '';
         };
 
         devShell = self.devShells.${system}.default;
