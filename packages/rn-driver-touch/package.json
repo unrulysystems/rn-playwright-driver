@@ -28,7 +28,6 @@
   "devDependencies": {
     "@typescript/native-preview": "^7.0.0-dev.20251227.1",
     "expo": "~54.0.30",
-    "expo-module-scripts": "^4.0.9",
     "expo-modules-core": "^3.0.29",
     "typescript": "^5.9.3"
   },
