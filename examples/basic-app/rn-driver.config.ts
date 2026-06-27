@@ -13,7 +13,10 @@ export default defineRnDriverConfig({
   metro: {
     // CI=1 keeps Expo non-interactive when backgrounded; 8083 avoids the
     // machine's other Metro instances (8081/8082 are taken by other projects).
+    // Expo SDK 56's `--localhost` listener is reachable on `localhost`/::1, not
+    // necessarily 127.0.0.1, so keep the runner probe URL aligned with Expo.
     command: 'CI=1 EXPO_NO_TELEMETRY=1 npx expo start --localhost --port 8083',
+    host: 'localhost',
     port: 8083,
   },
   ios: {

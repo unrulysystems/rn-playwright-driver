@@ -50,17 +50,17 @@ importers:
         specifier: workspace:*
         version: link:../../packages/xctest-companion
       expo:
-        specifier: ~54.0.30
-        version: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.12
+        version: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       expo-status-bar:
-        specifier: ~3.0.9
-        version: 3.0.9(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.4
+        version: 56.0.4(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       react:
-        specifier: 19.1.0
-        version: 19.1.0
+        specifier: 19.2.3
+        version: 19.2.3
       react-native:
-        specifier: 0.81.5
-        version: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+        specifier: 0.85.3
+        version: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
       '@playwright/test':
         specifier: ^1.57.0
@@ -69,8 +69,8 @@ importers:
         specifier: ^25.9.3
         version: 25.9.3
       '@types/react':
-        specifier: ~19.1.0
-        version: 19.1.17
+        specifier: ~19.2.17
+        version: 19.2.17
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20251227.1
         version: 7.0.0-dev.20251227.1
@@ -79,13 +79,13 @@ importers:
         version: 4.0.5
       knip:
         specifier: ^5.78.0
-        version: 5.78.0(@types/node@25.9.3)(typescript@5.9.3)
+        version: 5.78.0(@types/node@25.9.3)(typescript@6.0.3)
       lefthook:
         specifier: ^2.0.13
         version: 2.0.13
       typescript:
-        specifier: ~5.9.2
-        version: 5.9.3
+        specifier: ~6.0.3
+        version: 6.0.3
 
   packages/driver:
     dependencies:
@@ -136,14 +136,14 @@ importers:
   packages/instrumentation-companion:
     dependencies:
       '@expo/config-plugins':
-        specifier: ~54.0.4
-        version: 54.0.4
+        specifier: ~56.0.9
+        version: 56.0.9(typescript@6.0.3)
       expo:
         specifier: '*'
-        version: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        version: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       react-native:
         specifier: '*'
-        version: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+        version: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
   packages/lifecycle:
     dependencies:
@@ -152,20 +152,20 @@ importers:
         version: link:../shared-types
       react:
         specifier: '*'
-        version: 19.1.0
+        version: 19.2.3
       react-native:
         specifier: '*'
-        version: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+        version: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20251227.1
         version: 7.0.0-dev.20251227.1
       expo:
-        specifier: ~54.0.30
-        version: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.12
+        version: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       expo-modules-core:
-        specifier: ^3.0.29
-        version: 3.0.29(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.17
+        version: 56.0.17(@babel/core@7.28.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -174,20 +174,20 @@ importers:
     dependencies:
       react:
         specifier: '*'
-        version: 19.1.0
+        version: 19.2.3
       react-native:
         specifier: '*'
-        version: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+        version: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20251227.1
         version: 7.0.0-dev.20251227.1
       expo:
-        specifier: ~54.0.30
-        version: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.12
+        version: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       expo-modules-core:
-        specifier: ^3.0.29
-        version: 3.0.29(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.17
+        version: 56.0.17(@babel/core@7.28.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -223,20 +223,20 @@ importers:
         version: link:../shared-types
       react:
         specifier: '*'
-        version: 19.1.0
+        version: 19.2.3
       react-native:
         specifier: '*'
-        version: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+        version: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20251227.1
         version: 7.0.0-dev.20251227.1
       expo:
-        specifier: ~54.0.30
-        version: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.12
+        version: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       expo-modules-core:
-        specifier: ^3.0.29
-        version: 3.0.29(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.17
+        version: 56.0.17(@babel/core@7.28.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -257,20 +257,20 @@ importers:
         version: link:../shared-types
       react:
         specifier: '*'
-        version: 19.1.0
+        version: 19.2.3
       react-native:
         specifier: '*'
-        version: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+        version: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
     devDependencies:
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20251227.1
         version: 7.0.0-dev.20251227.1
       expo:
-        specifier: ~54.0.30
-        version: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.12
+        version: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       expo-modules-core:
-        specifier: ^3.0.29
-        version: 3.0.29(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        specifier: ~56.0.17
+        version: 56.0.17(@babel/core@7.28.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -278,38 +278,28 @@ importers:
   packages/xctest-companion:
     dependencies:
       '@expo/config-plugins':
-        specifier: ~54.0.4
-        version: 54.0.4
+        specifier: ~56.0.9
+        version: 56.0.9(typescript@6.0.3)
       expo:
         specifier: '*'
-        version: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+        version: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       xcode:
         specifier: ^3.0.1
         version: 3.0.1
 
 packages:
-  '@0no-co/graphql.web@1.2.0':
-    resolution:
-      {
-        integrity: sha512-/1iHy9TTr63gE1YcR5idjx8UREz1s0kFhydf3bBLCXyqjhkIc6igAzTOx3zPifCwFR87tsh/4Pa9cNts6d2otw==,
-      }
-    peerDependencies:
-      graphql: ^14.0.0 || ^15.0.0 || ^16.0.0
-    peerDependenciesMeta:
-      graphql:
-        optional: true
-
-  '@babel/code-frame@7.10.4':
-    resolution:
-      {
-        integrity: sha512-vG6SvB6oYEhvgisZNFRmRCUkLz11c7rp+tbNTynGqc6mS1d5ATd/sGyV6W0KZZnXRKMTzZDRgQT3Ou9jhpAfUg==,
-      }
-
   '@babel/code-frame@7.27.1':
     resolution:
       {
         integrity: sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg==,
       }
+
+  '@babel/code-frame@7.29.7':
+    resolution:
+      {
+        integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==,
+      }
+    engines: { node: '>=6.9.0' }
 
   '@babel/compat-data@7.28.5':
     resolution:
@@ -329,11 +319,25 @@ packages:
         integrity: sha512-3EwLFhZ38J4VyIP6WNtt2kUdW9dokXA9Cr4IVIFHuCpZ3H8/YFOl5JjZHisrn1fATPBmKKqXzDFvh9fUwHz6CQ==,
       }
 
+  '@babel/generator@7.29.7':
+    resolution:
+      {
+        integrity: sha512-DkXD5OJQaAQIdZ1bt3UZdEnHAn9Imd3IVBdX03UFe+ony9Ojw5pzr9YVKGDY1jt+Gcn/FnGkNf8r+Vj5NOJWtQ==,
+      }
+    engines: { node: '>=6.9.0' }
+
   '@babel/helper-annotate-as-pure@7.27.3':
     resolution:
       {
         integrity: sha512-fXSwMQqitTGeHLBC08Eq5yXz2m37E4pJX1qAU1+2cNedz/ifv/bVXft90VeSav5nFO61EcNgwr0aJxbyPaWBPg==,
       }
+
+  '@babel/helper-annotate-as-pure@7.29.7':
+    resolution:
+      {
+        integrity: sha512-OoK6239jHPuSQOoS0kfTVKn0b/rVTk0seKq4Gd2UMLtmOVLjDC0ki3e+c90Trqv2gMfvJFqkiljrr568+qddiw==,
+      }
+    engines: { node: '>=6.9.0' }
 
   '@babel/helper-compilation-targets@7.27.2':
     resolution:
@@ -371,6 +375,13 @@ packages:
         integrity: sha512-+W6cISkXFa1jXsDEdYA8HeevQT/FULhxzR99pxphltZcVaugps53THCeiWA8SguxxpSp3gKPiuYfSWopkLQ4hw==,
       }
 
+  '@babel/helper-globals@7.29.7':
+    resolution:
+      {
+        integrity: sha512-3nQVUAtvkKH9zahfWgw96Jc/uFOmjACE1kQz82E2lqWmHBgjzbNlsC22nuQTfahmWeQtTq5nQ/4Nnd2A1wj4zA==,
+      }
+    engines: { node: '>=6.9.0' }
+
   '@babel/helper-member-expression-to-functions@7.28.5':
     resolution:
       {
@@ -382,6 +393,13 @@ packages:
       {
         integrity: sha512-0gSFWUPNXNopqtIPQvlD5WgXYI5GY2kP2cCvoT8kczjbfcfuIljTbcWrulD1CIPIX2gt1wghbDy08yE1p+/r3w==,
       }
+
+  '@babel/helper-module-imports@7.29.7':
+    resolution:
+      {
+        integrity: sha512-ejHwrQQYcm9xnTivShn2IDOlIzInN34AXskvq9QicvCtEzq1Vzclu/tKF8Jq1Cg8JG2GL6/EmjgsCT7lXepE3g==,
+      }
+    engines: { node: '>=6.9.0' }
 
   '@babel/helper-module-transforms@7.28.3':
     resolution:
@@ -402,6 +420,13 @@ packages:
       {
         integrity: sha512-1gn1Up5YXka3YYAHGKpbideQ5Yjf1tDa9qYcgysz+cNCXukyLl6DjPXhD3VRwSb8c0J9tA4b2+rHEZtc6R0tlw==,
       }
+
+  '@babel/helper-plugin-utils@7.29.7':
+    resolution:
+      {
+        integrity: sha512-G7sHYigPY17oO5SYWnfD/0MTBwVR781S/JI643e/JhUYgVgWE/61SoW3NH9KWUKyKq5LVh3npif99Wkt6j86Jw==,
+      }
+    engines: { node: '>=6.9.0' }
 
   '@babel/helper-remap-async-to-generator@7.27.1':
     resolution:
@@ -431,11 +456,25 @@ packages:
         integrity: sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==,
       }
 
+  '@babel/helper-string-parser@7.29.7':
+    resolution:
+      {
+        integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==,
+      }
+    engines: { node: '>=6.9.0' }
+
   '@babel/helper-validator-identifier@7.28.5':
     resolution:
       {
         integrity: sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==,
       }
+
+  '@babel/helper-validator-identifier@7.29.7':
+    resolution:
+      {
+        integrity: sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==,
+      }
+    engines: { node: '>=6.9.0' }
 
   '@babel/helper-validator-option@7.27.1':
     resolution:
@@ -455,17 +494,19 @@ packages:
         integrity: sha512-HFN59MmQXGHVyYadKLVumYsA9dBFun/ldYxipEjzA4196jpLZd8UjEEBLkbEkvfYreDqJhZxYAWFPtrfhNpj4w==,
       }
 
-  '@babel/highlight@7.25.9':
-    resolution:
-      {
-        integrity: sha512-llL88JShoCsth8fF8R4SJnIn+WLvR6ccFxu1H3FlMhDontdcmZWf2HgIZ7AIqV3Xcck1idlohrN4EUBQz6klbw==,
-      }
-
   '@babel/parser@7.28.5':
     resolution:
       {
         integrity: sha512-KKBU1VGYR7ORr3At5HAtUQ+TV3SzRCXmA/8OdDZiLDBIZxVyzXuztPjfLd3BV1PRAQGCMWWSHYhL0F8d5uHBDQ==,
       }
+    hasBin: true
+
+  '@babel/parser@7.29.7':
+    resolution:
+      {
+        integrity: sha512-hnORnjP/1P/zFEndoeX+n+t1RwWRJiJpM/jO7FW32Kn9r5+sJB2JWOdYo4L6k78j15eCwY3Gm/7364B1EMwtNg==,
+      }
+    engines: { node: '>=6.0.0' }
     hasBin: true
 
   '@babel/plugin-proposal-decorators@7.28.0':
@@ -480,38 +521,6 @@ packages:
     resolution:
       {
         integrity: sha512-hjlsMBl1aJc5lp8MoCDEZCiYzlgdRAShOjAfRw6X+GlpLpUPU7c3XNLsKFZbQk/1cRzBlJ7CXg3xJAJMrFa1Uw==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-async-generators@7.8.4':
-    resolution:
-      {
-        integrity: sha512-tycmZxkGfZaxhMRbXlPXuVFpdWlXpir2W4AMhSJgRKzk/eDlIXOhb2LHWoLpDF7TEHylV5zNhykX6KAgHJmTNw==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-bigint@7.8.3':
-    resolution:
-      {
-        integrity: sha512-wnTnFlG+YxQm3vDxpGE57Pj0srRU4sHE/mDkt1qv2YJJSeUAec2ma4WLUnUPeKjyrfntVwe/N6dCXpU+zL3Npg==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-class-properties@7.12.13':
-    resolution:
-      {
-        integrity: sha512-fm4idjKla0YahUNgFNLCB0qySdsoPiZP3iQE3rky0mBUtMZ23yDJ9SJdg6dXTSDnulOVqiF3Hgr9nbXvXTQZYA==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-class-static-block@7.14.5':
-    resolution:
-      {
-        integrity: sha512-b+YyPmr6ldyNnM6sqYeMWE+bgJcJpO6yS4QD7ymxgH34GBPNDM/THBh8iunyvKIZztiwLH4CJZ0RxTk9emgpjw==,
       }
     peerDependencies:
       '@babel/core': ^7.0.0-0
@@ -548,30 +557,6 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/plugin-syntax-import-attributes@7.27.1':
-    resolution:
-      {
-        integrity: sha512-oFT0FrKHgF53f4vOsZGi2Hh3I35PfSmVs4IBFLFj4dnafP+hIWDLg3VyKmUHfLoLHlyxY4C7DGtmHuJgn+IGww==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-import-meta@7.10.4':
-    resolution:
-      {
-        integrity: sha512-Yqfm+XDx0+Prh3VSeEQCPU81yC+JWZ2pDPFSS4ZdpfZhp4MkFMaDC1UqseovEKwSUpnIL7+vK+Clp7bfh0iD7g==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-json-strings@7.8.3':
-    resolution:
-      {
-        integrity: sha512-lY6kdGpWHvjoe2vk4WrAapEuBR69EMxZl+RoGRhrFGNYVK8mOPAW8VfbT/ZgrFbXlDNiiaxQnAtgVCZ6jv30EA==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
   '@babel/plugin-syntax-jsx@7.27.1':
     resolution:
       {
@@ -580,11 +565,12 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/plugin-syntax-logical-assignment-operators@7.10.4':
+  '@babel/plugin-syntax-jsx@7.29.7':
     resolution:
       {
-        integrity: sha512-d8waShlpFDinQ5MtvGU9xDAOzKH47+FFoney2baFIoMr952hKOLp1HR7VszoZvOsV/4+RRszNY7D17ba0te0ig==,
+        integrity: sha512-TSu8+mHCoEaaCDEZ0I3+6mvTBYR4PCxQwf2z9/r5Tbztv6NaLR3B9thGTTxX2WGuGHJqRiAbKPeGTJ5XWXVg6A==,
       }
+    engines: { node: '>=6.9.0' }
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
@@ -592,30 +578,6 @@ packages:
     resolution:
       {
         integrity: sha512-aSff4zPII1u2QD7y+F8oDsz19ew4IGEJg9SVW+bqwpwtfFleiQDMdzA/R+UlWDzfnHFCxxleFT0PMIrR36XLNQ==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-numeric-separator@7.10.4':
-    resolution:
-      {
-        integrity: sha512-9H6YdfkcK/uOnY/K7/aA2xpzaAgkQn37yzWUMRK7OaPOqOpGS1+n0H5hxT9AUw9EsSjPW8SVyMJwYRtWs3X3ug==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-object-rest-spread@7.8.3':
-    resolution:
-      {
-        integrity: sha512-XoqMijGZb9y3y2XskN+P1wUGiVwWZ5JmoDRwx5+3GmEplNyVM2s2Dg8ILFQm8rWM48orGy5YpI5Bl8U1y7ydlA==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-optional-catch-binding@7.8.3':
-    resolution:
-      {
-        integrity: sha512-6VPD0Pc1lpTqw0aKoeRTMiB+kWhAoT24PA+ksWSBrFtl5SIRVpZlwN3NNPQjehA2E/91FV3RjLWoVTglWcSV3Q==,
       }
     peerDependencies:
       '@babel/core': ^7.0.0-0
@@ -628,34 +590,10 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/plugin-syntax-private-property-in-object@7.14.5':
-    resolution:
-      {
-        integrity: sha512-0wVnp9dxJ72ZUJDV27ZfbSj6iHLoytYZmh3rFcxNnvsJF3ktkzLDZPy/mA17HGsaQT3/DQsWYX1f1QGWkCoVUg==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-syntax-top-level-await@7.14.5':
-    resolution:
-      {
-        integrity: sha512-hx++upLv5U1rgYfwe1xBQUhRmU41NEvpUvrp8jkrSCdvGSnM5/qdRMtylJ6PG5OFkBaHkbTAKTnd3/YyESRHFw==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
   '@babel/plugin-syntax-typescript@7.27.1':
     resolution:
       {
         integrity: sha512-xfYCBMxveHrRMnAWl1ZlPXOZjzkN82THFvLhQhFXFt81Z5HnN+EtUkZhv/zcKpmT3fzmWZB0ywiBrbC3vogbwQ==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-transform-arrow-functions@7.27.1':
-    resolution:
-      {
-        integrity: sha512-8Z4TGic6xW70FKThA5HYEKKyBpOOsucTOD1DjU3fZxDg+K3zBJcXMFnt/4yQiZnf5+MiOMSXQ9PaEK/Ilh1DeA==,
       }
     peerDependencies:
       '@babel/core': ^7.0.0-0
@@ -708,14 +646,6 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/plugin-transform-computed-properties@7.27.1':
-    resolution:
-      {
-        integrity: sha512-lj9PGWvMTVksbWiDT2tW68zGS/cyo4AkZ/QTp0sQT0mjPopCmrSkzxeXkznjqBxzDI6TclZhOJbBmbBLjuOZUw==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
   '@babel/plugin-transform-destructuring@7.28.5':
     resolution:
       {
@@ -748,22 +678,6 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/plugin-transform-function-name@7.27.1':
-    resolution:
-      {
-        integrity: sha512-1bQeydJF9Nr1eBCMMbC+hdwmRlsv5XYOMu03YSWFwNs0HsAmtSxxF1fyuYPqemVldVyFmlCU7w8UE14LupUSZQ==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-transform-literals@7.27.1':
-    resolution:
-      {
-        integrity: sha512-0HCFSepIpLTkLcsi86GG3mTUzxV5jpmbv97hTETW3yzrAij8aqlD36toB1D0daVFJM8NK6GvKO0gslVQmm+zZA==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
   '@babel/plugin-transform-logical-assignment-operators@7.28.5':
     resolution:
       {
@@ -792,14 +706,6 @@ packages:
     resolution:
       {
         integrity: sha512-aGZh6xMo6q9vq1JGcw58lZ1Z0+i0xB2x0XaauNIUXd6O1xXc3RwoWEBlsTQrY4KQ9Jf0s5rgD6SiNkaUdJegTA==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-transform-numeric-separator@7.27.1':
-    resolution:
-      {
-        integrity: sha512-fdPKAcujuvEChxDBJ5c+0BTaS6revLV7CJL08e4m3de8qJfNIuCc2nc7XJYOjBoTMJeqSmwXJ0ypE14RCjLwaw==,
       }
     peerDependencies:
       '@babel/core': ^7.0.0-0
@@ -868,27 +774,20 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/plugin-transform-react-jsx-self@7.27.1':
-    resolution:
-      {
-        integrity: sha512-6UzkCs+ejGdZ5mFFC/OCUrv028ab2fp1znZmCZjAOBKiBK2jXD1O+BPSfX8X2qjJ75fZBMSnQn3Rq2mrBJK2mw==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-transform-react-jsx-source@7.27.1':
-    resolution:
-      {
-        integrity: sha512-zbwoTsBruTeKB9hSq73ha66iFeJHuaFkUbwvqElnygoNbj/jHRsSeokowZFN3CZ64IvEqcmmkVe89OPXc7ldAw==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
   '@babel/plugin-transform-react-jsx@7.27.1':
     resolution:
       {
         integrity: sha512-2KH4LWGSrJIkVf5tSiBFYuXDAoWRq2MMwgivCf+93dd0GQi8RXLjKA/0EvRnVV5G0hrHczsquXuD01L8s6dmBw==,
       }
+    peerDependencies:
+      '@babel/core': ^7.0.0-0
+
+  '@babel/plugin-transform-react-jsx@7.29.7':
+    resolution:
+      {
+        integrity: sha512-WsZulLVBUHXVj2cUcPVx6UE21TpalB6bHbSFErKT0Ib++ax24jjXe73FqlWvdylFOjiuPHYi6VCcgRad1ItN+A==,
+      }
+    engines: { node: '>=6.9.0' }
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
@@ -900,42 +799,10 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/plugin-transform-regenerator@7.28.4':
-    resolution:
-      {
-        integrity: sha512-+ZEdQlBoRg9m2NnzvEeLgtvBMO4tkFBw5SQIUgLICgTrumLoU7lr+Oghi6km2PFj+dbUt2u1oby2w3BDO9YQnA==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
   '@babel/plugin-transform-runtime@7.28.5':
     resolution:
       {
         integrity: sha512-20NUVgOrinudkIBzQ2bNxP08YpKprUkRTiRSd2/Z5GOdPImJGkoN4Z7IQe1T5AdyKI1i5L6RBmluqdSzvaq9/w==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-transform-shorthand-properties@7.27.1':
-    resolution:
-      {
-        integrity: sha512-N/wH1vcn4oYawbJ13Y/FxcQrWk63jhfNa7jef0ih7PHSIHX2LB7GWE1rkPrOnka9kwMxb6hMl19p7lidA+EHmQ==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-transform-spread@7.27.1':
-    resolution:
-      {
-        integrity: sha512-kpb3HUqaILBJcRFVhFUs6Trdd4mkrzcGXss+6/mxUd273PfbWqSDHRzMT2234gIg2QYfAjvXLSquP1xECSg09Q==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/plugin-transform-sticky-regex@7.27.1':
-    resolution:
-      {
-        integrity: sha512-lhInBO5bi/Kowe2/aLdBAawijx+q1pQzicSgnkB6dUPc1+RC8QmJHKf2OjvU+NZWitguJHEaEmbV6VWEouT58g==,
       }
     peerDependencies:
       '@babel/core': ^7.0.0-0
@@ -952,14 +819,6 @@ packages:
     resolution:
       {
         integrity: sha512-xvINq24TRojDuyt6JGtHmkVkrfVV3FPT16uytxImLeBZqW3/H52yN+kM1MGuyPkIQxrzKwPHs5U/MP3qKyzkGw==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
-  '@babel/preset-react@7.28.5':
-    resolution:
-      {
-        integrity: sha512-Z3J8vhRq7CeLjdC58jLv4lnZ5RKFUJWqH5emvxmv9Hv3BD1T9R/Im713R4MTKwvFaV74ejZ3sM01LyEKk4ugNQ==,
       }
     peerDependencies:
       '@babel/core': ^7.0.0-0
@@ -984,12 +843,12 @@ packages:
         integrity: sha512-LPDZ85aEJyYSd18/DkjNh4/y1ntkE5KwUHWTiqgRxruuZL2F1yuHligVHLvcHY2vMHXttKFpJn6LwfI7cw7ODw==,
       }
 
-  '@babel/traverse--for-generate-function-map@7.28.5':
+  '@babel/template@7.29.7':
     resolution:
       {
-        integrity: sha512-TCCj4t55U90khlYkVV/0TfkJkAkUg3jZFA3Neb7unZT8CPok7iiRfaX0F+WnqWqt7OxhOn0uBKXCw4lbL8W0aQ==,
+        integrity: sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==,
       }
-    aliasOf: '@babel/traverse'
+    engines: { node: '>=6.9.0' }
 
   '@babel/traverse@7.28.5':
     resolution:
@@ -997,11 +856,25 @@ packages:
         integrity: sha512-TCCj4t55U90khlYkVV/0TfkJkAkUg3jZFA3Neb7unZT8CPok7iiRfaX0F+WnqWqt7OxhOn0uBKXCw4lbL8W0aQ==,
       }
 
+  '@babel/traverse@7.29.7':
+    resolution:
+      {
+        integrity: sha512-EhlfNQtZ+NK22w5BM61ciuiq1m58ed33Wr1Xan//ZRTy6hgjnwyCffRYwzsGXdASJSUJ1guZILsErh1eQcl+zw==,
+      }
+    engines: { node: '>=6.9.0' }
+
   '@babel/types@7.28.5':
     resolution:
       {
         integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==,
       }
+
+  '@babel/types@7.29.7':
+    resolution:
+      {
+        integrity: sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA==,
+      }
+    engines: { node: '>=6.9.0' }
 
   '@changesets/apply-release-plan@7.0.14':
     resolution:
@@ -1356,10 +1229,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@expo/cli@54.0.20':
+  '@expo/cli@56.1.16':
     resolution:
       {
-        integrity: sha512-cwsXmhftvS0p9NNYOhXGnicBAZl9puWwRt19Qq5eQ6njLnaj8WvcR+kDZyADtgZxBsZiyVlrKXvnjt43HXywQA==,
+        integrity: sha512-VBQn0mqAwc67b9Cn0RVXyeodghomAx5xGRhA/bXaQzuxDjMQk0zIOb6pXMZX7yiIwJW66UZt/zQiJNSv6aWJYw==,
       }
     hasBin: true
     peerDependencies:
@@ -1372,28 +1245,28 @@ packages:
       react-native:
         optional: true
 
-  '@expo/code-signing-certificates@0.0.5':
+  '@expo/code-signing-certificates@0.0.6':
     resolution:
       {
-        integrity: sha512-BNhXkY1bblxKZpltzAx98G2Egj9g1Q+JRcvR7E99DOj862FTCX+ZPsAUtPTr7aHxwtrL7+fL3r0JSmM9kBm+Bw==,
+        integrity: sha512-iNe0puxwBNEcuua9gmTGzq+SuMDa0iATai1FlFTMHJ/vUmKvN/V//drXoLJkVb5i5H3iE/n/qIJxyoBnXouD0w==,
       }
 
-  '@expo/config-plugins@54.0.4':
+  '@expo/config-plugins@56.0.9':
     resolution:
       {
-        integrity: sha512-g2yXGICdoOw5i3LkQSDxl2Q5AlQCrG7oniu0pCPPO+UxGb7He4AFqSvPSy8HpRUj55io17hT62FTjYRD+d6j3Q==,
+        integrity: sha512-/6a/S9USwx8OC9tGjHxbviLFiBHyueN3aoNWMLvWDEJoZ1CIVW800ZBzwXq/FYNK2qzcN1LxFmQtzD1zeFQKNA==,
       }
 
-  '@expo/config-types@54.0.10':
+  '@expo/config-types@56.0.6':
     resolution:
       {
-        integrity: sha512-/J16SC2an1LdtCZ67xhSkGXpALYUVUNyZws7v+PVsFZxClYehDSoKLqyRaGkpHlYrCc08bS0RF5E0JV6g50psA==,
+        integrity: sha512-4Y6Aum5J4Re5NnxGVofRNe1aDwUBOmWhQYkynZsqzRtX/zEA1ADUeyHXuEckv9YD9djiyT7bKtLt5gKL3mA6VQ==,
       }
 
-  '@expo/config@12.0.13':
+  '@expo/config@56.0.9':
     resolution:
       {
-        integrity: sha512-Cu52arBa4vSaupIWsF0h7F/Cg//N374nYb7HAxV0I4KceKA7x2UXpYaHOL7EEYYvp7tZdThBjvGpVmr8ScIvaQ==,
+        integrity: sha512-/lqFeWGSrhpKJVP8tTN8LjuoIe8u8q2w7FzBL0C+wHgl+WM8l1qUIEYWy/sMvsG/NbpUIUsDHJRhQvOkU58eIw==,
       }
 
   '@expo/devcert@1.2.1':
@@ -1402,10 +1275,10 @@ packages:
         integrity: sha512-qC4eaxmKMTmJC2ahwyui6ud8f3W60Ss7pMkpBq40Hu3zyiAaugPXnZ24145U7K36qO9UHdZUVxsCvIpz2RYYCA==,
       }
 
-  '@expo/devtools@0.1.8':
+  '@expo/devtools@56.0.2':
     resolution:
       {
-        integrity: sha512-SVLxbuanDjJPgc0sy3EfXUMLb/tXzp6XIHkhtPVmTWJAp+FOr6+5SeiCfJrCzZFet0Ifyke2vX3sFcKwEvCXwQ==,
+        integrity: sha512-ANl4kPdbe0/HQYWkDEN79S6bQhI+i/ZCnPxuC853pPsB4svhINC7Ku9lmGOKPsUUWWnrHg1spkDGQBZ4sD6JxQ==,
       }
     peerDependencies:
       react: '*'
@@ -1416,35 +1289,75 @@ packages:
       react-native:
         optional: true
 
-  '@expo/env@2.0.8':
+  '@expo/dom-webview@56.0.5':
     resolution:
       {
-        integrity: sha512-5VQD6GT8HIMRaSaB5JFtOXuvfDVU80YtZIuUT/GDhUF782usIXY13Tn3IdDz1Tm/lqA9qnRZQ1BF4t7LlvdJPA==,
+        integrity: sha512-UIEJxkLg6cHqofKrpWpkn9E6ApxVRtCgZhZkARPr9VV7rBVloJgeroTHs31YgU/JpbI5lLQOnfOlGo54W6C2Ew==,
+      }
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
+
+  '@expo/env@2.3.0':
+    resolution:
+      {
+        integrity: sha512-9HnnIbzwTTdbwSjNLXTk0fPm9ZwMJ7c1/31tsni8HZ8Q62KzYCyspahH+V365vg5J6lr001DzNwBxVWSaYCQLg==,
+      }
+    engines: { node: '>=20.12.0' }
+
+  '@expo/expo-modules-macros-plugin@0.2.2':
+    resolution:
+      {
+        integrity: sha512-4IMzPDIo/VOXREQjsJtliSfqYVZvfzU2SLFS/9sKMWF848S8CHx+e/E+Vf0TcMvpWCCKX5umyqxb13KJJ+YUzg==,
       }
 
-  '@expo/fingerprint@0.15.4':
+  '@expo/fingerprint@0.19.4':
     resolution:
       {
-        integrity: sha512-eYlxcrGdR2/j2M6pEDXo9zU9KXXF1vhP+V+Tl+lyY+bU8lnzrN6c637mz6Ye3em2ANy8hhUR03Raf8VsT9Ogng==,
+        integrity: sha512-PsowRlO8+S7JlO8go7yhNEXp7sqlsWDE2AlCwoss7zH0dcajXFo74Fy0KdXEc4UXK7kKoHD37oDgsZ8aHSLr7A==,
       }
     hasBin: true
 
-  '@expo/image-utils@0.8.8':
+  '@expo/image-utils@0.10.1':
     resolution:
       {
-        integrity: sha512-HHHaG4J4nKjTtVa1GG9PCh763xlETScfEyNxxOvfTRr8IKPJckjTyqSLEtdJoFNJ1vqiABEjW7tqGhqGibZLeA==,
+        integrity: sha512-YDeefvmYdihS7Wp3ESDUVnOgOSWmj2Cczm9lVNDdm4MqQLdAKm/LPYg83HtFQPfefRlAxyHrQR/O9kIXN9C1Wg==,
       }
 
-  '@expo/json-file@10.0.8':
+  '@expo/inline-modules@0.0.12':
     resolution:
       {
-        integrity: sha512-9LOTh1PgKizD1VXfGQ88LtDH0lRwq9lsTb4aichWTWSWqy3Ugfkhfm3BhzBIkJJfQQ5iJu3m/BoRlEIjoCGcnQ==,
+        integrity: sha512-SNIZr/HWfIQPTZBwmukItxpc7ws1SgMUywYq1dnQvDknQDjJcuWAasIRFUjsK15yQ1xb4G5CP7VHtbN3V4lENg==,
       }
 
-  '@expo/metro-config@54.0.12':
+  '@expo/json-file@10.2.0':
     resolution:
       {
-        integrity: sha512-Xhv1z/ak/cuJWeLxlnWr2u22q2AM/klASbjpP5eE34y91lGWa2NUwrFWoS830MhJ6kuAqtGdoQhwyPa3TES7sA==,
+        integrity: sha512-S6XzKe3R9GQeHiUPXc3xJjOv2VJhOEwFYf7xdC2z2cUqt3kZJ9mSO877sNQloVdnW/SUCtPY3bexlM7nwq+CAQ==,
+      }
+
+  '@expo/local-build-cache-provider@56.0.8':
+    resolution:
+      {
+        integrity: sha512-UsuXwpNi57MNhzZ3be4XThc8xW6nzk3Wu37s1+2qcfZGeJcMLKDFfwO6n8YXeIiGlCsOi0Ee1rsTdgjrKt/YJQ==,
+      }
+
+  '@expo/log-box@56.0.13':
+    resolution:
+      {
+        integrity: sha512-QWRZSpWPyjkDLVQio4R7oAzg/Av2MOt/DciFkfjr8qQ3qxGVn1Rt1oHP/80hvcWDcHFV7N6PqpyxRXw6nbxzKQ==,
+      }
+    peerDependencies:
+      '@expo/dom-webview': ^56.0.5
+      expo: '*'
+      react: '*'
+      react-native: '*'
+
+  '@expo/metro-config@56.0.14':
+    resolution:
+      {
+        integrity: sha512-O3CIHruaTJhswPAf/nf3i8QQ3f2jl+mEwSea1eb3khuplabdy/wTQz+JvHN8VGUFyg7JKwUGU1QfO6T3JiSQqA==,
       }
     peerDependencies:
       expo: '*'
@@ -1452,42 +1365,83 @@ packages:
       expo:
         optional: true
 
-  '@expo/metro@54.2.0':
+  '@expo/metro-file-map@56.0.3':
     resolution:
       {
-        integrity: sha512-h68TNZPGsk6swMmLm9nRSnE2UXm48rWwgcbtAHVMikXvbxdS41NDHHeqg1rcQ9AbznDRp6SQVC2MVpDnsRKU1w==,
+        integrity: sha512-5OGW3z8LgEYgMJOR7F3pC8llFLkb1fVqwAewbCl6S4Vkha8AFQMwOjT+9Wbka+V4rmpljpGqOnMhF4xZbD961w==,
       }
 
-  '@expo/osascript@2.3.8':
+  '@expo/metro@56.0.0':
     resolution:
       {
-        integrity: sha512-/TuOZvSG7Nn0I8c+FcEaoHeBO07yu6vwDgk7rZVvAXoeAK5rkA09jRyjYsZo+0tMEFaToBeywA6pj50Mb3ny9w==,
+        integrity: sha512-5gIgQHtEpjjvsjKfVtIv23a98LLRV0/y07PDShEwYSytAMlE3FSF8RHXqtHc1sUJL6dn7hnuIBpIbrLXXuVi0A==,
       }
 
-  '@expo/package-manager@1.9.9':
+  '@expo/osascript@2.6.0':
     resolution:
       {
-        integrity: sha512-Nv5THOwXzPprMJwbnXU01iXSrCp3vJqly9M4EJ2GkKko9Ifer2ucpg7x6OUsE09/lw+npaoUnHMXwkw7gcKxlg==,
+        integrity: sha512-QvqDBlJXa8CS2vRORJ4wEflY1m0vVI07uSJdIRgBrLxRPBcsrXxrtU7+wXRXMqfq9zLwNP9XbvRsXF2omoDylg==,
+      }
+    engines: { node: '>=12' }
+
+  '@expo/package-manager@1.12.1':
+    resolution:
+      {
+        integrity: sha512-fQLiFAcFRWF53mtuLK32SUJQ1ahhrTcBZPZPedYTiUT5ha5FF+UO6bPtCc0Y/hgj0/m3HCGBAuSHjbg2kI9oPQ==,
       }
 
-  '@expo/plist@0.4.8':
+  '@expo/plist@0.7.0':
     resolution:
       {
-        integrity: sha512-pfNtErGGzzRwHP+5+RqswzPDKkZrx+Cli0mzjQaus1ZWFsog5ibL+nVT3NcporW51o8ggnt7x813vtRbPiyOrQ==,
+        integrity: sha512-vrpryU1GoqSIRNqRB2D3IjXDmzNYfiQpEF6AH/xknlD7eiYmEDt3mb26V7cLcedcPG8PY/1xWHdBXVQJfEAh6Q==,
       }
 
-  '@expo/prebuild-config@54.0.8':
+  '@expo/prebuild-config@56.0.16':
     resolution:
       {
-        integrity: sha512-EA7N4dloty2t5Rde+HP0IEE+nkAQiu4A/+QGZGT9mFnZ5KKjPPkqSyYcRvP5bhQE10D+tvz6X0ngZpulbMdbsg==,
+        integrity: sha512-ce9ENfPWO4WUWUVQz0OaqL3KYZ7YofP8O35ncnn7CHCaKwQ7BqxcCGJbh+qvP1UjlWeNB3CjHPrXXJ3bnZwlJw==,
+      }
+
+  '@expo/require-utils@56.1.3':
+    resolution:
+      {
+        integrity: sha512-KyLeOn/zzQSvuPpV5YhB/FPKnpQytno4luN918bGdPDssLBoS3N/0UbC3W0rJAn9kSFu+XpfR81eABRVsSdfgQ==,
       }
     peerDependencies:
-      expo: '*'
+      typescript: ^5.0.0 || ^5.0.0-0 || ^6.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
-  '@expo/schema-utils@0.1.8':
+  '@expo/router-server@56.0.14':
     resolution:
       {
-        integrity: sha512-9I6ZqvnAvKKDiO+ZF8BpQQFYWXOJvTAL5L/227RUbWG1OVZDInFifzCBiqAZ3b67NRfeAgpgvbA7rejsqhY62A==,
+        integrity: sha512-2UCTtZfcq1ZPgp3wk8/+sq9DvFI9UxrPr1jcEKMAF2DGAJLosnpc8GWNNg2hkjt6SHUOdFHIPxujWPYyho2y3A==,
+      }
+    peerDependencies:
+      '@expo/metro-runtime': ^56.0.15
+      expo: '*'
+      expo-constants: ^56.0.18
+      expo-font: ^56.0.6
+      expo-router: '*'
+      expo-server: ^56.0.5
+      react: '*'
+      react-dom: '*'
+      react-server-dom-webpack: ~19.0.1 || ~19.1.2 || ~19.2.1
+    peerDependenciesMeta:
+      '@expo/metro-runtime':
+        optional: true
+      expo-router:
+        optional: true
+      react-dom:
+        optional: true
+      react-server-dom-webpack:
+        optional: true
+
+  '@expo/schema-utils@56.0.1':
+    resolution:
+      {
+        integrity: sha512-CZ/+mYbQmWeOnkCGlWy9K+lFxbJSMFY7+TqBZcKzBSTU5Q7IGRvn/sOG3TdNjIdLPmbA8xe7R/c3UUQ28R9i9w==,
       }
 
   '@expo/sdk-runtime-versions@1.0.0':
@@ -1496,11 +1450,12 @@ packages:
         integrity: sha512-Doz2bfiPndXYFPMRwPyGa1k5QaKDVpY806UJj570epIiMzWaYyCtobasyfC++qfIXVb5Ocy7r3tP9d62hAQ7IQ==,
       }
 
-  '@expo/spawn-async@1.7.2':
+  '@expo/spawn-async@1.8.0':
     resolution:
       {
-        integrity: sha512-QdWi16+CHB9JYP7gma19OVVg0BFkvU8zNj9GjWorYI8Iv8FUxjOCcYRuAmX4s/h91e4e7BPsskc8cSrZYho9Ew==,
+        integrity: sha512-eb9xxd/LbuEGSdua4NumCu/McVB9EM+F/JxB9pWgnERw4HQ9XyTNH1KapG6oqLWR8TuRK2LQfzJlmNi94CVobw==,
       }
+    engines: { node: '>=12' }
 
   '@expo/sudo-prompt@9.3.2':
     resolution:
@@ -1508,26 +1463,18 @@ packages:
         integrity: sha512-HHQigo3rQWKMDzYDLkubN5WQOYXJJE2eNqIQC2axC2iO3mHdwnIR7FgZVvHWtBwAdzBgAP0ECp8KqS8TiMKvgw==,
       }
 
-  '@expo/vector-icons@15.0.3':
+  '@expo/ws-tunnel@2.0.0':
     resolution:
       {
-        integrity: sha512-SBUyYKphmlfUBqxSfDdJ3jAdEVSALS2VUPOUyqn48oZmb2TL/O7t7/PQm5v4NQujYEPLPMTLn9KVw6H7twwbTA==,
+        integrity: sha512-j+JfTRdCk820J9dU0sA2SqshQIKFOMo7ED84w9MJFcebfbNQgsLztEY/SABDkGnjatrW4xGqnUhVRxSBVyCkXw==,
       }
     peerDependencies:
-      expo-font: '>=14.0.4'
-      react: '*'
-      react-native: '*'
+      ws: ^8.0.0
 
-  '@expo/ws-tunnel@1.0.6':
+  '@expo/xcpretty@4.4.4':
     resolution:
       {
-        integrity: sha512-nDRbLmSrJar7abvUjp3smDwH8HcbZcoOEa5jVPUv9/9CajgmWw20JNRwTuBRzWIWIkEJDkz20GoNA+tSwUqk0Q==,
-      }
-
-  '@expo/xcpretty@4.3.2':
-    resolution:
-      {
-        integrity: sha512-ReZxZ8pdnoI3tP/dNnJdnmAk7uLT4FjsKDGW7YeDdvdOMz2XCQSmSCM9IWlrXuWtMF9zeSB6WJtEhCQ41gQOfw==,
+        integrity: sha512-4aQzz9vgxcNXFfo/iyNgDDYfsU5XGKKxWxZopw0cVotHiW+U8IJbIxMaxsINs6bHhtkG3StKNPcOrn3eBuxKPw==,
       }
     hasBin: true
 
@@ -1554,58 +1501,16 @@ packages:
         integrity: sha512-ZT55BDLV0yv0RBm2czMiZ+SqCGO7AvmOM3G/w2xhVPH+te0aKgFjmBvGlL1dH+ql2tgGO3MVrbb3jCKyvpgnxA==,
       }
 
-  '@isaacs/fs-minipass@4.0.1':
-    resolution:
-      {
-        integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==,
-      }
-
   '@isaacs/ttlcache@1.4.1':
     resolution:
       {
         integrity: sha512-RQgQ4uQ+pLbqXfOmieB91ejmLwvSgv9nLx6sT6sD83s7umBypgg+OIBOBbEUiJXrfpnp9j0mRhYYdzp9uqq3lA==,
       }
 
-  '@istanbuljs/load-nyc-config@1.1.0':
-    resolution:
-      {
-        integrity: sha512-VjeHSlIzpv/NyD3N0YuHfXOPDIixcA1q2ZV98wsMqcYlPmv2n3Yb2lYP9XMElnaFVXg5A7YLTeLu6V84uQDjmQ==,
-      }
-
-  '@istanbuljs/schema@0.1.3':
-    resolution:
-      {
-        integrity: sha512-ZXRY4jNvVgSVQ8DL3LTcakaAtXwTVUxE81hslsyD2AtoXW/wVob10HkOJ1X/pAlcI7D+2YoZKg5do8G/w6RYgA==,
-      }
-
-  '@jest/create-cache-key-function@29.7.0':
-    resolution:
-      {
-        integrity: sha512-4QqS3LY5PBmTRHj9sAg1HLoPzqAI0uOX6wI/TRqHIcOxlFidy6YEmCQJk6FSZjNLGCeubDMfmkWL+qaLKhSGQA==,
-      }
-
-  '@jest/environment@29.7.0':
-    resolution:
-      {
-        integrity: sha512-aQIfHDq33ExsN4jP1NWGXhxgQ/wixs60gDiKO+XVMd8Mn0NWPWgc34ZQDTb2jKaUWQ7MuwoitXAsN2XVXNMpAw==,
-      }
-
-  '@jest/fake-timers@29.7.0':
-    resolution:
-      {
-        integrity: sha512-q4DH1Ha4TTFPdxLsqDXK1d3+ioSL7yL5oCMJZgDYm6i+6CygW5E5xVr/D1HdsGxjt1ZWSfUAs9OxSB/BNelWrQ==,
-      }
-
   '@jest/schemas@29.6.3':
     resolution:
       {
         integrity: sha512-mo5j5X+jIZmJQveBKeS/clAueipV7KgiX1vMgCxam1RNYiqE1w62n0/tJJnHtjW8ZHcQco5gY85jA3mi0L+nSA==,
-      }
-
-  '@jest/transform@29.7.0':
-    resolution:
-      {
-        integrity: sha512-ok/BTPFzFKVMwO5eOHRrvnBVHdRy9IrsrW1GpMaQ9MCnilNLXQKmAX8s1YXDFaai9xJpac2ySzV0YeRRECr2Vw==,
       }
 
   '@jest/types@29.6.3':
@@ -2092,83 +1997,95 @@ packages:
       }
     hasBin: true
 
-  '@react-native/assets-registry@0.81.5':
+  '@react-native/assets-registry@0.85.3':
     resolution:
       {
-        integrity: sha512-705B6x/5Kxm1RKRvSv0ADYWm5JOnoiQ1ufW7h8uu2E6G9Of/eE6hP/Ivw3U5jI16ERqZxiKQwk34VJbB0niX9w==,
+        integrity: sha512-u9ZiYP23vA2IFtdFQFmetzSmk6SM0xgKIoiOsr1hXNHjHaLhOm+/Ph1ud57wX6+Dbwdzx8coJgnzSKL3W21PCg==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  '@react-native/babel-plugin-codegen@0.81.5':
+  '@react-native/babel-plugin-codegen@0.85.3':
     resolution:
       {
-        integrity: sha512-oF71cIH6je3fSLi6VPjjC3Sgyyn57JLHXs+mHWc9MoCiJJcM4nqsS5J38zv1XQ8d3zOW2JtHro+LF0tagj2bfQ==,
+        integrity: sha512-Wc94zGfeFG8Njf9SHMPfYZP04kjigkOps6F1TYTvd7ZVXuGxqseCDgxc50LWcOhOCLypI9n3oVVqz81C3p44ZA==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  '@react-native/babel-preset@0.81.5':
+  '@react-native/codegen@0.85.3':
     resolution:
       {
-        integrity: sha512-UoI/x/5tCmi+pZ3c1+Ypr1DaRMDLI3y+Q70pVLLVgrnC3DHsHRIbHcCHIeG/IJvoeFqFM2sTdhSOLJrf8lOPrA==,
+        integrity: sha512-/JkS1lGLyzBWP1FbgDwaqEf7qShIC6pUC1M0a/YMAd/v4iqR24MRkQWe7jkYvcBQ2LpEhs5NGE9InhxSv21zCA==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
+    peerDependencies:
+      '@babel/core': '*'
 
-  '@react-native/codegen@0.81.5':
+  '@react-native/community-cli-plugin@0.85.3':
     resolution:
       {
-        integrity: sha512-a2TDA03Up8lpSa9sh5VRGCQDXgCTOyDOFH+aqyinxp1HChG8uk89/G+nkJ9FPd0rqgi25eCTR16TWdS3b+fA6g==,
+        integrity: sha512-fs85dmbIqNmtzEixDb0g+q6R3Vt4H9eAt8/inIZdDKfjN76+sUJA2r1nxODQ76bU23MrIbz8sI7KFBPaWk/zQw==,
       }
-
-  '@react-native/community-cli-plugin@0.81.5':
-    resolution:
-      {
-        integrity: sha512-yWRlmEOtcyvSZ4+OvqPabt+NS36vg0K/WADTQLhrYrm9qdZSuXmq8PmdJWz/68wAqKQ+4KTILiq2kjRQwnyhQw==,
-      }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
     peerDependencies:
       '@react-native-community/cli': '*'
-      '@react-native/metro-config': '*'
+      '@react-native/metro-config': 0.85.3
     peerDependenciesMeta:
       '@react-native-community/cli':
         optional: true
       '@react-native/metro-config':
         optional: true
 
-  '@react-native/debugger-frontend@0.81.5':
+  '@react-native/debugger-frontend@0.85.3':
     resolution:
       {
-        integrity: sha512-bnd9FSdWKx2ncklOetCgrlwqSGhMHP2zOxObJbOWXoj7GHEmih4MKarBo5/a8gX8EfA1EwRATdfNBQ81DY+h+w==,
+        integrity: sha512-uAu7rM5o/Np1zgp6fi5zM1sP1aB8DcS7DdOLcj/TkSutOAjkMqqd2lWt1/+3S7qXexRHVK5XcP+o3VXo4L/V0A==,
+      }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
+
+  '@react-native/debugger-shell@0.85.3':
+    resolution:
+      {
+        integrity: sha512-/jRAaT9boiCttIcEwS02WPwYkUihqsjSaK/TMtHz05vT6uMgac9PaQt5kzBQLIABv5aEIa5gtrMmKVz49MjkjQ==,
+      }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
+
+  '@react-native/dev-middleware@0.85.3':
+    resolution:
+      {
+        integrity: sha512-JYzBiT4A8w+KQt+dOD5v+ti+tDrGoPnsSTuApq3Ls4RB5sfWbDlYMyz3dbc8qBIHz9tv0sQ5+eOu6Xwqzr5AQA==,
+      }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
+
+  '@react-native/gradle-plugin@0.85.3':
+    resolution:
+      {
+        integrity: sha512-39dY2j50Q1pntejzwt3XL7vwXtrj8jcIfHq6E+gyu3jzYxZJVvMkMutQ39vSg6zinIQOX36oQDhidXUbCXzgoA==,
+      }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
+
+  '@react-native/js-polyfills@0.85.3':
+    resolution:
+      {
+        integrity: sha512-U2+aMshIXf1uFn77tpBb/xhHWB9vkVrMpt7kkucAugF8hJKYTDGB587X7WwelHduK2KBfhl4giSv0rzZGoef9A==,
+      }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
+
+  '@react-native/normalize-colors@0.85.3':
+    resolution:
+      {
+        integrity: sha512-hj0PScZEhIbcOvQV5yMKX3ha4XEIOy/SVE1Rrpp0beW0dpNLOgSC7KDxGewmDnIHK9YdQUXGY9eMEfShUMIaZw==,
       }
 
-  '@react-native/dev-middleware@0.81.5':
+  '@react-native/virtualized-lists@0.85.3':
     resolution:
       {
-        integrity: sha512-WfPfZzboYgo/TUtysuD5xyANzzfka8Ebni6RIb2wDxhb56ERi7qDrE4xGhtPsjCL4pQBXSVxyIlCy0d8I6EgGA==,
+        integrity: sha512-dsCjI//OIPEUJMyNHp4l7zNLVjCx7bcaRUceOCkU+IB17hkbtbGWvi7HjGFSzy7FJGmS/MOlcfpb72xXiy1Oig==,
       }
-
-  '@react-native/gradle-plugin@0.81.5':
-    resolution:
-      {
-        integrity: sha512-hORRlNBj+ReNMLo9jme3yQ6JQf4GZpVEBLxmTXGGlIL78MAezDZr5/uq9dwElSbcGmLEgeiax6e174Fie6qPLg==,
-      }
-
-  '@react-native/js-polyfills@0.81.5':
-    resolution:
-      {
-        integrity: sha512-fB7M1CMOCIUudTRuj7kzxIBTVw2KXnsgbQ6+4cbqSxo8NmRRhA0Ul4ZUzZj3rFd3VznTL4Brmocv1oiN0bWZ8w==,
-      }
-
-  '@react-native/normalize-colors@0.81.5':
-    resolution:
-      {
-        integrity: sha512-0HuJ8YtqlTVRXGZuGeBejLE04wSQsibpTI+RGOyVqxZvgtlLLC/Ssw0UmbHhT4lYMp2fhdtvKZSs5emWB1zR/g==,
-      }
-
-  '@react-native/virtualized-lists@0.81.5':
-    resolution:
-      {
-        integrity: sha512-UVXgV/db25OPIvwZySeToXD/9sKKhOdkcWmmf4Jh8iBZuyfML+/5CasaZ1E7Lqg6g3uqVQq75NqIwkYmORJMPw==,
-      }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
     peerDependencies:
-      '@types/react': ^19.1.0
+      '@types/react': ^19.2.0
       react: '*'
-      react-native: '*'
+      react-native: 0.85.3
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -2355,18 +2272,6 @@ packages:
         integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==,
       }
 
-  '@sinonjs/commons@3.0.1':
-    resolution:
-      {
-        integrity: sha512-K3mCHKQ9sVh8o1C9cxkwxaOmXoAMlDxC1mYyHrjqOWEcBjYr76t96zL2zlj5dUGZ3HSw240X1qgH3Mjf1yJWpQ==,
-      }
-
-  '@sinonjs/fake-timers@10.3.0':
-    resolution:
-      {
-        integrity: sha512-V4BG07kuYSUkTCSBHG8G8TNhM+F19jXFWnQtzj+we8DrkpSBCee9Z3Ms8yiGer/dlmhe35/Xdgyo3/0rQKg7YA==,
-      }
-
   '@standard-schema/spec@1.1.0':
     resolution:
       {
@@ -2377,30 +2282,6 @@ packages:
     resolution:
       {
         integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==,
-      }
-
-  '@types/babel__core@7.20.5':
-    resolution:
-      {
-        integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==,
-      }
-
-  '@types/babel__generator@7.27.0':
-    resolution:
-      {
-        integrity: sha512-ufFd2Xi92OAVPYsy+P4n7/U7e68fex0+Ee8gSG9KX7eo084CWiQ4sdxktvdl0bOPupXtVJPY19zk6EwWqUQ8lg==,
-      }
-
-  '@types/babel__template@7.4.4':
-    resolution:
-      {
-        integrity: sha512-h/NUaSyG5EyxBIp8YRxo4RMe2/qQgvyowRwVMzhYhBCONbW8PUsg4lkFMrhgZhUe5z3L3MiLDuvyJ/CaPa2A8A==,
-      }
-
-  '@types/babel__traverse@7.28.0':
-    resolution:
-      {
-        integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==,
       }
 
   '@types/chai@5.2.3':
@@ -2419,12 +2300,6 @@ packages:
     resolution:
       {
         integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==,
-      }
-
-  '@types/graceful-fs@4.1.9':
-    resolution:
-      {
-        integrity: sha512-olP3sd1qOEe5dXTSaFvQG+02VdRXcdytWLAZsAq1PecU8uqQAhkrnbli7DagjtXKW/Bl7YJbUsa8MPcuc8LHEQ==,
       }
 
   '@types/istanbul-lib-coverage@2.0.6':
@@ -2469,22 +2344,16 @@ packages:
         integrity: sha512-0k5eKfrA83JOZPppLtS2C7OUtyNAl2wKNxfyYl9Q5g9lPkgBl/9hNyAu6HuEH2J4XmIv2znEpkDd0SaZVxW6iQ==,
       }
 
-  '@types/react@19.1.17':
+  '@types/react@19.2.17':
     resolution:
       {
-        integrity: sha512-Qec1E3mhALmaspIrhWt9jkQMNdw6bReVu64mjvhbhq2NFPftLPVr+l1SZgmw/66WwBNpDh7ao5AT6gF5v41PFA==,
+        integrity: sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==,
       }
 
   '@types/sarif@2.1.7':
     resolution:
       {
         integrity: sha512-kRz0VEkJqWLf1LLVN4pT1cg1Z9wAuvI6L97V3m2f5B76Tg8d413ddvLBPTEHAZJlnn4XSvu0FkZtViCQGVyrXQ==,
-      }
-
-  '@types/stack-utils@2.0.3':
-    resolution:
-      {
-        integrity: sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==,
       }
 
   '@types/ws@8.18.1':
@@ -2574,18 +2443,6 @@ packages:
         integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==,
       }
 
-  '@urql/core@5.2.0':
-    resolution:
-      {
-        integrity: sha512-/n0ieD0mvvDnVAXEQgX/7qJiVcvYvNkOHeBvkwtylfjydar123caCXcl58PXFY11oU1oquJocVXHxLAbtv4x1A==,
-      }
-
-  '@urql/exchange-retry@1.3.2':
-    resolution:
-      {
-        integrity: sha512-TQMCz2pFJMfpNxmSfX1VSfTjwUIFx/mL+p1bnfM1xjjdla7Z+KnGMW/EhFbpckp3LyWAH4PgOsMwOMnIN+MBFg==,
-      }
-
   '@vitest/expect@4.0.16':
     resolution:
       {
@@ -2653,6 +2510,13 @@ packages:
       {
         integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==,
       }
+
+  accepts@2.0.0:
+    resolution:
+      {
+        integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==,
+      }
+    engines: { node: '>= 0.6' }
 
   acorn@7.4.1:
     resolution:
@@ -2728,12 +2592,6 @@ packages:
         integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==,
       }
 
-  anymatch@3.1.3:
-    resolution:
-      {
-        integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==,
-      }
-
   arg@5.0.2:
     resolution:
       {
@@ -2776,32 +2634,6 @@ packages:
         integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==,
       }
 
-  async-limiter@1.0.1:
-    resolution:
-      {
-        integrity: sha512-csOlWGAcRFJaI6m+F2WKdnMKr4HhdhFVBk0H/QbJFMCr+uO2kwohwXQPxw/9OCxp05r5ghVBFSyioixx3gfkNQ==,
-      }
-
-  babel-jest@29.7.0:
-    resolution:
-      {
-        integrity: sha512-BrvGY3xZSwEcCzKvKsCi2GgHqDqsYkOP4/by5xCgIwGXQxIEh+8ew3gmrE1y7XRR6LHZIj6yLYnUi/mm2KXKBg==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.8.0
-
-  babel-plugin-istanbul@6.1.1:
-    resolution:
-      {
-        integrity: sha512-Y1IQok9821cC9onCx5otgFfRm7Lm+I+wwxOx738M/WLPZ9Q42m4IG5W0FNX8WLL2gYMZo3JkuXIH2DOpWM+qwA==,
-      }
-
-  babel-plugin-jest-hoist@29.6.3:
-    resolution:
-      {
-        integrity: sha512-ESAc/RJvGTFEzRwOTT4+lNDk/GNHMkKbNzsvT0qKRfDyyYTskxB5rnU2njIDYVxXCBHHEI1c0YwHob3WaYujOg==,
-      }
-
   babel-plugin-polyfill-corejs2@0.4.14:
     resolution:
       {
@@ -2838,10 +2670,10 @@ packages:
         integrity: sha512-SPD0J6qjJn8231i0HZhlAGH6NORe+QvRSQM2mwQEzJ2Fb3E4ruWTiiicPlHjmeWShDXLcvoorOCXjeR7k/lyWA==,
       }
 
-  babel-plugin-syntax-hermes-parser@0.29.1:
+  babel-plugin-syntax-hermes-parser@0.33.3:
     resolution:
       {
-        integrity: sha512-2WFYnoWGdmih1I1J5eIqxATOeycOqRwYxAQBu3cUu/rhwInwHUg7k60AFNbuGjSDL8tje5GDrAnxzRLcu2pYcA==,
+        integrity: sha512-/Z9xYdaJ1lC0pT9do6TqCqhOSLfZ5Ot8D5za1p+feEfWYupCOfGbhhEXN9r2ZgJtDNUNRw/Z+T2CvAGKBqtqWA==,
       }
 
   babel-plugin-transform-flow-enums@0.0.2:
@@ -2850,36 +2682,23 @@ packages:
         integrity: sha512-g4aaCrDDOsWjbm0PUUeVnkcVd6AKJsVc/MbnPhEotEpkeJQP6b8nzewohQi7+QS8UyPehOhGWn0nOwjvWpmMvQ==,
       }
 
-  babel-preset-current-node-syntax@1.2.0:
+  babel-preset-expo@56.0.15:
     resolution:
       {
-        integrity: sha512-E/VlAEzRrsLEb2+dv8yp3bo4scof3l9nR4lrld+Iy5NyVqgVYUJnDAmunkhPMisRI32Qc4iRiz425d8vM++2fg==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0 || ^8.0.0-0
-
-  babel-preset-expo@54.0.9:
-    resolution:
-      {
-        integrity: sha512-8J6hRdgEC2eJobjoft6mKJ294cLxmi3khCUy2JJQp4htOYYkllSLUq6vudWJkTJiIuGdVR4bR6xuz2EvJLWHNg==,
+        integrity: sha512-0MqbQoM6nBUbKvgu2xJ4VixZnUTGTq3HB2WwvOikdO4CiPxbQ+wGA25fOoHHSni5iEFW39wy6y1ookTWlq3wVw==,
       }
     peerDependencies:
       '@babel/runtime': ^7.20.0
       expo: '*'
+      expo-widgets: ^56.0.18
       react-refresh: '>=0.14.0 <1.0.0'
     peerDependenciesMeta:
       '@babel/runtime':
         optional: true
       expo:
         optional: true
-
-  babel-preset-jest@29.6.3:
-    resolution:
-      {
-        integrity: sha512-0B3bhxR6snWXJZtR/RliHTDPRgn1sNHOR0yVtq/IiQFyuOVjFS+wuio/R4gSNkyYmKmJB4wGZv2NZanmKmTnNA==,
-      }
-    peerDependencies:
-      '@babel/core': ^7.0.0
+      expo-widgets:
+        optional: true
 
   babel-walk@3.0.0-canary-5:
     resolution:
@@ -2887,11 +2706,12 @@ packages:
         integrity: sha512-GAwkz0AihzY5bkwIY5QDR+LvsRQgB/B+1foMPvi0FZPMl5fjD7ICiznUiBdLYMH1QYe6vqu4gWYytZOccLouFw==,
       }
 
-  balanced-match@1.0.2:
+  balanced-match@4.0.4:
     resolution:
       {
-        integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==,
+        integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==,
       }
+    engines: { node: 18 || 20 || >=22 }
 
   base64-js@1.5.1:
     resolution:
@@ -2905,12 +2725,6 @@ packages:
         integrity: sha512-Sg0xJUNDU1sJNGdfGWhVHX0kkZ+HWcvmVymJbj6NSgZZmW/8S9Y2HQ5euytnIgakgxN6papOAWiwDo1ctFDcoQ==,
       }
     hasBin: true
-
-  better-opn@3.0.2:
-    resolution:
-      {
-        integrity: sha512-aVNobHnJqLiUelTaHat9DZ1qM2w0C0Eym4LPI/3JxOnSokGVdsl1T1kN7TFvsEAD8G47A6VKQ0TVHqbBnYMJlQ==,
-      }
 
   better-path-resolve@1.0.0:
     resolution:
@@ -2942,23 +2756,12 @@ packages:
         integrity: sha512-PyJxiNtA5T2PlLIeBot4lbp7rj4OadzjnMZD/G5zuBNt8ei/yCU7+wW0h2bag9vr8c+/WuRWmSxbqAl9hL1rBA==,
       }
 
-  bplist-parser@0.3.2:
+  brace-expansion@5.0.6:
     resolution:
       {
-        integrity: sha512-apC2+fspHGI3mMKj+dGevkGo/tCqVB8jMb6i+OX+E29p0Iposz07fABkRIfVUPNd5A5VbuOz1bZbnmkKLYF+wQ==,
+        integrity: sha512-kLpxurY4Z4r9sgMsyG0Z9uzsBlgiU/EFKhj/h91/8yHu0edo7XuixOIH3VcJ8kkxs6/jPzoI6U9Vj3WqbMQ94g==,
       }
-
-  brace-expansion@1.1.12:
-    resolution:
-      {
-        integrity: sha512-9T9UjW3r0UW5c1Q7GTwllptXwhvYmEzFhzMfZ9H7FQWt+uZePjZPjBP/W1ZEyZ1twGWom5/56TF4lPcqjnDHcg==,
-      }
-
-  brace-expansion@2.0.2:
-    resolution:
-      {
-        integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==,
-      }
+    engines: { node: 18 || 20 || >=22 }
 
   braces@3.0.3:
     resolution:
@@ -2983,12 +2786,6 @@ packages:
     resolution:
       {
         integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==,
-      }
-
-  buffer@5.7.1:
-    resolution:
-      {
-        integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==,
       }
 
   bundle-require@5.1.0:
@@ -3021,12 +2818,6 @@ packages:
     resolution:
       {
         integrity: sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==,
-      }
-
-  camelcase@5.3.1:
-    resolution:
-      {
-        integrity: sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg==,
       }
 
   camelcase@6.3.0:
@@ -3077,12 +2868,6 @@ packages:
         integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==,
       }
 
-  chownr@3.0.0:
-    resolution:
-      {
-        integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==,
-      }
-
   chrome-launcher@0.15.2:
     resolution:
       {
@@ -3090,10 +2875,10 @@ packages:
       }
     hasBin: true
 
-  chromium-edge-launcher@0.2.0:
+  chromium-edge-launcher@0.3.0:
     resolution:
       {
-        integrity: sha512-JfJjUnq25y9yg4FABRRVPmBGWPZZi+AQXT4mxupb67766/0UlhG8PAZCz6xzEMXTbW3CsSoE8PcCWA49n35mKg==,
+        integrity: sha512-p03azHlGjtyRvFEee3cyvtsRYdniSkwjkzmM/KmVnqT5d7QkkwpJBhis/zCLMYdQMVJ5tt140TBNqqrZPaWeFA==,
       }
 
   ci-info@2.0.0:
@@ -3210,12 +2995,6 @@ packages:
         integrity: sha512-9mAqGPHLakhCLeNyxPkK4xVo746zQ/czLH1Ky+vkitMnWfWZps8r0qXuwhwizagCRttsL4lfG4pIOvaWLpAP0w==,
       }
 
-  concat-map@0.0.1:
-    resolution:
-      {
-        integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==,
-      }
-
   confbox@0.1.8:
     resolution:
       {
@@ -3258,12 +3037,6 @@ packages:
         integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==,
       }
 
-  crypto-random-string@2.0.0:
-    resolution:
-      {
-        integrity: sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==,
-      }
-
   csstype@3.2.3:
     resolution:
       {
@@ -3294,12 +3067,6 @@ packages:
         integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==,
       }
 
-  deep-extend@0.6.0:
-    resolution:
-      {
-        integrity: sha512-LOHxIOaPYdHlJRtCQfDIVZtfw/ufM8+rVj649RIHzcm/vGwQRXFt6OPqIFWsm2XEMrNIEtWR64sY1LEKD2vAOA==,
-      }
-
   deepmerge@4.3.1:
     resolution:
       {
@@ -3310,12 +3077,6 @@ packages:
     resolution:
       {
         integrity: sha512-eFuaLoy/Rxalv2kr+lqMlUnrDWV+3j4pljOIJgLIhI058IQfWJ7vXhyEIHu+HtC738klGALYxOKDO0bQP3tg8A==,
-      }
-
-  define-lazy-prop@2.0.0:
-    resolution:
-      {
-        integrity: sha512-Ds09qNh8yw3khSjiJjiUInaGX9xlqZDY7JVryGxdxV7NPeuqQfplOpQ66yJFZut3jLa5zOwkXw1g9EI2uKh4Og==,
       }
 
   depd@2.0.0:
@@ -3348,22 +3109,16 @@ packages:
         integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==,
       }
 
+  dnssd-advertise@1.1.6:
+    resolution:
+      {
+        integrity: sha512-Ndrrf6BMPalkQPd/zubL+4YghH2J9NspapQ09uDXwYbvOPkP0oaqf5CkcwJ0b50kS2O3ul6yVu+jz+RY62Cejg==,
+      }
+
   doctypes@1.1.0:
     resolution:
       {
         integrity: sha512-LLBi6pEqS6Do3EKQ3J0NqHWV5hhb78Pi8vvESYwyOy2c31ZEZVdtitdzsQsKb7878PEERhzUk0ftqGhG6Mz+pQ==,
-      }
-
-  dotenv-expand@11.0.7:
-    resolution:
-      {
-        integrity: sha512-zIHwmZPRshsCdpMDyVsqGmgyP0yT8GAgXUnkdAoJisxvf33k7yO6OuoKmcTGuXPWSsm8Oh88nZicRLA9Y0rUeA==,
-      }
-
-  dotenv@16.4.7:
-    resolution:
-      {
-        integrity: sha512-47qPchRCykZC03FhkYAhrvwU4xDBFIj1QPqaarj6mdM/hgUzfPHcpkHJOn3mJAufFeeAxAzeGsr5X0M4k6fLZQ==,
       }
 
   dotenv@8.6.0:
@@ -3418,12 +3173,6 @@ packages:
     resolution:
       {
         integrity: sha512-rRqJg/6gd538VHvR3PSrdRBb/1Vy2YfzHqzvbhGIQpDRKIa4FgV/54b5Q1xYSxOOwKvjXweS26E0Q+nAMwp2pQ==,
-      }
-
-  env-editor@0.4.2:
-    resolution:
-      {
-        integrity: sha512-ObFo8v4rQJAE59M69QzwloxPZtd33TpYEIjtKD1rrFDcM1Gd7IkDxEBU+HriziN6HSHQnBJi8Dmy+JWkav5HKA==,
       }
 
   error-stack-parser@2.1.4:
@@ -3481,12 +3230,6 @@ packages:
         integrity: sha512-vbRorB5FUQWvla16U8R/qgaFIya2qGzwDrNmCZuYKrbdSUMG6I1ZCGQRefkRVhuOkIGVne7BQ35DSfo1qvJqFg==,
       }
 
-  escape-string-regexp@2.0.0:
-    resolution:
-      {
-        integrity: sha512-UpzcLCXolUWcNu5HtVMHYdXJjArjsF9C0aNnquZYY4uW/Vu0miy5YoWvbV345HauVvcAUnpRuhMMcqTcGOY2+w==,
-      }
-
   escape-string-regexp@4.0.0:
     resolution:
       {
@@ -3524,12 +3267,6 @@ packages:
         integrity: sha512-GWkBvjiSZK87ELrYOSESUYeVIc9mvLLf/nXalMOS5dYrgZq9o5OVkbZAVM06CVxYsCwH9BDZFPlQTlPA1j4ahA==,
       }
 
-  exec-async@2.2.0:
-    resolution:
-      {
-        integrity: sha512-87OpwcEiMia/DeiKFzaQNBNFeN3XkkpYIh9FyOqq5mS2oKv3CBE67PXoEKcr6nodWdXNogTiQ0jE2NGuoffXPw==,
-      }
-
   execa@4.1.0:
     resolution:
       {
@@ -3542,100 +3279,120 @@ packages:
         integrity: sha512-knvyeauYhqjOYvQ66MznSMs83wmHrCycNEN6Ao+2AeYEfxUIkuiVxdEa1qlGEPK+We3n0THiDciYSsCcgW/DoA==,
       }
 
-  expo-asset@12.0.12:
+  expo-asset@56.0.17:
     resolution:
       {
-        integrity: sha512-CsXFCQbx2fElSMn0lyTdRIyKlSXOal6ilLJd+yeZ6xaC7I9AICQgscY5nj0QcwgA+KYYCCEQEBndMsmj7drOWQ==,
+        integrity: sha512-GFN5j+8SPkyv0nfsiFHewmdB/D0tL237TsBE/gSfFOFy/J3a52py7IulcSqkA3sQE/u/UlD5BmvP5ssS4//nUg==,
       }
     peerDependencies:
       expo: '*'
       react: '*'
       react-native: '*'
 
-  expo-constants@18.0.12:
+  expo-constants@56.0.18:
     resolution:
       {
-        integrity: sha512-WzcKYMVNRRu4NcSzfIVRD5aUQFnSpTZgXFrlWmm19xJoDa4S3/PQNi6PNTBRc49xz9h8FT7HMxRKaC8lr0gflA==,
+        integrity: sha512-8AMtbDGl/WVPnWlmbpGmvcdnNCy9E4PFnwdVwj600vljkMDPSxcAcjw8GVXEPk3PpZ+ngTqsrkltWyj0UKYAxw==,
       }
     peerDependencies:
       expo: '*'
       react-native: '*'
 
-  expo-file-system@19.0.21:
+  expo-file-system@56.0.8:
     resolution:
       {
-        integrity: sha512-s3DlrDdiscBHtab/6W1osrjGL+C2bvoInPJD7sOwmxfJ5Woynv2oc+Fz1/xVXaE/V7HE/+xrHC/H45tu6lZzzg==,
+        integrity: sha512-NrH41/8snGIBSbYicwVLB4txPdgCATd7ZYhMAGS3YJZ9GbnduhlAoV4/YCbGayjrbpE9bJb/6wegPL/zmvRMnQ==,
       }
     peerDependencies:
       expo: '*'
       react-native: '*'
 
-  expo-font@14.0.10:
+  expo-font@56.0.7:
     resolution:
       {
-        integrity: sha512-UqyNaaLKRpj4pKAP4HZSLnuDQqueaO5tB1c/NWu5vh1/LF9ulItyyg2kF/IpeOp0DeOLk0GY0HrIXaKUMrwB+Q==,
+        integrity: sha512-hpU/vRwPzsby9lPGkA4blDqLIIXYzoWnCZHr6PxvcWbY/uPObAiyhh6q+e0WYsB65SthK+PLH95jEnVag7fwEg==,
       }
     peerDependencies:
       expo: '*'
       react: '*'
       react-native: '*'
 
-  expo-keep-awake@15.0.8:
+  expo-keep-awake@56.0.3:
     resolution:
       {
-        integrity: sha512-YK9M1VrnoH1vLJiQzChZgzDvVimVoriibiDIFLbQMpjYBnvyfUeHJcin/Gx1a+XgupNXy92EQJLgI/9ZuXajYQ==,
+        integrity: sha512-CLMJXtEiMKknD3Rpm8CRwE6ZJUzu2yCEmRk1sgfHAJ1zIbuEWY3dpPDubtsnuzWm+2k6Sru+yaFbYsvPWmTiBA==,
       }
     peerDependencies:
       expo: '*'
       react: '*'
 
-  expo-modules-autolinking@3.0.23:
+  expo-modules-autolinking@56.0.16:
     resolution:
       {
-        integrity: sha512-YZnaE0G+52xftjH5nsIRaWsoVBY38SQCECclpdgLisdbRY/6Mzo7ndokjauOv3mpFmzMZACHyJNu1YSAffQwTg==,
+        integrity: sha512-9JnL4N46P8ubDpDIfWolDn7nxU2j1rY67xY/dNVuyH0m+HG+r/JI16VYtjIf4COpZtEuFo4D3h3MBeFzGucMnw==,
       }
     hasBin: true
 
-  expo-modules-core@3.0.29:
+  expo-modules-core@56.0.17:
     resolution:
       {
-        integrity: sha512-LzipcjGqk8gvkrOUf7O2mejNWugPkf3lmd9GkqL9WuNyeN2fRwU0Dn77e3ZUKI3k6sI+DNwjkq4Nu9fNN9WS7Q==,
+        integrity: sha512-5J8whnT7Ccp+BrFClLmpF76omBqn95VZExroTm01Dgjm4vpty1Rb7U3we+ZUceNHtRd07Lw30u7FNfDgIhEbRQ==,
       }
     peerDependencies:
       react: '*'
       react-native: '*'
+      react-native-worklets: ^0.7.4 || ^0.8.0
+    peerDependenciesMeta:
+      react-native-worklets:
+        optional: true
 
-  expo-server@1.0.5:
+  expo-modules-jsi@56.0.10:
     resolution:
       {
-        integrity: sha512-IGR++flYH70rhLyeXF0Phle56/k4cee87WeQ4mamS+MkVAVP+dDlOHf2nN06Z9Y2KhU0Gp1k+y61KkghF7HdhA==,
-      }
-
-  expo-status-bar@3.0.9:
-    resolution:
-      {
-        integrity: sha512-xyYyVg6V1/SSOZWh4Ni3U129XHCnFHBTcUo0dhWtFDrZbNp/duw5AGsQfb2sVeU0gxWHXSY1+5F0jnKYC7WuOw==,
+        integrity: sha512-fHZcFpYO/o62GYa6fJyAQJZcAShzhoN0iMMDzbr7vD3ewET6e1vAlTonbEakN9F0VHEgBFJ4NREy87uwVcpCuA==,
       }
     peerDependencies:
+      react-native: '*'
+
+  expo-server@56.0.5:
+    resolution:
+      {
+        integrity: sha512-SmM2p2g3Jrktpiazcst+OxhjSzOHXKAY4BPURHYHXvApzzoybMmrNF4IEZ8DKZ145BhSe4ydAmlEFCRTsdtgUQ==,
+      }
+    engines: { node: '>=20.16.0' }
+
+  expo-status-bar@56.0.4:
+    resolution:
+      {
+        integrity: sha512-IGs/fDfkHXofy2ZQrGiXayhFK04HB85FZXorhcEhDZEcqASKgSqpak+HwUtAaR0MeTJwWyHNF7I6VmVbbp8EcA==,
+      }
+    peerDependencies:
+      expo: '*'
       react: '*'
       react-native: '*'
 
-  expo@54.0.30:
+  expo@56.0.12:
     resolution:
       {
-        integrity: sha512-6q+aFfKL0SpT8prfdpR3V8HcN51ov0mCGuwQTzyuk6eeO9rg7a7LWbgPv9rEVXGZEuyULstL8LGNwHqusand7Q==,
+        integrity: sha512-FxgdI/Yqva6iJOThZIHfvxlKPxs4EC4uScUnEswwSArR/Fj9k430O13R590LcOQTsdNsjIs+GBHwjfoAY6vmAQ==,
       }
     hasBin: true
     peerDependencies:
       '@expo/dom-webview': '*'
       '@expo/metro-runtime': '*'
       react: '*'
+      react-dom: '*'
       react-native: '*'
+      react-native-web: '*'
       react-native-webview: '*'
     peerDependenciesMeta:
       '@expo/dom-webview':
         optional: true
       '@expo/metro-runtime':
+        optional: true
+      react-dom:
+        optional: true
+      react-native-web:
         optional: true
       react-native-webview:
         optional: true
@@ -3658,17 +3415,19 @@ packages:
         integrity: sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==,
       }
 
-  fast-json-stable-stringify@2.1.0:
-    resolution:
-      {
-        integrity: sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==,
-      }
-
   fastq@1.20.1:
     resolution:
       {
         integrity: sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw==,
       }
+
+  fb-dotslash@0.5.8:
+    resolution:
+      {
+        integrity: sha512-XHYLKk9J4BupDxi9bSEhkfss0m+Vr9ChTrjhf9l2iw3jB5C7BnY4GVPoMcqbrTutsKJso6yj2nAB6BI/F2oZaA==,
+      }
+    engines: { node: '>=20' }
+    hasBin: true
 
   fb-watchman@2.0.2:
     resolution:
@@ -3693,6 +3452,12 @@ packages:
       picomatch:
         optional: true
 
+  fetch-nodeshim@0.4.10:
+    resolution:
+      {
+        integrity: sha512-m6I8ALe4L4XpdETy7MJZWs6L1IVMbjs99bwbpIKphxX+0CTns4IKDWJY0LWfr4YsFjfg+z1TjzTMU8lKl8rG0w==,
+      }
+
   fill-range@7.1.1:
     resolution:
       {
@@ -3709,12 +3474,6 @@ packages:
     resolution:
       {
         integrity: sha512-PpOwAdQ/YlXQ2vj8a3h8IipDuYRi3wceVQQGYWxNINccq40Anw7BlsEXCMbt1Zt+OLA6Fq9suIpIWD0OsnISlw==,
-      }
-
-  find-up@5.0.0:
-    resolution:
-      {
-        integrity: sha512-78/PXT1wlLLDgTzDs7sjq9hzz0vXD+zn+7wypEe4fXQxCmdmqfGsEPQxmiCSQI3ajFV91bVSsvNtrJRiW6nGng==,
       }
 
   fix-dts-default-cjs-exports@1.0.1:
@@ -3741,12 +3500,6 @@ packages:
         integrity: sha512-9XNj/o4wrRFyhSMJOvsuyMwy8aUfBaZ1VrqHVfohyXf0Sw0e+yfKG+xZaY3arGCOMdwFsqObtzVOc1gU9KiT9w==,
       }
     hasBin: true
-
-  freeport-async@2.0.0:
-    resolution:
-      {
-        integrity: sha512-K7od3Uw45AJg00XUmy15+Hae2hOcgKcmN3/EF6Y7i01O0gaqiRx8sUSpsb9+BRNL8RPBrhzPsVfy8q9ADlJuWQ==,
-      }
 
   fresh@0.5.2:
     resolution:
@@ -3776,12 +3529,6 @@ packages:
     resolution:
       {
         integrity: sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g==,
-      }
-
-  fs.realpath@1.0.0:
-    resolution:
-      {
-        integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==,
       }
 
   fsevents@2.3.2:
@@ -3822,12 +3569,6 @@ packages:
         integrity: sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==,
       }
 
-  get-package-type@0.1.0:
-    resolution:
-      {
-        integrity: sha512-pjzuKtY64GYfWizNAJ0fr9VqttZkNiK2iS430LtIHzjBEr6bX8Am2zm4sW4Ro5wjWW5cAlRL1qAMTcXbjNAO2Q==,
-      }
-
   get-proto@1.0.1:
     resolution:
       {
@@ -3862,18 +3603,6 @@ packages:
     resolution:
       {
         integrity: sha512-tvZgpqk6fz4BaNZ66ZsRaZnbHvP/jG3uKJvAZOwEVUL4RTA5nJeeLYfyN9/VA8NX/V3IBG+hkeuGpKjvELkVhA==,
-      }
-
-  glob@7.2.3:
-    resolution:
-      {
-        integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==,
-      }
-
-  global-dirs@0.1.1:
-    resolution:
-      {
-        integrity: sha512-NknMLn7F2J7aflwFOlGdNIuCDpN3VGoSoB+aap3KABFWbHVn1TCgFC+np23J8W2BiZbjfEw3BFBycSMv1AFblg==,
       }
 
   globby@11.1.0:
@@ -3924,28 +3653,34 @@ packages:
         integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==,
       }
 
-  hermes-estree@0.29.1:
+  hermes-compiler@250829098.0.10:
     resolution:
       {
-        integrity: sha512-jl+x31n4/w+wEqm0I2r4CMimukLbLQEYpisys5oCre611CI5fc9TxhqkBBCJ1edDG4Kza0f7CgNz8xVMLZQOmQ==,
+        integrity: sha512-TcRlZ0/TlyfJqquRFAWoyElVNnkdYRi/sEp4/Qy8/GYxjg8j2cS9D4MjuaQ+qimkmLN7AmO+44IznRf06mAr0w==,
       }
 
-  hermes-estree@0.32.0:
+  hermes-estree@0.33.3:
     resolution:
       {
-        integrity: sha512-KWn3BqnlDOl97Xe1Yviur6NbgIZ+IP+UVSpshlZWkq+EtoHg6/cwiDj/osP9PCEgFE15KBm1O55JRwbMEm5ejQ==,
+        integrity: sha512-6kzYZHCk8Fy1Uc+t3HGYyJn3OL4aeqKLTyina4UFtWl8I0kSL7OmKThaiX+Uh2f8nGw3mo4Ifxg0M5Zk3/Oeqg==,
       }
 
-  hermes-parser@0.29.1:
+  hermes-estree@0.35.0:
     resolution:
       {
-        integrity: sha512-xBHWmUtRC5e/UL0tI7Ivt2riA/YBq9+SiYFU7C1oBa/j2jYGlIF9043oak1F47ihuDIxQ5nbsKueYJDRY02UgA==,
+        integrity: sha512-xVx5Opwy8Oo1I5yGpVRhCvWL/iV3M+ylksSKVNlxxD90cpDpR/AR1jLYqK8HWihm065a6UI3HeyAmYzwS8NOOg==,
       }
 
-  hermes-parser@0.32.0:
+  hermes-parser@0.33.3:
     resolution:
       {
-        integrity: sha512-g4nBOWFpuiTqjR3LZdRxKUkij9iyveWeuks7INEsMX741f3r9xxrOe8TeQfUxtda0eXmiIFiMQzoeSQEno33Hw==,
+        integrity: sha512-Yg3HgaG4CqgyowtYjX/FsnPAuZdHOqSMtnbpylbptsQ9nwwSKsy6uRWcGO5RK0EqiX12q8HvDWKgeAVajRO5DA==,
+      }
+
+  hermes-parser@0.35.0:
+    resolution:
+      {
+        integrity: sha512-9JLjeHxBx8T4CAsydZR49PNZUaix+WpQJwu9p2010lu+7Kwl6D/7wYFFJxoz+aXkaaClp9Zfg6W6/zVlSJORaA==,
       }
 
   hosted-git-info@7.0.2:
@@ -3985,12 +3720,6 @@ packages:
         integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==,
       }
 
-  ieee754@1.2.1:
-    resolution:
-      {
-        integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==,
-      }
-
   ignore@5.3.2:
     resolution:
       {
@@ -4004,28 +3733,10 @@ packages:
       }
     hasBin: true
 
-  imurmurhash@0.1.4:
-    resolution:
-      {
-        integrity: sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA==,
-      }
-
-  inflight@1.0.6:
-    resolution:
-      {
-        integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==,
-      }
-
   inherits@2.0.4:
     resolution:
       {
         integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==,
-      }
-
-  ini@1.3.8:
-    resolution:
-      {
-        integrity: sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==,
       }
 
   invariant@2.2.4:
@@ -4119,52 +3830,10 @@ packages:
         integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==,
       }
 
-  istanbul-lib-coverage@3.2.2:
-    resolution:
-      {
-        integrity: sha512-O8dpsF+r0WV/8MNRKfnmrtCWhuKjxrq2w+jpzBL5UZKTi2LeVWnWOmWRxFlesJONmc+wLAGvKQZEOanko0LFTg==,
-      }
-
-  istanbul-lib-instrument@5.2.1:
-    resolution:
-      {
-        integrity: sha512-pzqtp31nLv/XFOzXGuvhCb8qhjmTVo5vjVk19XE4CRlSWz0KoeJ3bw9XsA7nOp9YBf4qHjwBxkDzKcME/J29Yg==,
-      }
-
-  jest-environment-node@29.7.0:
-    resolution:
-      {
-        integrity: sha512-DOSwCRqXirTOyheM+4d5YZOrWcdu0LNZ87ewUoywbcb2XR4wKgqiG8vNeYwhjFMbEkfju7wx2GYH0P2gevGvFw==,
-      }
-
   jest-get-type@29.6.3:
     resolution:
       {
         integrity: sha512-zrteXnqYxfQh7l5FHyL38jL39di8H8rHoecLH3JNxH3BwOrBsNeabdap5e0I23lD4HHI8W5VFBZqG4Eaq5LNcw==,
-      }
-
-  jest-haste-map@29.7.0:
-    resolution:
-      {
-        integrity: sha512-fP8u2pyfqx0K1rGn1R9pyE0/KTn+G7PxktWidOBTqFPLYX0b9ksaMFkhK5vrS3DVun09pckLdlx90QthlW7AmA==,
-      }
-
-  jest-message-util@29.7.0:
-    resolution:
-      {
-        integrity: sha512-GBEV4GRADeP+qtB2+6u61stea8mGcOT4mCtrYISZwfu9/ISHFJ/5zOMXYbpBE9RsS5+Gb63DW4FgmnKJ79Kf6w==,
-      }
-
-  jest-mock@29.7.0:
-    resolution:
-      {
-        integrity: sha512-ITOMZn+UkYS4ZFh83xYAOzWStloNzJFO2s8DWrE4lhtGD+AorgnbkiKERe4wQVBydIGPx059g6riW5Btp6Llnw==,
-      }
-
-  jest-regex-util@29.6.3:
-    resolution:
-      {
-        integrity: sha512-KJJBsRCyyLNWCNBOvZyRDnAIfUiRJ8v+hOBQYGn8gDyF3UegwiP4gwRR3/SDa42g1YbVycTidUF3rKjyLFDWbg==,
       }
 
   jest-util@29.7.0:
@@ -4297,10 +3966,10 @@ packages:
       '@types/node': '>=18'
       typescript: '>=5.0.4 <7'
 
-  lan-network@0.1.7:
+  lan-network@0.2.1:
     resolution:
       {
-        integrity: sha512-mnIlAEMu4OyEvUNdzco9xpuB9YVcPkQec+QsgycBCtPZvEqWPCDPfbAE4OJMdBBWpZWtpCn1xw9jJYlwjWI5zQ==,
+        integrity: sha512-ONPnazC96VKDntab9j9JKwIWhZ4ZUceB4A9Epu4Ssg0hYFmtHZSeQ+n15nIwTFmcBUKtExOer8WTJ4GF9MO64A==,
       }
     hasBin: true
 
@@ -4521,12 +4190,6 @@ packages:
         integrity: sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g==,
       }
 
-  locate-path@6.0.0:
-    resolution:
-      {
-        integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==,
-      }
-
   lodash.debounce@4.0.8:
     resolution:
       {
@@ -4624,90 +4287,104 @@ packages:
         integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==,
       }
 
-  metro-babel-transformer@0.83.3:
+  metro-babel-transformer@0.84.4:
     resolution:
       {
-        integrity: sha512-1vxlvj2yY24ES1O5RsSIvg4a4WeL7PFXgKOHvXTXiW0deLvQr28ExXj6LjwCCDZ4YZLhq6HddLpZnX4dEdSq5g==,
+        integrity: sha512-rvCfz8snl9h20VcvpOHxZuHP1SlAkv4HXbzw7nyyVwu6Eqo5PRerbakQ9XmUCOsRy70spJ37O+G1TK8oMzo48g==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-cache-key@0.83.3:
+  metro-cache-key@0.84.4:
     resolution:
       {
-        integrity: sha512-59ZO049jKzSmvBmG/B5bZ6/dztP0ilp0o988nc6dpaDsU05Cl1c/lRf+yx8m9WW/JVgbmfO5MziBU559XjI5Zw==,
+        integrity: sha512-wVO79aGrkYImpnaVS4+d5RrRBRPX31QtvKB3wKGBuiNSznduZTQHzsrJZRroFJSwnygrzdsGUtDQPuqqFjFdvw==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-cache@0.83.3:
+  metro-cache@0.84.4:
     resolution:
       {
-        integrity: sha512-3jo65X515mQJvKqK3vWRblxDEcgY55Sk3w4xa6LlfEXgQ9g1WgMh9m4qVZVwgcHoLy0a2HENTPCCX4Pk6s8c8Q==,
+        integrity: sha512-gpcFQdSLUwUCk71saKoE64jLFbx2nwTfVCcPSULMNT8QYq0p1eZZE29Jvd0HtT/UlhC3ZOutLxJME5xqD2JUZg==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-config@0.83.3:
+  metro-config@0.84.4:
     resolution:
       {
-        integrity: sha512-mTel7ipT0yNjKILIan04bkJkuCzUUkm2SeEaTads8VfEecCh+ltXchdq6DovXJqzQAXuR2P9cxZB47Lg4klriA==,
+        integrity: sha512-PMotGDjXcXLWo2TMRH+VR99phFNgYTwqh4OoieIKK3yTJa1Jmkl+fZJxDO0jfBvNF+WESHciHvpNuBtXaF3B0Q==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-core@0.83.3:
+  metro-core@0.84.4:
     resolution:
       {
-        integrity: sha512-M+X59lm7oBmJZamc96usuF1kusd5YimqG/q97g4Ac7slnJ3YiGglW5CsOlicTR5EWf8MQFxxjDoB6ytTqRe8Hw==,
+        integrity: sha512-HONpWC5LGXZn3ffkd4Hu6AIrfE7j4Z0g0wMo/goV24WOB3lhuFZ40KgvaDiSw8iyQHloMYay5N/wPX+z8oN/PQ==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-file-map@0.83.3:
+  metro-file-map@0.84.4:
     resolution:
       {
-        integrity: sha512-jg5AcyE0Q9Xbbu/4NAwwZkmQn7doJCKGW0SLeSJmzNB9Z24jBe0AL2PHNMy4eu0JiKtNWHz9IiONGZWq7hjVTA==,
+        integrity: sha512-KSVDi/u60hKPx++NLu3MTIvyjzNoJnFAF8PQFxaj1jiSka/wjw+Ua6sNuJ0TDHQv+7AAoFQxeMgaRAe8Yic5wQ==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-minify-terser@0.83.3:
+  metro-minify-terser@0.84.4:
     resolution:
       {
-        integrity: sha512-O2BmfWj6FSfzBLrNCXt/rr2VYZdX5i6444QJU0fFoc7Ljg+Q+iqebwE3K0eTvkI6TRjELsXk1cjU+fXwAR4OjQ==,
+        integrity: sha512-5qpbaVOMC7CPitIpuewzVeGw7E+C3ykbv2mqTjQLl85Z3annSVGlSCTcsZjqXZzjupfK4Ztj3dDc4kc44NZwtQ==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-resolver@0.83.3:
+  metro-resolver@0.84.4:
     resolution:
       {
-        integrity: sha512-0js+zwI5flFxb1ktmR///bxHYg7OLpRpWZlBBruYG8OKYxeMP7SV0xQ/o/hUelrEMdK4LJzqVtHAhBm25LVfAQ==,
+        integrity: sha512-1qLgbxQ5ZGhhutuPot1Yp348ofDsATL2WkrHF65TobqTT9K3P9qJXw38bomk7ncp5B7OYMfWwtyBZo1lCV792A==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-runtime@0.83.3:
+  metro-runtime@0.84.4:
     resolution:
       {
-        integrity: sha512-JHCJb9ebr9rfJ+LcssFYA2x1qPYuSD/bbePupIGhpMrsla7RCwC/VL3yJ9cSU+nUhU4c9Ixxy8tBta+JbDeZWw==,
+        integrity: sha512-Jibypds4g7AhzdRKY+kDoj51s5EXMwgyp5ddtlreDAsWefMdOx+agWqgm0H2XSZ/ueanHHVM89fnf5OJnlxa8Q==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-source-map@0.83.3:
+  metro-source-map@0.84.4:
     resolution:
       {
-        integrity: sha512-xkC3qwUBh2psVZgVavo8+r2C9Igkk3DibiOXSAht1aYRRcztEZNFtAMtfSB7sdO2iFMx2Mlyu++cBxz/fhdzQg==,
+        integrity: sha512-jbWkPxIesVuo1IWkvezmMJld6iu8nD62GsrZiV6jP37AOdbo4OBq1FJ+qkOg8sV05wAHB//jAbziuW0SlJfW4g==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-symbolicate@0.83.3:
+  metro-symbolicate@0.84.4:
     resolution:
       {
-        integrity: sha512-F/YChgKd6KbFK3eUR5HdUsfBqVsanf5lNTwFd4Ca7uuxnHgBC3kR/Hba/RGkenR3pZaGNp5Bu9ZqqP52Wyhomw==,
+        integrity: sha512-OnfpacxUqGPZQ27t8qK9mFa7uqHIlVWeqRqkCbvMvreEBiamEeOn8krKtcwgP5M4cYDPwuSmCTopHMVthqG4zA==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
     hasBin: true
 
-  metro-transform-plugins@0.83.3:
+  metro-transform-plugins@0.84.4:
     resolution:
       {
-        integrity: sha512-eRGoKJU6jmqOakBMH5kUB7VitEWiNrDzBHpYbkBXW7C5fUGeOd2CyqrosEzbMK5VMiZYyOcNFEphvxk3OXey2A==,
+        integrity: sha512-kehr6HbAecqD0/a3xLXobELdPaAmRAl8bel0qagPF4vhZtux93nS8S4eq2kgKt6J2GnQpVjSoW1PXdst04mwow==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro-transform-worker@0.83.3:
+  metro-transform-worker@0.84.4:
     resolution:
       {
-        integrity: sha512-Ztekew9t/gOIMZX1tvJOgX7KlSLL5kWykl0Iwu2cL2vKMKVALRl1hysyhUw0vjpAvLFx+Kfq9VLjnHIkW32fPA==,
+        integrity: sha512-W1IYMvvXTu4MxYr7d9h7CeG2vpIr3bmLLIavkPY4O1ilzDrvS8z/NEe6y+pC44Ff7raMXQgYSfdqDUwN/i39gg==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
-  metro@0.83.3:
+  metro@0.84.4:
     resolution:
       {
-        integrity: sha512-+rP+/GieOzkt97hSJ0MrPOuAH/jpaS21ZDvL9DJ35QYRDlQcwzcvUlGUf79AnQxq/2NPiS/AULhhM4TKutIt8Q==,
+        integrity: sha512-8ETTubqfD6ornDy2zYDvRcKnVDOXdFJsjetYDBsY4oAsb6NJkiwFR+FaMESyGppFmQUyBQA4H4sFGxzcQSGtFA==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
     hasBin: true
 
   micromatch@4.0.8:
@@ -4722,11 +4399,25 @@ packages:
         integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==,
       }
 
+  mime-db@1.54.0:
+    resolution:
+      {
+        integrity: sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==,
+      }
+    engines: { node: '>= 0.6' }
+
   mime-types@2.1.35:
     resolution:
       {
         integrity: sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==,
       }
+
+  mime-types@3.0.2:
+    resolution:
+      {
+        integrity: sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A==,
+      }
+    engines: { node: '>=18' }
 
   mime@1.6.0:
     resolution:
@@ -4753,17 +4444,12 @@ packages:
         integrity: sha512-enIvLvRAFZYXJzkCYG5RKmPfrFArdLv+R+lbQ53BmIMLIry74bjKzX6iHAm8WYamJkhSSEabrWN5D97XnKObjQ==,
       }
 
-  minimatch@3.1.2:
+  minimatch@10.2.5:
     resolution:
       {
-        integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==,
+        integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==,
       }
-
-  minimatch@9.0.5:
-    resolution:
-      {
-        integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==,
-      }
+    engines: { node: 18 || 20 || >=22 }
 
   minimist@1.2.8:
     resolution:
@@ -4775,12 +4461,6 @@ packages:
     resolution:
       {
         integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==,
-      }
-
-  minizlib@3.1.0:
-    resolution:
-      {
-        integrity: sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw==,
       }
 
   mkdirp@1.0.4:
@@ -4814,6 +4494,12 @@ packages:
         integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==,
       }
 
+  multitars@1.0.0:
+    resolution:
+      {
+        integrity: sha512-H/J4fMLedtudftaYMOg7ajzLYgT3/rwbWVJbqr/iUgB8DQztn38ys5HOqI1CzSxx8QhXXwOOnnBvd4v3jG5+Mg==,
+      }
+
   mz@2.7.0:
     resolution:
       {
@@ -4825,6 +4511,14 @@ packages:
       {
         integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==,
       }
+    hasBin: true
+
+  nanoid@3.3.15:
+    resolution:
+      {
+        integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==,
+      }
+    engines: { node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1 }
     hasBin: true
 
   negotiator@0.6.3:
@@ -4839,11 +4533,12 @@ packages:
         integrity: sha512-myRT3DiWPHqho5PrJaIRyaMv2kgYf0mUVgBNOYMuCH5Ki1yEiQaf/ZJuQ62nvpc44wL5WDbTX7yGJi1Neevw8w==,
       }
 
-  nested-error-stacks@2.0.1:
+  negotiator@1.0.0:
     resolution:
       {
-        integrity: sha512-SrQrok4CATudVzBS7coSz26QRSmlK9TzzoFbeKfcPBUFPjcQM9Rqvr/DlJkOrwI/0KcgvMub1n1g5Jt9EgRn4A==,
+        integrity: sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg==,
       }
+    engines: { node: '>= 0.6' }
 
   node-fetch@2.7.0:
     resolution:
@@ -4880,12 +4575,6 @@ packages:
         integrity: sha512-Pzr3rol8fvhG/oJjIq2NTVB0vmdNNlz22FENhhPojYRZ4/ee08CfK4YuKmuL54V9MLhI1kpzxfOJ/63LzmZzDg==,
       }
 
-  normalize-path@3.0.0:
-    resolution:
-      {
-        integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==,
-      }
-
   npm-package-arg@11.0.3:
     resolution:
       {
@@ -4904,11 +4593,12 @@ packages:
         integrity: sha512-2vPPEi+Z7WqML2jZYddDIfy5Dqb0r2fze2zTxNNknZaFpVHU3mFB3R+DWeJWGVx0ecvttSGlJTI+WG+8Z4cDWw==,
       }
 
-  ob1@0.83.3:
+  ob1@0.84.4:
     resolution:
       {
-        integrity: sha512-egUxXCDwoWG06NGCS5s5AdcpnumHKJlfd3HH06P3m9TEMwwScfcY35wpQxbm9oHof+dM/lVH9Rfyu1elTVelSA==,
+        integrity: sha512-eJXMpz4aQHXF/YBB9ddqZDIS+ooO91hObo9FoW/xBkr54/zCwYYCDqT/O54vNo8kOkWs5Ou/y28NgdrV0edQNA==,
       }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
 
   object-assign@4.1.1:
     resolution:
@@ -4964,12 +4654,6 @@ packages:
         integrity: sha512-MVHddDVweXZF3awtlAS+6pgKLlm/JgxZ90+/NBurBoQctVOOB/zDdVjcyPzQ+0laDGbsWgrRkflI65sQeOgT9Q==,
       }
 
-  open@8.4.2:
-    resolution:
-      {
-        integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==,
-      }
-
   ora@3.4.0:
     resolution:
       {
@@ -5022,22 +4706,10 @@ packages:
         integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==,
       }
 
-  p-limit@3.1.0:
-    resolution:
-      {
-        integrity: sha512-TYOanM3wGwNGsZN2cVTYPArw454xnXj5qmWF1bEoAc4+cU/ol7GVh7odevjp1FNHduHc3KZMcFduxU5Xc6uJRQ==,
-      }
-
   p-locate@4.1.0:
     resolution:
       {
         integrity: sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A==,
-      }
-
-  p-locate@5.0.0:
-    resolution:
-      {
-        integrity: sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==,
       }
 
   p-map@2.1.0:
@@ -5074,12 +4746,6 @@ packages:
     resolution:
       {
         integrity: sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==,
-      }
-
-  path-is-absolute@1.0.1:
-    resolution:
-      {
-        integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==,
       }
 
   path-key@3.1.1:
@@ -5124,17 +4790,18 @@ packages:
         integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==,
       }
 
-  picomatch@3.0.1:
-    resolution:
-      {
-        integrity: sha512-I3EurrIQMlRc9IaAZnqRR044Phh2DXY+55o7uJ0V+hYZAcQYSuFWsc9q5PvyDHUSCe1Qxn/iBz+78s86zWnGag==,
-      }
-
   picomatch@4.0.3:
     resolution:
       {
         integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==,
       }
+
+  picomatch@4.0.4:
+    resolution:
+      {
+        integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==,
+      }
+    engines: { node: '>=12' }
 
   pify@4.0.1:
     resolution:
@@ -5213,11 +4880,12 @@ packages:
       yaml:
         optional: true
 
-  postcss@8.4.49:
+  postcss@8.5.15:
     resolution:
       {
-        integrity: sha512-OCVPnIObs4N29kxTjzLfUryOkvZEq+pf8jTF0lg8E7uETuWHA+v7j3c/xJmiqpX450191LlmZfUKkXxkTry7nA==,
+        integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==,
       }
+    engines: { node: ^10 || ^12 || >=14 }
 
   postcss@8.5.6:
     resolution:
@@ -5231,12 +4899,6 @@ packages:
         integrity: sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==,
       }
     hasBin: true
-
-  pretty-bytes@5.6.0:
-    resolution:
-      {
-        integrity: sha512-FFw039TmrBqFK8ma/7OL3sDz/VytdtJr044/QUJtH0wK9lb9jLq9tJyIxUwtQJHwar2BqtiA4iCWSwo9JLkzFg==,
-      }
 
   pretty-format@29.7.0:
     resolution:
@@ -5352,19 +5014,6 @@ packages:
         integrity: sha512-todwxLMY7/heScKmntwQG8CXVkWUOdYxIvY2s0VWAAMh/nd8SoYiRaKjlr7+iCs984f2P8zvrfWcDDYVb73NfA==,
       }
 
-  punycode@2.3.1:
-    resolution:
-      {
-        integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==,
-      }
-
-  qrcode-terminal@0.11.0:
-    resolution:
-      {
-        integrity: sha512-Uu7ii+FQy4Qf82G4xu7ShHhjhGahEpCWc3x8UavY3CTcWV+ufmmCtwkr7ZKsX42jdL0kr1B5FKUeqJvAn51jzQ==,
-      }
-    hasBin: true
-
   quansync@0.2.11:
     resolution:
       {
@@ -5389,13 +5038,6 @@ packages:
         integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==,
       }
 
-  rc@1.2.8:
-    resolution:
-      {
-        integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==,
-      }
-    hasBin: true
-
   react-devtools-core@6.1.5:
     resolution:
       {
@@ -5408,25 +5050,20 @@ packages:
         integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==,
       }
 
-  react-native-is-edge-to-edge@1.2.1:
+  react-native@0.85.3:
     resolution:
       {
-        integrity: sha512-FLbPWl/MyYQWz+KwqOZsSyj2JmLKglHatd3xLZWskXOpRaio4LfEDEz8E/A6uD8QoTHW6Aobw1jbEwK7KMgR7Q==,
+        integrity: sha512-HN/fGC+3nZVcDNcw7gfbM/DuqZAvI9Mz+/SxuhODaua4JY0BPzhfTzWXRyTR4mRgMHmShTPpH2PYMTxvZrsdZA==,
       }
-    peerDependencies:
-      react: '*'
-      react-native: '*'
-
-  react-native@0.81.5:
-    resolution:
-      {
-        integrity: sha512-1w+/oSjEXZjMqsIvmkCRsOc8UBYv163bTWKTI8+1mxztvQPhCRYGTvZ/PL1w16xXHneIj/SLGfxWg2GWN2uexw==,
-      }
+    engines: { node: ^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0 }
     hasBin: true
     peerDependencies:
-      '@types/react': ^19.1.0
-      react: ^19.1.0
+      '@react-native/jest-preset': 0.85.3
+      '@types/react': ^19.1.1
+      react: ^19.2.3
     peerDependenciesMeta:
+      '@react-native/jest-preset':
+        optional: true
       '@types/react':
         optional: true
 
@@ -5436,11 +5073,12 @@ packages:
         integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==,
       }
 
-  react@19.1.0:
+  react@19.2.3:
     resolution:
       {
-        integrity: sha512-FS+XFBNvn3GTAWq26joslQgWNoFu08F4kl0J4CgdNKADkdSGXQyTCnKteIAJy96Br6YbpEU1LSzV5dYtjMkMDg==,
+        integrity: sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==,
       }
+    engines: { node: '>=0.10.0' }
 
   read-yaml-file@1.1.0:
     resolution:
@@ -5509,28 +5147,10 @@ packages:
         integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==,
       }
 
-  require-from-string@2.0.2:
-    resolution:
-      {
-        integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==,
-      }
-
-  requireg@0.2.2:
-    resolution:
-      {
-        integrity: sha512-nYzyjnFcPNGR3lx9lwPPPnuQxv6JWEZd2Ci0u9opN7N5zUEPIhY/GbL3vMGOr2UXwEg9WwSyV9X9Y/kLFgPsOg==,
-      }
-
   resolve-from@5.0.0:
     resolution:
       {
         integrity: sha512-qYg9KP24dD5qka9J47d0aVky0N+b4fTU89LN9iDnjB5waksiC49rvMB0PrUJQGoTmH50XPiqOvAjDfaijGxYZw==,
-      }
-
-  resolve-global@1.0.0:
-    resolution:
-      {
-        integrity: sha512-zFa12V4OLtT5XUX/Q4VLvTfBf+Ok0SPc1FNGM/z9ctUdiU618qwKpWnd0CHs3+RqROfyEg/DhuHbMWYqcgljEw==,
       }
 
   resolve-workspace-root@2.0.0:
@@ -5539,24 +5159,12 @@ packages:
         integrity: sha512-IsaBUZETJD5WsI11Wt8PKHwaIe45or6pwNc8yflvLJ4DWtImK9kuLoH5kUva/2Mmx/RdIyr4aONNSa2v9LTJsw==,
       }
 
-  resolve.exports@2.0.3:
-    resolution:
-      {
-        integrity: sha512-OcXjMsGdhL4XnbShKpAcSqPMzQoYkYyhbEaeSko47MjRP9NfEQMhZkXL1DoFlt9LWQn4YttrdnV6X2OiyzBi+A==,
-      }
-
   resolve@1.22.11:
     resolution:
       {
         integrity: sha512-RfqAvLnMl313r7c9oclB1HhUEAezcpLjz95wFH4LVuhk9JF/r22qmVP9AMmOU4vMX7Q8pN8jwNg/CSpdFnMjTQ==,
       }
     hasBin: true
-
-  resolve@1.7.1:
-    resolution:
-      {
-        integrity: sha512-c7rwLofp8g1U+h1KNyHL/jicrKg1Ek4q+Lr33AL65uZTinUZHe30D5HlyN5V9NW0JX1D5dXQ4jqW5l7Sy/kGfw==,
-      }
 
   restore-cursor@2.0.0:
     resolution:
@@ -5569,13 +5177,6 @@ packages:
       {
         integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==,
       }
-
-  rimraf@3.0.2:
-    resolution:
-      {
-        integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==,
-      }
-    hasBin: true
 
   rollup@4.54.0:
     resolution:
@@ -5608,10 +5209,10 @@ packages:
         integrity: sha512-yqYn1JhPczigF94DMS+shiDMjDowYO6y9+wB/4WgO0Y19jWYk0lQ4tuG5KI7kj4FTp1wxPj5IFfcrz/s1c3jjQ==,
       }
 
-  scheduler@0.26.0:
+  scheduler@0.27.0:
     resolution:
       {
-        integrity: sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA==,
+        integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==,
       }
 
   semver@6.3.1:
@@ -5766,12 +5367,6 @@ packages:
         integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==,
       }
 
-  stack-utils@2.0.6:
-    resolution:
-      {
-        integrity: sha512-XlkWvfIm6RmsWtNJx+uqtKLS8eqFbxUg0ZzLXqY0caEy9l7hruX8IpiDnjsLavoBgqCCR71TqWO8MaXYheJ3RQ==,
-      }
-
   stackback@0.0.2:
     resolution:
       {
@@ -5844,12 +5439,6 @@ packages:
         integrity: sha512-BrpvfNAE3dcvq7ll3xVumzjKjZQ5tI1sEUIKr3Uoks0XUl45St3FlatVqef9prk4jRDzhW6WZg+3bk93y6pLjA==,
       }
 
-  strip-json-comments@2.0.1:
-    resolution:
-      {
-        integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==,
-      }
-
   strip-json-comments@5.0.3:
     resolution:
       {
@@ -5899,18 +5488,6 @@ packages:
         integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==,
       }
 
-  tar@7.5.2:
-    resolution:
-      {
-        integrity: sha512-7NyxrTE4Anh8km8iEy7o0QYPs+0JKBTj5ZaqHg6B39erLg0qYXN3BijtShwbsNSvQ+LN75+KV+C4QR/f6Gwnpg==,
-      }
-
-  temp-dir@2.0.0:
-    resolution:
-      {
-        integrity: sha512-aoBAniQmmwtcKp/7BzsH8Cxzv8OL736p7v1ihGb5e9DJ9kTwGWHrQrVB5+lfVDzfGrdRzXch+ig7LHaY1JTOrg==,
-      }
-
   term-size@2.2.1:
     resolution:
       {
@@ -5929,12 +5506,6 @@ packages:
         integrity: sha512-t/R3R/n0MSwnnazuPpPNVO60LX0SKL45pyl9YlvxIdkH0Of7D5qM2EVe+yASRIlY5pZ73nclYJfNANGWPwFDZw==,
       }
     hasBin: true
-
-  test-exclude@6.0.0:
-    resolution:
-      {
-        integrity: sha512-cAGWPIyOHU6zlmg88jwm7VRyXnMN7iV68OGAbYDk/Mh/xC/pzVPlQtY6ngoIH/5/tciuhGfvESU8GrHrcxD56w==,
-      }
 
   thenify-all@1.6.0:
     resolution:
@@ -6014,6 +5585,12 @@ packages:
         integrity: sha512-VSsyNPPW74RpHwR8Fc21uubwHY7wMDeJLys2IX5zJNih+OnAnaifKHo+1LHT7DAdloQ7apeaaWg8l7qnf/TnEg==,
       }
 
+  toqr@0.1.1:
+    resolution:
+      {
+        integrity: sha512-FWAPzCIHZHnrE/5/w9MPk0kK25hSQSH2IKhYh9PyjS3SG/+IEMvlwIHbhz+oF7xl54I+ueZlVnMjyzdSwLmAwA==,
+      }
+
   tr46@0.0.3:
     resolution:
       {
@@ -6060,12 +5637,6 @@ packages:
       typescript:
         optional: true
 
-  type-detect@4.0.8:
-    resolution:
-      {
-        integrity: sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==,
-      }
-
   type-fest@0.21.3:
     resolution:
       {
@@ -6085,6 +5656,14 @@ packages:
       }
     hasBin: true
 
+  typescript@6.0.3:
+    resolution:
+      {
+        integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==,
+      }
+    engines: { node: '>=14.17' }
+    hasBin: true
+
   ufo@1.6.1:
     resolution:
       {
@@ -6101,12 +5680,6 @@ packages:
     resolution:
       {
         integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==,
-      }
-
-  undici@6.22.0:
-    resolution:
-      {
-        integrity: sha512-hU/10obOIu62MGYjdskASR3CUAiYaFTtC9Pa6vHyf//mAipSvSQg6od2CnJswq7fvzNS3zJhxoRkgNVaHurWKw==,
       }
 
   unicode-canonical-property-names-ecmascript@2.0.1:
@@ -6131,12 +5704,6 @@ packages:
     resolution:
       {
         integrity: sha512-hpbDzxUY9BFwX+UeBnxv3Sh1q7HFxj48DTmXchNgRa46lO8uj3/1iEn3MiNUYTg1g9ctIqXCCERn8gYZhHC5lQ==,
-      }
-
-  unique-string@2.0.0:
-    resolution:
-      {
-        integrity: sha512-uNaeirEPvpZWSgzwsPGtU2zVSTrn/8L5q/IexZmH0eH6SA73CmAA5U4GwORTxQAZs95TAXLNqeLoPPNO5gZfWg==,
       }
 
   universalify@0.1.2:
@@ -6305,22 +5872,16 @@ packages:
         integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==,
       }
 
-  webidl-conversions@5.0.0:
-    resolution:
-      {
-        integrity: sha512-VlZwKPCkYKxQgeSbH5EyngOmRp7Ww7I9rQLERETtf5ofd9pGeswWiOtogpEO850jziPRarreGxn5QIiTqpb2wA==,
-      }
-
   whatwg-fetch@3.6.20:
     resolution:
       {
         integrity: sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg==,
       }
 
-  whatwg-url-without-unicode@8.0.0-3:
+  whatwg-url-minimum@0.1.2:
     resolution:
       {
-        integrity: sha512-HoKuzZrUlgpz35YO27XgD28uh/WJH4B0+3ttFqRo//lmq+9T/mIOJ6kqmINI9HpUpz1imRC/nR/lxKpJiv0uig==,
+        integrity: sha512-XPEm0XFQWNVG292lII1PrRRJl3sItrs7CettZ4ncYxuDVpLyy+NwlGyut2hXI0JswcJUxeCH+CyOJK0ZzAXD6A==,
       }
 
   whatwg-url@5.0.0:
@@ -6349,12 +5910,6 @@ packages:
         integrity: sha512-RNGKj82nUPg3g5ygxkQl0R937xLyho1J24ItRCBTr/m1YnZkzJy1hUiHUJrc/VlsDQzsCnInEGSg3bci0Lmd4w==,
       }
 
-  wonka@6.3.5:
-    resolution:
-      {
-        integrity: sha512-SSil+ecw6B4/Dm7Pf2sAshKQ5hWFvfyGlfPbEd6A14dOH6VDjrmbY86u6nZvy9omGwwIPFR8V41+of1EezgoUw==,
-      }
-
   wrap-ansi@7.0.0:
     resolution:
       {
@@ -6365,18 +5920,6 @@ packages:
     resolution:
       {
         integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==,
-      }
-
-  write-file-atomic@4.0.2:
-    resolution:
-      {
-        integrity: sha512-7KxauUdBmSdWnmpaGFg+ppNjKF8uNLry8LyzjauQDOVONfFLNKrKvQOxZ/VuTIcS/gge/YNahf5RIIQWTSarlg==,
-      }
-
-  ws@6.2.3:
-    resolution:
-      {
-        integrity: sha512-jmTjYU0j60B+vHey6TfR3Z7RD61z/hmxBS3VMSGIrroOWXQEneK1zNuotOUrGyBHQj0yrpsLHPWtigEFd13ndA==,
       }
 
   ws@7.5.10:
@@ -6443,12 +5986,6 @@ packages:
         integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==,
       }
 
-  yallist@5.0.0:
-    resolution:
-      {
-        integrity: sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw==,
-      }
-
   yaml@2.8.2:
     resolution:
       {
@@ -6468,10 +6005,10 @@ packages:
         integrity: sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w==,
       }
 
-  yocto-queue@0.1.0:
+  zod@3.25.76:
     resolution:
       {
-        integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==,
+        integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==,
       }
 
   zod@4.2.1:
@@ -6481,15 +6018,15 @@ packages:
       }
 
 snapshots:
-  '@0no-co/graphql.web@1.2.0': {}
-
-  '@babel/code-frame@7.10.4':
-    dependencies:
-      '@babel/highlight': 7.25.9
-
   '@babel/code-frame@7.27.1':
     dependencies:
       '@babel/helper-validator-identifier': 7.28.5
+      js-tokens: 4.0.0
+      picocolors: 1.1.1
+
+  '@babel/code-frame@7.29.7':
+    dependencies:
+      '@babel/helper-validator-identifier': 7.29.7
       js-tokens: 4.0.0
       picocolors: 1.1.1
 
@@ -6521,9 +6058,21 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
       jsesc: 3.1.0
 
+  '@babel/generator@7.29.7':
+    dependencies:
+      '@babel/parser': 7.29.7
+      '@babel/types': 7.29.7
+      '@jridgewell/gen-mapping': 0.3.13
+      '@jridgewell/trace-mapping': 0.3.31
+      jsesc: 3.1.0
+
   '@babel/helper-annotate-as-pure@7.27.3':
     dependencies:
       '@babel/types': 7.28.5
+
+  '@babel/helper-annotate-as-pure@7.29.7':
+    dependencies:
+      '@babel/types': 7.29.7
 
   '@babel/helper-compilation-targets@7.27.2':
     dependencies:
@@ -6562,6 +6111,8 @@ snapshots:
 
   '@babel/helper-globals@7.28.0': {}
 
+  '@babel/helper-globals@7.29.7': {}
+
   '@babel/helper-member-expression-to-functions@7.28.5':
     dependencies:
       '@babel/traverse': 7.28.5
@@ -6571,6 +6122,11 @@ snapshots:
     dependencies:
       '@babel/traverse': 7.28.5
       '@babel/types': 7.28.5
+
+  '@babel/helper-module-imports@7.29.7':
+    dependencies:
+      '@babel/traverse': 7.29.7
+      '@babel/types': 7.29.7
 
   '@babel/helper-module-transforms@7.28.3(@babel/core@7.28.5)':
     dependencies:
@@ -6584,6 +6140,8 @@ snapshots:
       '@babel/types': 7.28.5
 
   '@babel/helper-plugin-utils@7.27.1': {}
+
+  '@babel/helper-plugin-utils@7.29.7': {}
 
   '@babel/helper-remap-async-to-generator@7.27.1(@babel/core@7.28.5)':
     dependencies:
@@ -6606,7 +6164,11 @@ snapshots:
 
   '@babel/helper-string-parser@7.27.1': {}
 
+  '@babel/helper-string-parser@7.29.7': {}
+
   '@babel/helper-validator-identifier@7.28.5': {}
+
+  '@babel/helper-validator-identifier@7.29.7': {}
 
   '@babel/helper-validator-option@7.27.1': {}
 
@@ -6621,16 +6183,13 @@ snapshots:
       '@babel/template': 7.27.2
       '@babel/types': 7.28.5
 
-  '@babel/highlight@7.25.9':
-    dependencies:
-      '@babel/helper-validator-identifier': 7.28.5
-      chalk: 2.4.2
-      js-tokens: 4.0.0
-      picocolors: 1.1.1
-
   '@babel/parser@7.28.5':
     dependencies:
       '@babel/types': 7.28.5
+
+  '@babel/parser@7.29.7':
+    dependencies:
+      '@babel/types': 7.29.7
 
   '@babel/plugin-proposal-decorators@7.28.0(@babel/core@7.28.5)':
     dependencies:
@@ -6640,26 +6199,6 @@ snapshots:
       '@babel/plugin-syntax-decorators': 7.27.1(@babel/core@7.28.5)
 
   '@babel/plugin-proposal-export-default-from@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-async-generators@7.8.4(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-bigint@7.8.3(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-class-properties@7.12.13(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-class-static-block@7.14.5(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/helper-plugin-utils': 7.27.1
@@ -6684,47 +6223,17 @@ snapshots:
       '@babel/core': 7.28.5
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-import-attributes@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-import-meta@7.10.4(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-json-strings@7.8.3(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
   '@babel/plugin-syntax-jsx@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-logical-assignment-operators@7.10.4(@babel/core@7.28.5)':
+  '@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/helper-plugin-utils': 7.29.7
 
   '@babel/plugin-syntax-nullish-coalescing-operator@7.8.3(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-numeric-separator@7.10.4(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-object-rest-spread@7.8.3(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-optional-catch-binding@7.8.3(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/helper-plugin-utils': 7.27.1
@@ -6734,22 +6243,7 @@ snapshots:
       '@babel/core': 7.28.5
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-private-property-in-object@7.14.5(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-top-level-await@7.14.5(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
   '@babel/plugin-syntax-typescript@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-transform-arrow-functions@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/helper-plugin-utils': 7.27.1
@@ -6795,12 +6289,6 @@ snapshots:
       '@babel/helper-replace-supers': 7.27.1(@babel/core@7.28.5)
       '@babel/traverse': 7.28.5
 
-  '@babel/plugin-transform-computed-properties@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-      '@babel/template': 7.27.2
-
   '@babel/plugin-transform-destructuring@7.28.5(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
@@ -6824,18 +6312,6 @@ snapshots:
       '@babel/helper-plugin-utils': 7.27.1
       '@babel/helper-skip-transparent-expression-wrappers': 7.27.1
 
-  '@babel/plugin-transform-function-name@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-compilation-targets': 7.27.2
-      '@babel/helper-plugin-utils': 7.27.1
-      '@babel/traverse': 7.28.5
-
-  '@babel/plugin-transform-literals@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
   '@babel/plugin-transform-logical-assignment-operators@7.28.5(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
@@ -6854,11 +6330,6 @@ snapshots:
       '@babel/helper-plugin-utils': 7.27.1
 
   '@babel/plugin-transform-nullish-coalescing-operator@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-transform-numeric-separator@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/helper-plugin-utils': 7.27.1
@@ -6911,16 +6382,6 @@ snapshots:
       '@babel/core': 7.28.5
       '@babel/plugin-transform-react-jsx': 7.27.1(@babel/core@7.28.5)
 
-  '@babel/plugin-transform-react-jsx-self@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-transform-react-jsx-source@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
   '@babel/plugin-transform-react-jsx@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
@@ -6930,15 +6391,19 @@ snapshots:
       '@babel/plugin-syntax-jsx': 7.27.1(@babel/core@7.28.5)
       '@babel/types': 7.28.5
 
+  '@babel/plugin-transform-react-jsx@7.29.7(@babel/core@7.28.5)':
+    dependencies:
+      '@babel/core': 7.28.5
+      '@babel/helper-annotate-as-pure': 7.29.7
+      '@babel/helper-module-imports': 7.29.7
+      '@babel/helper-plugin-utils': 7.29.7
+      '@babel/plugin-syntax-jsx': 7.29.7(@babel/core@7.28.5)
+      '@babel/types': 7.29.7
+
   '@babel/plugin-transform-react-pure-annotations@7.27.1(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
       '@babel/helper-annotate-as-pure': 7.27.3
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-transform-regenerator@7.28.4(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
       '@babel/helper-plugin-utils': 7.27.1
 
   '@babel/plugin-transform-runtime@7.28.5(@babel/core@7.28.5)':
@@ -6950,22 +6415,6 @@ snapshots:
       babel-plugin-polyfill-corejs3: 0.13.0(@babel/core@7.28.5)
       babel-plugin-polyfill-regenerator: 0.6.5(@babel/core@7.28.5)
       semver: 6.3.1
-
-  '@babel/plugin-transform-shorthand-properties@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-transform-spread@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-      '@babel/helper-skip-transparent-expression-wrappers': 7.27.1
-
-  '@babel/plugin-transform-sticky-regex@7.27.1(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
 
   '@babel/plugin-transform-typescript@7.28.5(@babel/core@7.28.5)':
     dependencies:
@@ -6981,16 +6430,6 @@ snapshots:
       '@babel/core': 7.28.5
       '@babel/helper-create-regexp-features-plugin': 7.28.5(@babel/core@7.28.5)
       '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/preset-react@7.28.5(@babel/core@7.28.5)':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/helper-plugin-utils': 7.27.1
-      '@babel/helper-validator-option': 7.27.1
-      '@babel/plugin-transform-react-display-name': 7.28.0(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-jsx': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-jsx-development': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-pure-annotations': 7.27.1(@babel/core@7.28.5)
 
   '@babel/preset-typescript@7.28.5(@babel/core@7.28.5)':
     dependencies:
@@ -7009,15 +6448,11 @@ snapshots:
       '@babel/parser': 7.28.5
       '@babel/types': 7.28.5
 
-  '@babel/traverse--for-generate-function-map@7.28.5':
+  '@babel/template@7.29.7':
     dependencies:
-      '@babel/code-frame': 7.27.1
-      '@babel/generator': 7.28.5
-      '@babel/helper-globals': 7.28.0
-      '@babel/parser': 7.28.5
-      '@babel/template': 7.27.2
-      '@babel/types': 7.28.5
-      debug: 4.4.3
+      '@babel/code-frame': 7.29.7
+      '@babel/parser': 7.29.7
+      '@babel/types': 7.29.7
 
   '@babel/traverse@7.28.5':
     dependencies:
@@ -7029,10 +6464,25 @@ snapshots:
       '@babel/types': 7.28.5
       debug: 4.4.3
 
+  '@babel/traverse@7.29.7':
+    dependencies:
+      '@babel/code-frame': 7.29.7
+      '@babel/generator': 7.29.7
+      '@babel/helper-globals': 7.29.7
+      '@babel/parser': 7.29.7
+      '@babel/template': 7.29.7
+      '@babel/types': 7.29.7
+      debug: 4.4.3
+
   '@babel/types@7.28.5':
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@babel/types@7.29.7':
+    dependencies:
+      '@babel/helper-string-parser': 7.29.7
+      '@babel/helper-validator-identifier': 7.29.7
 
   '@changesets/apply-release-plan@7.0.14':
     dependencies:
@@ -7290,274 +6740,307 @@ snapshots:
   '@esbuild/win32-x64@0.27.2':
     optional: true
 
-  '@expo/cli@54.0.20(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))':
+  '@expo/cli@56.1.16(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-constants@56.0.18(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-font@56.0.7(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)':
     dependencies:
-      '@0no-co/graphql.web': 1.2.0
-      '@expo/code-signing-certificates': 0.0.5
-      '@expo/config': 12.0.13
-      '@expo/config-plugins': 54.0.4
+      '@expo/code-signing-certificates': 0.0.6
+      '@expo/config': 56.0.9(typescript@6.0.3)
+      '@expo/config-plugins': 56.0.9(typescript@6.0.3)
       '@expo/devcert': 1.2.1
-      '@expo/env': 2.0.8
-      '@expo/image-utils': 0.8.8
-      '@expo/json-file': 10.0.8
-      '@expo/metro': 54.2.0
-      '@expo/metro-config': 54.0.12(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))
-      '@expo/osascript': 2.3.8
-      '@expo/package-manager': 1.9.9
-      '@expo/plist': 0.4.8
-      '@expo/prebuild-config': 54.0.8(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))
-      '@expo/schema-utils': 0.1.8
-      '@expo/spawn-async': 1.7.2
-      '@expo/ws-tunnel': 1.0.6
-      '@expo/xcpretty': 4.3.2
-      '@react-native/dev-middleware': 0.81.5
-      '@urql/core': 5.2.0
-      '@urql/exchange-retry': 1.3.2
+      '@expo/env': 2.3.0
+      '@expo/image-utils': 0.10.1(typescript@6.0.3)
+      '@expo/inline-modules': 0.0.12(typescript@6.0.3)
+      '@expo/json-file': 10.2.0
+      '@expo/log-box': 56.0.13(@babel/core@7.28.5)(@expo/dom-webview@56.0.5(expo@56.0.12)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      '@expo/metro': 56.0.0
+      '@expo/metro-config': 56.0.14(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(typescript@6.0.3)
+      '@expo/metro-file-map': 56.0.3
+      '@expo/osascript': 2.6.0
+      '@expo/package-manager': 1.12.1
+      '@expo/plist': 0.7.0
+      '@expo/prebuild-config': 56.0.16(typescript@6.0.3)
+      '@expo/require-utils': 56.1.3(typescript@6.0.3)
+      '@expo/router-server': 56.0.14(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-constants@56.0.18(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-font@56.0.7(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-server@56.0.5)(react@19.2.3)(typescript@6.0.3)
+      '@expo/schema-utils': 56.0.1
+      '@expo/spawn-async': 1.8.0
+      '@expo/ws-tunnel': 2.0.0(ws@8.18.3)
+      '@expo/xcpretty': 4.4.4
+      '@react-native/dev-middleware': 0.85.3
       accepts: 1.3.8
       arg: 5.0.2
-      better-opn: 3.0.2
       bplist-creator: 0.1.0
-      bplist-parser: 0.3.2
+      bplist-parser: 0.3.1
       chalk: 4.1.2
       ci-info: 3.9.0
       compression: 1.8.1
       connect: 3.7.0
       debug: 4.4.3
-      env-editor: 0.4.2
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      expo-server: 1.0.5
-      freeport-async: 2.0.0
+      dnssd-advertise: 1.1.6
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      expo-server: 56.0.5
+      fetch-nodeshim: 0.4.10
       getenv: 2.0.0
       glob: 13.0.0
-      lan-network: 0.1.7
-      minimatch: 9.0.5
+      lan-network: 0.2.1
+      multitars: 1.0.0
       node-forge: 1.3.3
       npm-package-arg: 11.0.3
       ora: 3.4.0
-      picomatch: 3.0.1
-      pretty-bytes: 5.6.0
+      picomatch: 4.0.4
       pretty-format: 29.7.0
       progress: 2.0.3
       prompts: 2.4.2
-      qrcode-terminal: 0.11.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
-      require-from-string: 2.0.2
-      requireg: 0.2.2
-      resolve: 1.22.11
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
       resolve-from: 5.0.0
-      resolve.exports: 2.0.3
       semver: 7.7.3
       send: 0.19.2
       slugify: 1.6.6
-      source-map-support: 0.5.21
       stacktrace-parser: 0.1.11
       structured-headers: 0.4.1
-      tar: 7.5.2
       terminal-link: 2.1.1
-      undici: 6.22.0
+      toqr: 0.1.1
       wrap-ansi: 7.0.0
       ws: 8.18.3
+      zod: 3.25.76
     transitivePeerDependencies:
+      - '@expo/metro-runtime'
       - bufferutil
-      - graphql
+      - expo-router
+      - react-dom
+      - react-server-dom-webpack
       - utf-8-validate
 
-  '@expo/code-signing-certificates@0.0.5':
+  '@expo/code-signing-certificates@0.0.6':
     dependencies:
       node-forge: 1.3.3
-      nullthrows: 1.1.1
 
-  '@expo/config-plugins@54.0.4':
+  '@expo/config-plugins@56.0.9(typescript@6.0.3)':
     dependencies:
-      '@expo/config-types': 54.0.10
-      '@expo/json-file': 10.0.8
-      '@expo/plist': 0.4.8
+      '@expo/config-types': 56.0.6
+      '@expo/json-file': 10.2.0
+      '@expo/plist': 0.7.0
+      '@expo/require-utils': 56.1.3(typescript@6.0.3)
       '@expo/sdk-runtime-versions': 1.0.0
       chalk: 4.1.2
       debug: 4.4.3
       getenv: 2.0.0
       glob: 13.0.0
-      resolve-from: 5.0.0
       semver: 7.7.3
-      slash: 3.0.0
       slugify: 1.6.6
       xcode: 3.0.1
       xml2js: 0.6.0
 
-  '@expo/config-types@54.0.10': {}
+  '@expo/config-types@56.0.6': {}
 
-  '@expo/config@12.0.13':
+  '@expo/config@56.0.9(typescript@6.0.3)':
     dependencies:
-      '@babel/code-frame': 7.10.4
-      '@expo/config-plugins': 54.0.4
-      '@expo/config-types': 54.0.10
-      '@expo/json-file': 10.0.8
+      '@expo/config-plugins': 56.0.9(typescript@6.0.3)
+      '@expo/config-types': 56.0.6
+      '@expo/json-file': 10.2.0
+      '@expo/require-utils': 56.1.3(typescript@6.0.3)
       deepmerge: 4.3.1
       getenv: 2.0.0
       glob: 13.0.0
-      require-from-string: 2.0.2
-      resolve-from: 5.0.0
       resolve-workspace-root: 2.0.0
       semver: 7.7.3
       slugify: 1.6.6
-      sucrase: 3.35.1
 
   '@expo/devcert@1.2.1':
     dependencies:
       '@expo/sudo-prompt': 9.3.2
       debug: 3.2.7
 
-  '@expo/devtools@0.1.8(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))':
+  '@expo/devtools@56.0.2(@babel/core@7.28.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))':
     dependencies:
       chalk: 4.1.2
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
-  '@expo/env@2.0.8':
+  '@expo/dom-webview@56.0.5(@babel/core@7.28.5)(expo@56.0.12)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)':
+    dependencies:
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
+
+  '@expo/env@2.3.0':
     dependencies:
       chalk: 4.1.2
       debug: 4.4.3
-      dotenv: 16.4.7
-      dotenv-expand: 11.0.7
       getenv: 2.0.0
 
-  '@expo/fingerprint@0.15.4':
+  '@expo/expo-modules-macros-plugin@0.2.2': {}
+
+  '@expo/fingerprint@0.19.4':
     dependencies:
-      '@expo/spawn-async': 1.7.2
+      '@expo/env': 2.3.0
+      '@expo/spawn-async': 1.8.0
       arg: 5.0.2
       chalk: 4.1.2
       debug: 4.4.3
       getenv: 2.0.0
       glob: 13.0.0
       ignore: 5.3.2
-      minimatch: 9.0.5
-      p-limit: 3.1.0
+      minimatch: 10.2.5
       resolve-from: 5.0.0
       semver: 7.7.3
 
-  '@expo/image-utils@0.8.8':
+  '@expo/image-utils@0.10.1(typescript@6.0.3)':
     dependencies:
-      '@expo/spawn-async': 1.7.2
+      '@expo/require-utils': 56.1.3(typescript@6.0.3)
+      '@expo/spawn-async': 1.8.0
       chalk: 4.1.2
       getenv: 2.0.0
       jimp-compact: 0.16.1
       parse-png: 2.1.0
-      resolve-from: 5.0.0
-      resolve-global: 1.0.0
       semver: 7.7.3
-      temp-dir: 2.0.0
-      unique-string: 2.0.0
 
-  '@expo/json-file@10.0.8':
+  '@expo/inline-modules@0.0.12(typescript@6.0.3)':
     dependencies:
-      '@babel/code-frame': 7.10.4
+      '@expo/config-plugins': 56.0.9(typescript@6.0.3)
+
+  '@expo/json-file@10.2.0':
+    dependencies:
+      '@babel/code-frame': 7.27.1
       json5: 2.2.3
 
-  '@expo/metro-config@54.0.12(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))':
+  '@expo/local-build-cache-provider@56.0.8(typescript@6.0.3)':
+    dependencies:
+      '@expo/config': 56.0.9(typescript@6.0.3)
+      chalk: 4.1.2
+
+  '@expo/log-box@56.0.13(@babel/core@7.28.5)(@expo/dom-webview@56.0.5(expo@56.0.12)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)':
+    dependencies:
+      '@expo/dom-webview': 56.0.5(@babel/core@7.28.5)(expo@56.0.12)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      anser: 1.4.10
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
+      stacktrace-parser: 0.1.11
+
+  '@expo/metro-config@56.0.14(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(typescript@6.0.3)':
     dependencies:
       '@babel/code-frame': 7.27.1
       '@babel/core': 7.28.5
       '@babel/generator': 7.28.5
-      '@expo/config': 12.0.13
-      '@expo/env': 2.0.8
-      '@expo/json-file': 10.0.8
-      '@expo/metro': 54.2.0
-      '@expo/spawn-async': 1.7.2
+      '@expo/config': 56.0.9(typescript@6.0.3)
+      '@expo/env': 2.3.0
+      '@expo/json-file': 10.2.0
+      '@expo/metro': 56.0.0
+      '@expo/require-utils': 56.1.3(typescript@6.0.3)
+      '@expo/spawn-async': 1.8.0
+      '@jridgewell/gen-mapping': 0.3.13
+      '@jridgewell/remapping': 2.3.5
+      '@jridgewell/sourcemap-codec': 1.5.5
       browserslist: 4.28.1
       chalk: 4.1.2
       debug: 4.4.3
-      dotenv: 16.4.7
-      dotenv-expand: 11.0.7
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       getenv: 2.0.0
       glob: 13.0.0
-      hermes-parser: 0.29.1
+      hermes-parser: 0.33.3
       jsc-safe-url: 0.2.4
       lightningcss: 1.30.2
-      minimatch: 9.0.5
-      postcss: 8.4.49
+      picomatch: 4.0.4
+      postcss: 8.5.15
       resolve-from: 5.0.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@expo/metro@54.2.0':
+  '@expo/metro-file-map@56.0.3':
     dependencies:
-      metro: 0.83.3
-      metro-babel-transformer: 0.83.3
-      metro-cache: 0.83.3
-      metro-cache-key: 0.83.3
-      metro-config: 0.83.3
-      metro-core: 0.83.3
-      metro-file-map: 0.83.3
-      metro-minify-terser: 0.83.3
-      metro-resolver: 0.83.3
-      metro-runtime: 0.83.3
-      metro-source-map: 0.83.3
-      metro-symbolicate: 0.83.3
-      metro-transform-plugins: 0.83.3
-      metro-transform-worker: 0.83.3
+      debug: 4.4.3
+      fb-watchman: 2.0.2
+      invariant: 2.2.4
+      jest-worker: 29.7.0
+      micromatch: 4.0.8
+      walker: 1.0.8
+
+  '@expo/metro@56.0.0':
+    dependencies:
+      metro: 0.84.4
+      metro-babel-transformer: 0.84.4
+      metro-cache: 0.84.4
+      metro-cache-key: 0.84.4
+      metro-config: 0.84.4
+      metro-core: 0.84.4
+      metro-file-map: 0.84.4
+      metro-minify-terser: 0.84.4
+      metro-resolver: 0.84.4
+      metro-runtime: 0.84.4
+      metro-source-map: 0.84.4
+      metro-symbolicate: 0.84.4
+      metro-transform-plugins: 0.84.4
+      metro-transform-worker: 0.84.4
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@expo/osascript@2.3.8':
+  '@expo/osascript@2.6.0':
     dependencies:
-      '@expo/spawn-async': 1.7.2
-      exec-async: 2.2.0
+      '@expo/spawn-async': 1.8.0
 
-  '@expo/package-manager@1.9.9':
+  '@expo/package-manager@1.12.1':
     dependencies:
-      '@expo/json-file': 10.0.8
-      '@expo/spawn-async': 1.7.2
+      '@expo/json-file': 10.2.0
+      '@expo/spawn-async': 1.8.0
       chalk: 4.1.2
       npm-package-arg: 11.0.3
       ora: 3.4.0
       resolve-workspace-root: 2.0.0
 
-  '@expo/plist@0.4.8':
+  '@expo/plist@0.7.0':
     dependencies:
       '@xmldom/xmldom': 0.8.11
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
 
-  '@expo/prebuild-config@54.0.8(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))':
+  '@expo/prebuild-config@56.0.16(typescript@6.0.3)':
     dependencies:
-      '@expo/config': 12.0.13
-      '@expo/config-plugins': 54.0.4
-      '@expo/config-types': 54.0.10
-      '@expo/image-utils': 0.8.8
-      '@expo/json-file': 10.0.8
-      '@react-native/normalize-colors': 0.81.5
+      '@expo/config': 56.0.9(typescript@6.0.3)
+      '@expo/config-plugins': 56.0.9(typescript@6.0.3)
+      '@expo/config-types': 56.0.6
+      '@expo/image-utils': 0.10.1(typescript@6.0.3)
+      '@expo/json-file': 10.2.0
+      '@react-native/normalize-colors': 0.85.3
       debug: 4.4.3
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+      expo-modules-autolinking: 56.0.16(typescript@6.0.3)
       resolve-from: 5.0.0
       semver: 7.7.3
-      xml2js: 0.6.0
 
-  '@expo/schema-utils@0.1.8': {}
+  '@expo/require-utils@56.1.3(typescript@6.0.3)':
+    dependencies:
+      '@babel/code-frame': 7.27.1
+      '@babel/core': 7.28.5
+      '@babel/plugin-transform-modules-commonjs': 7.27.1(@babel/core@7.28.5)
+      typescript: 6.0.3
+
+  '@expo/router-server@56.0.14(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-constants@56.0.18(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-font@56.0.7(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-server@56.0.5)(react@19.2.3)(typescript@6.0.3)':
+    dependencies:
+      debug: 4.4.3
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      expo-constants: 56.0.18(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      expo-font: 56.0.7(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      expo-server: 56.0.5
+      react: 19.2.3
+
+  '@expo/schema-utils@56.0.1': {}
 
   '@expo/sdk-runtime-versions@1.0.0': {}
 
-  '@expo/spawn-async@1.7.2':
+  '@expo/spawn-async@1.8.0':
     dependencies:
       cross-spawn: 7.0.6
 
   '@expo/sudo-prompt@9.3.2': {}
 
-  '@expo/vector-icons@15.0.3(@babel/core@7.28.5)(expo-font@14.0.10(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))':
+  '@expo/ws-tunnel@2.0.0(ws@8.18.3)':
     dependencies:
-      expo-font: 14.0.10(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      ws: 8.18.3
 
-  '@expo/ws-tunnel@1.0.6': {}
-
-  '@expo/xcpretty@4.3.2':
+  '@expo/xcpretty@4.4.4':
     dependencies:
-      '@babel/code-frame': 7.10.4
+      '@babel/code-frame': 7.27.1
       chalk: 4.1.2
-      find-up: 5.0.0
       js-yaml: 4.1.1
 
   '@inquirer/external-editor@1.0.3':
@@ -7571,63 +7054,11 @@ snapshots:
     dependencies:
       '@isaacs/balanced-match': 4.0.1
 
-  '@isaacs/fs-minipass@4.0.1':
-    dependencies:
-      minipass: 7.1.2
-
   '@isaacs/ttlcache@1.4.1': {}
-
-  '@istanbuljs/load-nyc-config@1.1.0':
-    dependencies:
-      camelcase: 5.3.1
-      find-up: 4.1.0
-      get-package-type: 0.1.0
-      js-yaml: 3.14.2
-      resolve-from: 5.0.0
-
-  '@istanbuljs/schema@0.1.3': {}
-
-  '@jest/create-cache-key-function@29.7.0':
-    dependencies:
-      '@jest/types': 29.6.3
-
-  '@jest/environment@29.7.0':
-    dependencies:
-      '@jest/fake-timers': 29.7.0
-      '@jest/types': 29.6.3
-      '@types/node': 25.0.3
-      jest-mock: 29.7.0
-
-  '@jest/fake-timers@29.7.0':
-    dependencies:
-      '@jest/types': 29.6.3
-      '@sinonjs/fake-timers': 10.3.0
-      '@types/node': 25.0.3
-      jest-message-util: 29.7.0
-      jest-mock: 29.7.0
-      jest-util: 29.7.0
 
   '@jest/schemas@29.6.3':
     dependencies:
       '@sinclair/typebox': 0.27.8
-
-  '@jest/transform@29.7.0':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@jest/types': 29.6.3
-      '@jridgewell/trace-mapping': 0.3.31
-      babel-plugin-istanbul: 6.1.1
-      chalk: 4.1.2
-      convert-source-map: 2.0.0
-      fast-json-stable-stringify: 2.1.0
-      graceful-fs: 4.2.11
-      jest-haste-map: 29.7.0
-      jest-regex-util: 29.6.3
-      jest-util: 29.7.0
-      micromatch: 4.0.8
-      pirates: 4.0.7
-      slash: 3.0.0
-      write-file-atomic: 4.0.2
 
   '@jest/types@29.6.3':
     dependencies:
@@ -7873,121 +7304,75 @@ snapshots:
     dependencies:
       playwright: 1.57.0
 
-  '@react-native/assets-registry@0.81.5': {}
+  '@react-native/assets-registry@0.85.3': {}
 
-  '@react-native/babel-plugin-codegen@0.81.5':
+  '@react-native/babel-plugin-codegen@0.85.3(@babel/core@7.28.5)':
     dependencies:
-      '@babel/traverse': 7.28.5
-      '@react-native/codegen': 0.81.5
+      '@babel/traverse': 7.29.7
+      '@react-native/codegen': 0.85.3(@babel/core@7.28.5)
 
-  '@react-native/babel-preset@0.81.5':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/plugin-proposal-export-default-from': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-syntax-dynamic-import': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-syntax-export-default-from': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-syntax-nullish-coalescing-operator': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-syntax-optional-chaining': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-transform-arrow-functions': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-async-generator-functions': 7.28.0(@babel/core@7.28.5)
-      '@babel/plugin-transform-async-to-generator': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-block-scoping': 7.28.5(@babel/core@7.28.5)
-      '@babel/plugin-transform-class-properties': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-classes': 7.28.4(@babel/core@7.28.5)
-      '@babel/plugin-transform-computed-properties': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-destructuring': 7.28.5(@babel/core@7.28.5)
-      '@babel/plugin-transform-flow-strip-types': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-for-of': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-function-name': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-literals': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-logical-assignment-operators': 7.28.5(@babel/core@7.28.5)
-      '@babel/plugin-transform-modules-commonjs': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-named-capturing-groups-regex': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-nullish-coalescing-operator': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-numeric-separator': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-object-rest-spread': 7.28.4(@babel/core@7.28.5)
-      '@babel/plugin-transform-optional-catch-binding': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-optional-chaining': 7.28.5(@babel/core@7.28.5)
-      '@babel/plugin-transform-parameters': 7.27.7(@babel/core@7.28.5)
-      '@babel/plugin-transform-private-methods': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-private-property-in-object': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-display-name': 7.28.0(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-jsx': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-regenerator': 7.28.4(@babel/core@7.28.5)
-      '@babel/plugin-transform-runtime': 7.28.5(@babel/core@7.28.5)
-      '@babel/plugin-transform-shorthand-properties': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-spread': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-sticky-regex': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-typescript': 7.28.5(@babel/core@7.28.5)
-      '@babel/plugin-transform-unicode-regex': 7.27.1(@babel/core@7.28.5)
-      '@babel/template': 7.27.2
-      '@react-native/babel-plugin-codegen': 0.81.5
-      babel-plugin-syntax-hermes-parser: 0.29.1
-      babel-plugin-transform-flow-enums: 0.0.2(@babel/core@7.28.5)
-      react-refresh: 0.14.2
-
-  '@react-native/codegen@0.81.5':
+  '@react-native/codegen@0.85.3(@babel/core@7.28.5)':
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/parser': 7.28.5
-      glob: 7.2.3
-      hermes-parser: 0.29.1
+      '@babel/parser': 7.29.7
+      hermes-parser: 0.33.3
       invariant: 2.2.4
       nullthrows: 1.1.1
+      tinyglobby: 0.2.15
       yargs: 17.7.2
 
-  '@react-native/community-cli-plugin@0.81.5':
+  '@react-native/community-cli-plugin@0.85.3':
     dependencies:
-      '@react-native/dev-middleware': 0.81.5
+      '@react-native/dev-middleware': 0.85.3
       debug: 4.4.3
       invariant: 2.2.4
-      metro: 0.83.3
-      metro-config: 0.83.3
-      metro-core: 0.83.3
+      metro: 0.84.4
+      metro-config: 0.84.4
+      metro-core: 0.84.4
       semver: 7.7.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@react-native/debugger-frontend@0.81.5': {}
+  '@react-native/debugger-frontend@0.85.3': {}
 
-  '@react-native/dev-middleware@0.81.5':
+  '@react-native/debugger-shell@0.85.3':
+    dependencies:
+      cross-spawn: 7.0.6
+      debug: 4.4.3
+      fb-dotslash: 0.5.8
+
+  '@react-native/dev-middleware@0.85.3':
     dependencies:
       '@isaacs/ttlcache': 1.4.1
-      '@react-native/debugger-frontend': 0.81.5
+      '@react-native/debugger-frontend': 0.85.3
+      '@react-native/debugger-shell': 0.85.3
       chrome-launcher: 0.15.2
-      chromium-edge-launcher: 0.2.0
+      chromium-edge-launcher: 0.3.0
       connect: 3.7.0
       debug: 4.4.3
       invariant: 2.2.4
       nullthrows: 1.1.1
       open: 7.4.2
       serve-static: 1.16.3
-      ws: 6.2.3
+      ws: 7.5.10
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
-  '@react-native/gradle-plugin@0.81.5': {}
+  '@react-native/gradle-plugin@0.85.3': {}
 
-  '@react-native/js-polyfills@0.81.5': {}
+  '@react-native/js-polyfills@0.85.3': {}
 
-  '@react-native/normalize-colors@0.81.5': {}
+  '@react-native/normalize-colors@0.85.3': {}
 
-  '@react-native/virtualized-lists@0.81.5(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(react@19.1.0))':
+  '@react-native/virtualized-lists@0.85.3(@types/react@19.2.17)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))':
     dependencies:
+      '@types/react': 19.2.17
       invariant: 2.2.4
       nullthrows: 1.1.1
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(react@19.1.0)
-    optional: true
-
-  '@react-native/virtualized-lists@0.81.5(@types/react@19.1.17)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))':
-    dependencies:
-      '@types/react': 19.1.17
-      invariant: 2.2.4
-      nullthrows: 1.1.1
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
   '@rollup/rollup-android-arm-eabi@4.54.0':
     optional: true
@@ -8057,41 +7442,12 @@ snapshots:
 
   '@sinclair/typebox@0.27.8': {}
 
-  '@sinonjs/commons@3.0.1':
-    dependencies:
-      type-detect: 4.0.8
-
-  '@sinonjs/fake-timers@10.3.0':
-    dependencies:
-      '@sinonjs/commons': 3.0.1
-
   '@standard-schema/spec@1.1.0': {}
 
   '@tybys/wasm-util@0.10.1':
     dependencies:
       tslib: 2.8.1
     optional: true
-
-  '@types/babel__core@7.20.5':
-    dependencies:
-      '@babel/parser': 7.28.5
-      '@babel/types': 7.28.5
-      '@types/babel__generator': 7.27.0
-      '@types/babel__template': 7.4.4
-      '@types/babel__traverse': 7.28.0
-
-  '@types/babel__generator@7.27.0':
-    dependencies:
-      '@babel/types': 7.28.5
-
-  '@types/babel__template@7.4.4':
-    dependencies:
-      '@babel/parser': 7.28.5
-      '@babel/types': 7.28.5
-
-  '@types/babel__traverse@7.28.0':
-    dependencies:
-      '@babel/types': 7.28.5
 
   '@types/chai@5.2.3':
     dependencies:
@@ -8101,10 +7457,6 @@ snapshots:
   '@types/deep-eql@4.0.2': {}
 
   '@types/estree@1.0.8': {}
-
-  '@types/graceful-fs@4.1.9':
-    dependencies:
-      '@types/node': 25.0.3
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 
@@ -8130,13 +7482,11 @@ snapshots:
     dependencies:
       '@types/node': 25.0.3
 
-  '@types/react@19.1.17':
+  '@types/react@19.2.17':
     dependencies:
       csstype: 3.2.3
 
   '@types/sarif@2.1.7': {}
-
-  '@types/stack-utils@2.0.3': {}
 
   '@types/ws@8.18.1':
     dependencies:
@@ -8180,20 +7530,6 @@ snapshots:
       '@typescript/native-preview-win32-x64': 7.0.0-dev.20251227.1
 
   '@ungap/structured-clone@1.3.0': {}
-
-  '@urql/core@5.2.0':
-    dependencies:
-      '@0no-co/graphql.web': 1.2.0
-      wonka: 6.3.5
-    transitivePeerDependencies:
-      - graphql
-
-  '@urql/exchange-retry@1.3.2':
-    dependencies:
-      '@urql/core': 5.2.0
-      wonka: 6.3.5
-    transitivePeerDependencies:
-      - graphql
 
   '@vitest/expect@4.0.16':
     dependencies:
@@ -8244,6 +7580,11 @@ snapshots:
       mime-types: 2.1.35
       negotiator: 0.6.3
 
+  accepts@2.0.0:
+    dependencies:
+      mime-types: 3.0.2
+      negotiator: 1.0.0
+
   acorn@7.4.1: {}
 
   acorn@8.15.0: {}
@@ -8274,11 +7615,6 @@ snapshots:
 
   any-promise@1.3.0: {}
 
-  anymatch@3.1.3:
-    dependencies:
-      normalize-path: 3.0.0
-      picomatch: 2.3.1
-
   arg@5.0.2: {}
 
   argparse@1.0.10:
@@ -8294,34 +7630,6 @@ snapshots:
   assert-never@1.4.0: {}
 
   assertion-error@2.0.1: {}
-
-  async-limiter@1.0.1: {}
-
-  babel-jest@29.7.0(@babel/core@7.28.5):
-    dependencies:
-      '@babel/core': 7.28.5
-      '@jest/transform': 29.7.0
-      '@types/babel__core': 7.20.5
-      babel-plugin-istanbul: 6.1.1
-      babel-preset-jest: 29.6.3(@babel/core@7.28.5)
-      chalk: 4.1.2
-      graceful-fs: 4.2.11
-      slash: 3.0.0
-
-  babel-plugin-istanbul@6.1.1:
-    dependencies:
-      '@babel/helper-plugin-utils': 7.27.1
-      '@istanbuljs/load-nyc-config': 1.1.0
-      '@istanbuljs/schema': 0.1.3
-      istanbul-lib-instrument: 5.2.1
-      test-exclude: 6.0.0
-
-  babel-plugin-jest-hoist@29.6.3:
-    dependencies:
-      '@babel/template': 7.27.2
-      '@babel/types': 7.28.5
-      '@types/babel__core': 7.20.5
-      '@types/babel__traverse': 7.28.0
 
   babel-plugin-polyfill-corejs2@0.4.14(@babel/core@7.28.5):
     dependencies:
@@ -8347,80 +7655,71 @@ snapshots:
 
   babel-plugin-react-native-web@0.21.2: {}
 
-  babel-plugin-syntax-hermes-parser@0.29.1:
+  babel-plugin-syntax-hermes-parser@0.33.3:
     dependencies:
-      hermes-parser: 0.29.1
+      hermes-parser: 0.33.3
 
   babel-plugin-transform-flow-enums@0.0.2(@babel/core@7.28.5):
     dependencies:
       '@babel/plugin-syntax-flow': 7.27.1(@babel/core@7.28.5)
 
-  babel-preset-current-node-syntax@1.2.0(@babel/core@7.28.5):
+  babel-preset-expo@56.0.15(@babel/core@7.28.5)(@babel/runtime@7.28.4)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-refresh@0.14.2):
     dependencies:
-      '@babel/core': 7.28.5
-      '@babel/plugin-syntax-async-generators': 7.8.4(@babel/core@7.28.5)
-      '@babel/plugin-syntax-bigint': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-syntax-class-properties': 7.12.13(@babel/core@7.28.5)
-      '@babel/plugin-syntax-class-static-block': 7.14.5(@babel/core@7.28.5)
-      '@babel/plugin-syntax-import-attributes': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-syntax-import-meta': 7.10.4(@babel/core@7.28.5)
-      '@babel/plugin-syntax-json-strings': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-syntax-logical-assignment-operators': 7.10.4(@babel/core@7.28.5)
-      '@babel/plugin-syntax-nullish-coalescing-operator': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-syntax-numeric-separator': 7.10.4(@babel/core@7.28.5)
-      '@babel/plugin-syntax-object-rest-spread': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-syntax-optional-catch-binding': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-syntax-optional-chaining': 7.8.3(@babel/core@7.28.5)
-      '@babel/plugin-syntax-private-property-in-object': 7.14.5(@babel/core@7.28.5)
-      '@babel/plugin-syntax-top-level-await': 7.14.5(@babel/core@7.28.5)
-
-  babel-preset-expo@54.0.9(@babel/core@7.28.5)(@babel/runtime@7.28.4)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-refresh@0.14.2):
-    dependencies:
+      '@babel/generator': 7.28.5
       '@babel/helper-module-imports': 7.27.1
       '@babel/plugin-proposal-decorators': 7.28.0(@babel/core@7.28.5)
       '@babel/plugin-proposal-export-default-from': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-syntax-dynamic-import': 7.8.3(@babel/core@7.28.5)
       '@babel/plugin-syntax-export-default-from': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-syntax-nullish-coalescing-operator': 7.8.3(@babel/core@7.28.5)
+      '@babel/plugin-syntax-optional-chaining': 7.8.3(@babel/core@7.28.5)
+      '@babel/plugin-transform-async-generator-functions': 7.28.0(@babel/core@7.28.5)
+      '@babel/plugin-transform-async-to-generator': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-block-scoping': 7.28.5(@babel/core@7.28.5)
+      '@babel/plugin-transform-class-properties': 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-class-static-block': 7.28.3(@babel/core@7.28.5)
+      '@babel/plugin-transform-classes': 7.28.4(@babel/core@7.28.5)
+      '@babel/plugin-transform-destructuring': 7.28.5(@babel/core@7.28.5)
       '@babel/plugin-transform-export-namespace-from': 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-flow-strip-types': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-for-of': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-logical-assignment-operators': 7.28.5(@babel/core@7.28.5)
       '@babel/plugin-transform-modules-commonjs': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-named-capturing-groups-regex': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-nullish-coalescing-operator': 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-object-rest-spread': 7.28.4(@babel/core@7.28.5)
+      '@babel/plugin-transform-optional-catch-binding': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-optional-chaining': 7.28.5(@babel/core@7.28.5)
       '@babel/plugin-transform-parameters': 7.27.7(@babel/core@7.28.5)
       '@babel/plugin-transform-private-methods': 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-private-property-in-object': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-react-display-name': 7.28.0(@babel/core@7.28.5)
+      '@babel/plugin-transform-react-jsx': 7.29.7(@babel/core@7.28.5)
+      '@babel/plugin-transform-react-jsx-development': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-react-pure-annotations': 7.27.1(@babel/core@7.28.5)
       '@babel/plugin-transform-runtime': 7.28.5(@babel/core@7.28.5)
-      '@babel/preset-react': 7.28.5(@babel/core@7.28.5)
+      '@babel/plugin-transform-typescript': 7.28.5(@babel/core@7.28.5)
+      '@babel/plugin-transform-unicode-regex': 7.27.1(@babel/core@7.28.5)
       '@babel/preset-typescript': 7.28.5(@babel/core@7.28.5)
       '@babel/runtime': 7.28.4
-      '@react-native/babel-preset': 0.81.5
+      '@react-native/babel-plugin-codegen': 0.85.3(@babel/core@7.28.5)
       babel-plugin-react-compiler: 1.0.0
       babel-plugin-react-native-web: 0.21.2
-      babel-plugin-syntax-hermes-parser: 0.29.1
+      babel-plugin-syntax-hermes-parser: 0.33.3
       babel-plugin-transform-flow-enums: 0.0.2(@babel/core@7.28.5)
       debug: 4.4.3
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       react-refresh: 0.14.2
-      resolve-from: 5.0.0
-
-  babel-preset-jest@29.6.3(@babel/core@7.28.5):
-    dependencies:
-      '@babel/core': 7.28.5
-      babel-plugin-jest-hoist: 29.6.3
-      babel-preset-current-node-syntax: 1.2.0(@babel/core@7.28.5)
 
   babel-walk@3.0.0-canary-5:
     dependencies:
       '@babel/types': 7.28.5
 
-  balanced-match@1.0.2: {}
+  balanced-match@4.0.4: {}
 
   base64-js@1.5.1: {}
 
   baseline-browser-mapping@2.9.11: {}
-
-  better-opn@3.0.2:
-    dependencies:
-      open: 8.4.2
 
   better-path-resolve@1.0.0:
     dependencies:
@@ -8441,18 +7740,9 @@ snapshots:
     dependencies:
       big-integer: 1.6.52
 
-  bplist-parser@0.3.2:
+  brace-expansion@5.0.6:
     dependencies:
-      big-integer: 1.6.52
-
-  brace-expansion@1.1.12:
-    dependencies:
-      balanced-match: 1.0.2
-      concat-map: 0.0.1
-
-  brace-expansion@2.0.2:
-    dependencies:
-      balanced-match: 1.0.2
+      balanced-match: 4.0.4
 
   braces@3.0.3:
     dependencies:
@@ -8472,11 +7762,6 @@ snapshots:
 
   buffer-from@1.1.2: {}
 
-  buffer@5.7.1:
-    dependencies:
-      base64-js: 1.5.1
-      ieee754: 1.2.1
-
   bundle-require@5.1.0(esbuild@0.27.2):
     dependencies:
       esbuild: 0.27.2
@@ -8495,8 +7780,6 @@ snapshots:
     dependencies:
       call-bind-apply-helpers: 1.0.2
       get-intrinsic: 1.3.0
-
-  camelcase@5.3.1: {}
 
   camelcase@6.3.0: {}
 
@@ -8525,8 +7808,6 @@ snapshots:
     dependencies:
       readdirp: 4.1.2
 
-  chownr@3.0.0: {}
-
   chrome-launcher@0.15.2:
     dependencies:
       '@types/node': 25.0.3
@@ -8534,14 +7815,13 @@ snapshots:
       is-wsl: 2.2.0
       lighthouse-logger: 1.4.2
 
-  chromium-edge-launcher@0.2.0:
+  chromium-edge-launcher@0.3.0:
     dependencies:
-      '@types/node': 25.0.3
+      '@types/node': 25.9.3
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 1.4.2
       mkdirp: 1.0.4
-      rimraf: 3.0.2
 
   ci-info@2.0.0: {}
 
@@ -8605,8 +7885,6 @@ snapshots:
       safe-buffer: 5.2.1
       vary: 1.1.2
 
-  concat-map@0.0.1: {}
-
   confbox@0.1.8: {}
 
   connect@3.7.0:
@@ -8635,8 +7913,6 @@ snapshots:
       shebang-command: 2.0.0
       which: 2.0.2
 
-  crypto-random-string@2.0.0: {}
-
   csstype@3.2.3: {}
 
   dataloader@1.4.0: {}
@@ -8653,15 +7929,11 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
-  deep-extend@0.6.0: {}
-
   deepmerge@4.3.1: {}
 
   defaults@1.0.4:
     dependencies:
       clone: 1.0.4
-
-  define-lazy-prop@2.0.0: {}
 
   depd@2.0.0: {}
 
@@ -8675,13 +7947,9 @@ snapshots:
     dependencies:
       path-type: 4.0.0
 
+  dnssd-advertise@1.1.6: {}
+
   doctypes@1.1.0: {}
-
-  dotenv-expand@11.0.7:
-    dependencies:
-      dotenv: 16.4.7
-
-  dotenv@16.4.7: {}
 
   dotenv@8.6.0: {}
 
@@ -8709,8 +7977,6 @@ snapshots:
     dependencies:
       ansi-colors: 4.1.3
       strip-ansi: 6.0.1
-
-  env-editor@0.4.2: {}
 
   error-stack-parser@2.1.4:
     dependencies:
@@ -8761,8 +8027,6 @@ snapshots:
 
   escape-string-regexp@1.0.5: {}
 
-  escape-string-regexp@2.0.0: {}
-
   escape-string-regexp@4.0.0: {}
 
   esprima@4.0.1: {}
@@ -8776,8 +8040,6 @@ snapshots:
   event-target-shim@5.0.1: {}
 
   eventemitter3@5.0.1: {}
-
-  exec-async@2.2.0: {}
 
   execa@4.1.0:
     dependencies:
@@ -8793,89 +8055,99 @@ snapshots:
 
   expect-type@1.3.0: {}
 
-  expo-asset@12.0.12(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)):
+  expo-asset@56.0.17(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3):
     dependencies:
-      '@expo/image-utils': 0.8.8
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      expo-constants: 18.0.12(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      '@expo/image-utils': 0.10.1(typescript@6.0.3)
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      expo-constants: 56.0.18(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
-  expo-constants@18.0.12(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)):
+  expo-constants@56.0.18(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)):
     dependencies:
-      '@expo/config': 12.0.13
-      '@expo/env': 2.0.8
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      '@expo/env': 2.3.0
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
-  expo-file-system@19.0.21(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)):
+  expo-file-system@56.0.8(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)):
     dependencies:
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
-  expo-font@14.0.10(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)):
+  expo-font@56.0.7(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)):
     dependencies:
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
       fontfaceobserver: 2.3.0
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
-  expo-keep-awake@15.0.8(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0):
+  expo-keep-awake@56.0.3(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3):
     dependencies:
-      expo: 54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      react: 19.1.0
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      react: 19.2.3
 
-  expo-modules-autolinking@3.0.23:
+  expo-modules-autolinking@56.0.16(typescript@6.0.3):
     dependencies:
-      '@expo/spawn-async': 1.7.2
+      '@expo/require-utils': 56.1.3(typescript@6.0.3)
+      '@expo/spawn-async': 1.8.0
       chalk: 4.1.2
       commander: 7.2.0
-      require-from-string: 2.0.2
-      resolve-from: 5.0.0
 
-  expo-modules-core@3.0.29(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)):
+  expo-modules-core@56.0.17(@babel/core@7.28.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)):
     dependencies:
+      '@expo/expo-modules-macros-plugin': 0.2.2
+      expo-modules-jsi: 56.0.10(@babel/core@7.28.5)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
       invariant: 2.2.4
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
-  expo-server@1.0.5: {}
-
-  expo-status-bar@3.0.9(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)):
+  expo-modules-jsi@56.0.10(@babel/core@7.28.5)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)):
     dependencies:
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
-      react-native-is-edge-to-edge: 1.2.1(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
 
-  expo@54.0.30(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)):
+  expo-server@56.0.5: {}
+
+  expo-status-bar@56.0.4(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3):
+    dependencies:
+      expo: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
+
+  expo@56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3):
     dependencies:
       '@babel/runtime': 7.28.4
-      '@expo/cli': 54.0.20(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      '@expo/config': 12.0.13
-      '@expo/config-plugins': 54.0.4
-      '@expo/devtools': 0.1.8(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      '@expo/fingerprint': 0.15.4
-      '@expo/metro': 54.2.0
-      '@expo/metro-config': 54.0.12(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))
-      '@expo/vector-icons': 15.0.3(@babel/core@7.28.5)(expo-font@14.0.10(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+      '@expo/cli': 56.1.16(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-constants@56.0.18(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo-font@56.0.7(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      '@expo/config': 56.0.9(typescript@6.0.3)
+      '@expo/config-plugins': 56.0.9(typescript@6.0.3)
+      '@expo/devtools': 56.0.2(@babel/core@7.28.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      '@expo/dom-webview': 56.0.5(@babel/core@7.28.5)(expo@56.0.12)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      '@expo/fingerprint': 0.19.4
+      '@expo/local-build-cache-provider': 56.0.8(typescript@6.0.3)
+      '@expo/log-box': 56.0.13(@babel/core@7.28.5)(@expo/dom-webview@56.0.5(expo@56.0.12)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      '@expo/metro': 56.0.0
+      '@expo/metro-config': 56.0.14(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(typescript@6.0.3)
       '@ungap/structured-clone': 1.3.0
-      babel-preset-expo: 54.0.9(@babel/core@7.28.5)(@babel/runtime@7.28.4)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-refresh@0.14.2)
-      expo-asset: 12.0.12(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      expo-constants: 18.0.12(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      expo-file-system: 19.0.21(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      expo-font: 14.0.10(@babel/core@7.28.5)(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      expo-keep-awake: 15.0.8(expo@54.0.30(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)))(react@19.1.0)
-      expo-modules-autolinking: 3.0.23
-      expo-modules-core: 3.0.29(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
+      babel-preset-expo: 56.0.15(@babel/core@7.28.5)(@babel/runtime@7.28.4)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-refresh@0.14.2)
+      expo-asset: 56.0.17(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      expo-constants: 56.0.18(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      expo-file-system: 56.0.8(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      expo-font: 56.0.7(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      expo-keep-awake: 56.0.3(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)
+      expo-modules-autolinking: 56.0.16(typescript@6.0.3)
+      expo-modules-core: 56.0.17(@babel/core@7.28.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
       pretty-format: 29.7.0
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3)
       react-refresh: 0.14.2
-      whatwg-url-without-unicode: 8.0.0-3
+      whatwg-url-minimum: 0.1.2
     transitivePeerDependencies:
+      - '@expo/metro-runtime'
       - bufferutil
       - expo-router
-      - graphql
+      - expo-widgets
+      - react-dom
+      - react-native-worklets
+      - react-server-dom-webpack
       - utf-8-validate
 
   exponential-backoff@3.1.3: {}
@@ -8890,11 +8162,11 @@ snapshots:
       merge2: 1.4.1
       micromatch: 4.0.8
 
-  fast-json-stable-stringify@2.1.0: {}
-
   fastq@1.20.1:
     dependencies:
       reusify: 1.1.0
+
+  fb-dotslash@0.5.8: {}
 
   fb-watchman@2.0.2:
     dependencies:
@@ -8907,6 +8179,8 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.3):
     dependencies:
       picomatch: 4.0.3
+
+  fetch-nodeshim@0.4.10: {}
 
   fill-range@7.1.1:
     dependencies:
@@ -8927,11 +8201,6 @@ snapshots:
       locate-path: 5.0.0
       path-exists: 4.0.0
 
-  find-up@5.0.0:
-    dependencies:
-      locate-path: 6.0.0
-      path-exists: 4.0.0
-
   fix-dts-default-cjs-exports@1.0.1:
     dependencies:
       magic-string: 0.30.21
@@ -8945,8 +8214,6 @@ snapshots:
   formatly@0.3.0:
     dependencies:
       fd-package-json: 2.0.0
-
-  freeport-async@2.0.0: {}
 
   fresh@0.5.2: {}
 
@@ -8974,8 +8241,6 @@ snapshots:
       jsonfile: 4.0.0
       universalify: 0.1.2
 
-  fs.realpath@1.0.0: {}
-
   fsevents@2.3.2:
     optional: true
 
@@ -9001,8 +8266,6 @@ snapshots:
       hasown: 2.0.2
       math-intrinsics: 1.1.0
 
-  get-package-type@0.1.0: {}
-
   get-proto@1.0.1:
     dependencies:
       dunder-proto: 1.0.1
@@ -9025,19 +8288,6 @@ snapshots:
       minimatch: 10.1.1
       minipass: 7.1.2
       path-scurry: 2.0.1
-
-  glob@7.2.3:
-    dependencies:
-      fs.realpath: 1.0.0
-      inflight: 1.0.6
-      inherits: 2.0.4
-      minimatch: 3.1.2
-      once: 1.4.0
-      path-is-absolute: 1.0.1
-
-  global-dirs@0.1.1:
-    dependencies:
-      ini: 1.3.8
 
   globby@11.1.0:
     dependencies:
@@ -9066,17 +8316,19 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hermes-estree@0.29.1: {}
+  hermes-compiler@250829098.0.10: {}
 
-  hermes-estree@0.32.0: {}
+  hermes-estree@0.33.3: {}
 
-  hermes-parser@0.29.1:
+  hermes-estree@0.35.0: {}
+
+  hermes-parser@0.33.3:
     dependencies:
-      hermes-estree: 0.29.1
+      hermes-estree: 0.33.3
 
-  hermes-parser@0.32.0:
+  hermes-parser@0.35.0:
     dependencies:
-      hermes-estree: 0.32.0
+      hermes-estree: 0.35.0
 
   hosted-git-info@7.0.2:
     dependencies:
@@ -9103,24 +8355,13 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  ieee754@1.2.1: {}
-
   ignore@5.3.2: {}
 
   image-size@1.2.1:
     dependencies:
       queue: 6.0.2
 
-  imurmurhash@0.1.4: {}
-
-  inflight@1.0.6:
-    dependencies:
-      once: 1.4.0
-      wrappy: 1.0.2
-
   inherits@2.0.4: {}
-
-  ini@1.3.8: {}
 
   invariant@2.2.4:
     dependencies:
@@ -9170,62 +8411,7 @@ snapshots:
 
   isexe@2.0.0: {}
 
-  istanbul-lib-coverage@3.2.2: {}
-
-  istanbul-lib-instrument@5.2.1:
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/parser': 7.28.5
-      '@istanbuljs/schema': 0.1.3
-      istanbul-lib-coverage: 3.2.2
-      semver: 6.3.1
-
-  jest-environment-node@29.7.0:
-    dependencies:
-      '@jest/environment': 29.7.0
-      '@jest/fake-timers': 29.7.0
-      '@jest/types': 29.6.3
-      '@types/node': 25.0.3
-      jest-mock: 29.7.0
-      jest-util: 29.7.0
-
   jest-get-type@29.6.3: {}
-
-  jest-haste-map@29.7.0:
-    dependencies:
-      '@jest/types': 29.6.3
-      '@types/graceful-fs': 4.1.9
-      '@types/node': 25.0.3
-      anymatch: 3.1.3
-      fb-watchman: 2.0.2
-      graceful-fs: 4.2.11
-      jest-regex-util: 29.6.3
-      jest-util: 29.7.0
-      jest-worker: 29.7.0
-      micromatch: 4.0.8
-      walker: 1.0.8
-    optionalDependencies:
-      fsevents: 2.3.3
-
-  jest-message-util@29.7.0:
-    dependencies:
-      '@babel/code-frame': 7.27.1
-      '@jest/types': 29.6.3
-      '@types/stack-utils': 2.0.3
-      chalk: 4.1.2
-      graceful-fs: 4.2.11
-      micromatch: 4.0.8
-      pretty-format: 29.7.0
-      slash: 3.0.0
-      stack-utils: 2.0.6
-
-  jest-mock@29.7.0:
-    dependencies:
-      '@jest/types': 29.6.3
-      '@types/node': 25.0.3
-      jest-util: 29.7.0
-
-  jest-regex-util@29.6.3: {}
 
   jest-util@29.7.0:
     dependencies:
@@ -9329,7 +8515,24 @@ snapshots:
       typescript: 5.9.3
       zod: 4.2.1
 
-  lan-network@0.1.7: {}
+  knip@5.78.0(@types/node@25.9.3)(typescript@6.0.3):
+    dependencies:
+      '@nodelib/fs.walk': 1.2.8
+      '@types/node': 25.9.3
+      fast-glob: 3.3.3
+      formatly: 0.3.0
+      jiti: 2.6.1
+      js-yaml: 4.1.1
+      minimist: 1.2.8
+      oxc-resolver: 11.16.2
+      picocolors: 1.1.1
+      picomatch: 4.0.3
+      smol-toml: 1.6.0
+      strip-json-comments: 5.0.3
+      typescript: 6.0.3
+      zod: 4.2.1
+
+  lan-network@0.2.1: {}
 
   lefthook-darwin-arm64@2.0.13:
     optional: true
@@ -9440,10 +8643,6 @@ snapshots:
     dependencies:
       p-locate: 4.1.0
 
-  locate-path@6.0.0:
-    dependencies:
-      p-locate: 5.0.0
-
   lodash.debounce@4.0.8: {}
 
   lodash.startcase@4.4.0: {}
@@ -9488,45 +8687,46 @@ snapshots:
 
   merge2@1.4.1: {}
 
-  metro-babel-transformer@0.83.3:
+  metro-babel-transformer@0.84.4:
     dependencies:
       '@babel/core': 7.28.5
       flow-enums-runtime: 0.0.6
-      hermes-parser: 0.32.0
+      hermes-parser: 0.35.0
+      metro-cache-key: 0.84.4
       nullthrows: 1.1.1
 
-  metro-cache-key@0.83.3:
+  metro-cache-key@0.84.4:
     dependencies:
       flow-enums-runtime: 0.0.6
 
-  metro-cache@0.83.3:
+  metro-cache@0.84.4:
     dependencies:
       exponential-backoff: 3.1.3
       flow-enums-runtime: 0.0.6
       https-proxy-agent: 7.0.6
-      metro-core: 0.83.3
+      metro-core: 0.84.4
 
-  metro-config@0.83.3:
+  metro-config@0.84.4:
     dependencies:
       connect: 3.7.0
       flow-enums-runtime: 0.0.6
       jest-validate: 29.7.0
-      metro: 0.83.3
-      metro-cache: 0.83.3
-      metro-core: 0.83.3
-      metro-runtime: 0.83.3
+      metro: 0.84.4
+      metro-cache: 0.84.4
+      metro-core: 0.84.4
+      metro-runtime: 0.84.4
       yaml: 2.8.2
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  metro-core@0.83.3:
+  metro-core@0.84.4:
     dependencies:
       flow-enums-runtime: 0.0.6
       lodash.throttle: 4.1.1
-      metro-resolver: 0.83.3
+      metro-resolver: 0.84.4
 
-  metro-file-map@0.83.3:
+  metro-file-map@0.84.4:
     dependencies:
       debug: 4.4.3
       fb-watchman: 2.0.2
@@ -9538,106 +8738,104 @@ snapshots:
       nullthrows: 1.1.1
       walker: 1.0.8
 
-  metro-minify-terser@0.83.3:
+  metro-minify-terser@0.84.4:
     dependencies:
       flow-enums-runtime: 0.0.6
       terser: 5.44.1
 
-  metro-resolver@0.83.3:
+  metro-resolver@0.84.4:
     dependencies:
       flow-enums-runtime: 0.0.6
 
-  metro-runtime@0.83.3:
+  metro-runtime@0.84.4:
     dependencies:
       '@babel/runtime': 7.28.4
       flow-enums-runtime: 0.0.6
 
-  metro-source-map@0.83.3:
+  metro-source-map@0.84.4:
     dependencies:
-      '@babel/traverse': 7.28.5
-      '@babel/traverse--for-generate-function-map': 7.28.5
-      '@babel/types': 7.28.5
+      '@babel/traverse': 7.29.7
+      '@babel/types': 7.29.7
       flow-enums-runtime: 0.0.6
       invariant: 2.2.4
-      metro-symbolicate: 0.83.3
+      metro-symbolicate: 0.84.4
       nullthrows: 1.1.1
-      ob1: 0.83.3
+      ob1: 0.84.4
       source-map: 0.5.7
       vlq: 1.0.1
 
-  metro-symbolicate@0.83.3:
+  metro-symbolicate@0.84.4:
     dependencies:
       flow-enums-runtime: 0.0.6
       invariant: 2.2.4
-      metro-source-map: 0.83.3
+      metro-source-map: 0.84.4
       nullthrows: 1.1.1
       source-map: 0.5.7
       vlq: 1.0.1
 
-  metro-transform-plugins@0.83.3:
+  metro-transform-plugins@0.84.4:
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/generator': 7.28.5
-      '@babel/template': 7.27.2
-      '@babel/traverse': 7.28.5
+      '@babel/generator': 7.29.7
+      '@babel/template': 7.29.7
+      '@babel/traverse': 7.29.7
       flow-enums-runtime: 0.0.6
       nullthrows: 1.1.1
 
-  metro-transform-worker@0.83.3:
+  metro-transform-worker@0.84.4:
     dependencies:
       '@babel/core': 7.28.5
-      '@babel/generator': 7.28.5
-      '@babel/parser': 7.28.5
-      '@babel/types': 7.28.5
+      '@babel/generator': 7.29.7
+      '@babel/parser': 7.29.7
+      '@babel/types': 7.29.7
       flow-enums-runtime: 0.0.6
-      metro: 0.83.3
-      metro-babel-transformer: 0.83.3
-      metro-cache: 0.83.3
-      metro-cache-key: 0.83.3
-      metro-minify-terser: 0.83.3
-      metro-source-map: 0.83.3
-      metro-transform-plugins: 0.83.3
+      metro: 0.84.4
+      metro-babel-transformer: 0.84.4
+      metro-cache: 0.84.4
+      metro-cache-key: 0.84.4
+      metro-minify-terser: 0.84.4
+      metro-source-map: 0.84.4
+      metro-transform-plugins: 0.84.4
       nullthrows: 1.1.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  metro@0.83.3:
+  metro@0.84.4:
     dependencies:
-      '@babel/code-frame': 7.27.1
+      '@babel/code-frame': 7.29.7
       '@babel/core': 7.28.5
-      '@babel/generator': 7.28.5
-      '@babel/parser': 7.28.5
-      '@babel/template': 7.27.2
-      '@babel/traverse': 7.28.5
-      '@babel/types': 7.28.5
-      accepts: 1.3.8
-      chalk: 4.1.2
+      '@babel/generator': 7.29.7
+      '@babel/parser': 7.29.7
+      '@babel/template': 7.29.7
+      '@babel/traverse': 7.29.7
+      '@babel/types': 7.29.7
+      accepts: 2.0.0
       ci-info: 2.0.0
       connect: 3.7.0
       debug: 4.4.3
       error-stack-parser: 2.1.4
       flow-enums-runtime: 0.0.6
       graceful-fs: 4.2.11
-      hermes-parser: 0.32.0
+      hermes-parser: 0.35.0
       image-size: 1.2.1
       invariant: 2.2.4
       jest-worker: 29.7.0
       jsc-safe-url: 0.2.4
       lodash.throttle: 4.1.1
-      metro-babel-transformer: 0.83.3
-      metro-cache: 0.83.3
-      metro-cache-key: 0.83.3
-      metro-config: 0.83.3
-      metro-core: 0.83.3
-      metro-file-map: 0.83.3
-      metro-resolver: 0.83.3
-      metro-runtime: 0.83.3
-      metro-source-map: 0.83.3
-      metro-symbolicate: 0.83.3
-      metro-transform-plugins: 0.83.3
-      metro-transform-worker: 0.83.3
-      mime-types: 2.1.35
+      metro-babel-transformer: 0.84.4
+      metro-cache: 0.84.4
+      metro-cache-key: 0.84.4
+      metro-config: 0.84.4
+      metro-core: 0.84.4
+      metro-file-map: 0.84.4
+      metro-resolver: 0.84.4
+      metro-runtime: 0.84.4
+      metro-source-map: 0.84.4
+      metro-symbolicate: 0.84.4
+      metro-transform-plugins: 0.84.4
+      metro-transform-worker: 0.84.4
+      mime-types: 3.0.2
       nullthrows: 1.1.1
       serialize-error: 2.1.0
       source-map: 0.5.7
@@ -9655,9 +8853,15 @@ snapshots:
 
   mime-db@1.52.0: {}
 
+  mime-db@1.54.0: {}
+
   mime-types@2.1.35:
     dependencies:
       mime-db: 1.52.0
+
+  mime-types@3.0.2:
+    dependencies:
+      mime-db: 1.54.0
 
   mime@1.6.0: {}
 
@@ -9669,21 +8873,13 @@ snapshots:
     dependencies:
       '@isaacs/brace-expansion': 5.0.0
 
-  minimatch@3.1.2:
+  minimatch@10.2.5:
     dependencies:
-      brace-expansion: 1.1.12
-
-  minimatch@9.0.5:
-    dependencies:
-      brace-expansion: 2.0.2
+      brace-expansion: 5.0.6
 
   minimist@1.2.8: {}
 
   minipass@7.1.2: {}
-
-  minizlib@3.1.0:
-    dependencies:
-      minipass: 7.1.2
 
   mkdirp@1.0.4: {}
 
@@ -9700,6 +8896,8 @@ snapshots:
 
   ms@2.1.3: {}
 
+  multitars@1.0.0: {}
+
   mz@2.7.0:
     dependencies:
       any-promise: 1.3.0
@@ -9708,11 +8906,13 @@ snapshots:
 
   nanoid@3.3.11: {}
 
+  nanoid@3.3.15: {}
+
   negotiator@0.6.3: {}
 
   negotiator@0.6.4: {}
 
-  nested-error-stacks@2.0.1: {}
+  negotiator@1.0.0: {}
 
   node-fetch@2.7.0:
     dependencies:
@@ -9729,8 +8929,6 @@ snapshots:
       '@types/sarif': 2.1.7
       fs-extra: 10.1.0
 
-  normalize-path@3.0.0: {}
-
   npm-package-arg@11.0.3:
     dependencies:
       hosted-git-info: 7.0.2
@@ -9744,7 +8942,7 @@ snapshots:
 
   nullthrows@1.1.1: {}
 
-  ob1@0.83.3:
+  ob1@0.84.4:
     dependencies:
       flow-enums-runtime: 0.0.6
 
@@ -9776,12 +8974,6 @@ snapshots:
 
   open@7.4.2:
     dependencies:
-      is-docker: 2.2.1
-      is-wsl: 2.2.0
-
-  open@8.4.2:
-    dependencies:
-      define-lazy-prop: 2.0.0
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
@@ -9862,17 +9054,9 @@ snapshots:
     dependencies:
       p-try: 2.2.0
 
-  p-limit@3.1.0:
-    dependencies:
-      yocto-queue: 0.1.0
-
   p-locate@4.1.0:
     dependencies:
       p-limit: 2.3.0
-
-  p-locate@5.0.0:
-    dependencies:
-      p-limit: 3.1.0
 
   p-map@2.1.0: {}
 
@@ -9889,8 +9073,6 @@ snapshots:
   parseurl@1.3.3: {}
 
   path-exists@4.0.0: {}
-
-  path-is-absolute@1.0.1: {}
 
   path-key@3.1.1: {}
 
@@ -9909,9 +9091,9 @@ snapshots:
 
   picomatch@2.3.1: {}
 
-  picomatch@3.0.1: {}
-
   picomatch@4.0.3: {}
+
+  picomatch@4.0.4: {}
 
   pify@4.0.1: {}
 
@@ -9950,9 +9132,9 @@ snapshots:
       lilconfig: 3.1.3
       postcss: 8.5.6
 
-  postcss@8.4.49:
+  postcss@8.5.15:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.15
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -9963,8 +9145,6 @@ snapshots:
       source-map-js: 1.2.1
 
   prettier@2.8.8: {}
-
-  pretty-bytes@5.6.0: {}
 
   pretty-format@29.7.0:
     dependencies:
@@ -10061,10 +9241,6 @@ snapshots:
       end-of-stream: 1.4.5
       once: 1.4.0
 
-  punycode@2.3.1: {}
-
-  qrcode-terminal@0.11.0: {}
-
   quansync@0.2.11: {}
 
   queue-microtask@1.2.3: {}
@@ -10074,13 +9250,6 @@ snapshots:
       inherits: 2.0.4
 
   range-parser@1.2.1: {}
-
-  rc@1.2.8:
-    dependencies:
-      deep-extend: 0.6.0
-      ini: 1.3.8
-      minimist: 1.2.8
-      strip-json-comments: 2.0.1
 
   react-devtools-core@6.1.5:
     dependencies:
@@ -10092,103 +9261,51 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-native-is-edge-to-edge@1.2.1(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0)):
+  react-native@0.85.3(@babel/core@7.28.5)(@types/react@19.2.17)(react@19.2.3):
     dependencies:
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
-
-  react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0):
-    dependencies:
-      '@jest/create-cache-key-function': 29.7.0
-      '@react-native/assets-registry': 0.81.5
-      '@react-native/codegen': 0.81.5
-      '@react-native/community-cli-plugin': 0.81.5
-      '@react-native/gradle-plugin': 0.81.5
-      '@react-native/js-polyfills': 0.81.5
-      '@react-native/normalize-colors': 0.81.5
-      '@react-native/virtualized-lists': 0.81.5(@types/react@19.1.17)(react@19.1.0)(react-native@0.81.5(@types/react@19.1.17)(react@19.1.0))
-      '@types/react': 19.1.17
+      '@react-native/assets-registry': 0.85.3
+      '@react-native/codegen': 0.85.3(@babel/core@7.28.5)
+      '@react-native/community-cli-plugin': 0.85.3
+      '@react-native/gradle-plugin': 0.85.3
+      '@react-native/js-polyfills': 0.85.3
+      '@react-native/normalize-colors': 0.85.3
+      '@react-native/virtualized-lists': 0.85.3(@types/react@19.2.17)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
+      '@types/react': 19.2.17
       abort-controller: 3.0.0
       anser: 1.4.10
       ansi-regex: 5.0.1
-      babel-jest: 29.7.0(@babel/core@7.28.5)
-      babel-plugin-syntax-hermes-parser: 0.29.1
+      babel-plugin-syntax-hermes-parser: 0.33.3
       base64-js: 1.5.1
       commander: 12.1.0
       flow-enums-runtime: 0.0.6
-      glob: 7.2.3
+      hermes-compiler: 250829098.0.10
       invariant: 2.2.4
-      jest-environment-node: 29.7.0
       memoize-one: 5.2.1
-      metro-runtime: 0.83.3
-      metro-source-map: 0.83.3
+      metro-runtime: 0.84.4
+      metro-source-map: 0.84.4
       nullthrows: 1.1.1
       pretty-format: 29.7.0
       promise: 8.3.0
-      react: 19.1.0
+      react: 19.2.3
       react-devtools-core: 6.1.5
       react-refresh: 0.14.2
       regenerator-runtime: 0.13.11
-      scheduler: 0.26.0
+      scheduler: 0.27.0
       semver: 7.7.3
       stacktrace-parser: 0.1.11
+      tinyglobby: 0.2.15
       whatwg-fetch: 3.6.20
-      ws: 6.2.3
+      ws: 7.5.10
       yargs: 17.7.2
     transitivePeerDependencies:
       - '@react-native-community/cli'
       - '@react-native/metro-config'
       - bufferutil
       - utf-8-validate
-
-  react-native@0.81.5(@babel/core@7.28.5)(react@19.1.0):
-    dependencies:
-      '@jest/create-cache-key-function': 29.7.0
-      '@react-native/assets-registry': 0.81.5
-      '@react-native/codegen': 0.81.5
-      '@react-native/community-cli-plugin': 0.81.5
-      '@react-native/gradle-plugin': 0.81.5
-      '@react-native/js-polyfills': 0.81.5
-      '@react-native/normalize-colors': 0.81.5
-      '@react-native/virtualized-lists': 0.81.5(@babel/core@7.28.5)(react@19.1.0)(react-native@0.81.5(react@19.1.0))
-      abort-controller: 3.0.0
-      anser: 1.4.10
-      ansi-regex: 5.0.1
-      babel-jest: 29.7.0(@babel/core@7.28.5)
-      babel-plugin-syntax-hermes-parser: 0.29.1
-      base64-js: 1.5.1
-      commander: 12.1.0
-      flow-enums-runtime: 0.0.6
-      glob: 7.2.3
-      invariant: 2.2.4
-      jest-environment-node: 29.7.0
-      memoize-one: 5.2.1
-      metro-runtime: 0.83.3
-      metro-source-map: 0.83.3
-      nullthrows: 1.1.1
-      pretty-format: 29.7.0
-      promise: 8.3.0
-      react: 19.1.0
-      react-devtools-core: 6.1.5
-      react-refresh: 0.14.2
-      regenerator-runtime: 0.13.11
-      scheduler: 0.26.0
-      semver: 7.7.3
-      stacktrace-parser: 0.1.11
-      whatwg-fetch: 3.6.20
-      ws: 6.2.3
-      yargs: 17.7.2
-    transitivePeerDependencies:
-      - '@react-native-community/cli'
-      - '@react-native/metro-config'
-      - '@types/react'
-      - bufferutil
-      - utf-8-validate
-    optional: true
 
   react-refresh@0.14.2: {}
 
-  react@19.1.0: {}
+  react@19.2.3: {}
 
   read-yaml-file@1.1.0:
     dependencies:
@@ -10228,23 +9345,9 @@ snapshots:
 
   require-directory@2.1.1: {}
 
-  require-from-string@2.0.2: {}
-
-  requireg@0.2.2:
-    dependencies:
-      nested-error-stacks: 2.0.1
-      rc: 1.2.8
-      resolve: 1.7.1
-
   resolve-from@5.0.0: {}
 
-  resolve-global@1.0.0:
-    dependencies:
-      global-dirs: 0.1.1
-
   resolve-workspace-root@2.0.0: {}
-
-  resolve.exports@2.0.3: {}
 
   resolve@1.22.11:
     dependencies:
@@ -10252,20 +9355,12 @@ snapshots:
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
 
-  resolve@1.7.1:
-    dependencies:
-      path-parse: 1.0.7
-
   restore-cursor@2.0.0:
     dependencies:
       onetime: 2.0.1
       signal-exit: 3.0.7
 
   reusify@1.1.0: {}
-
-  rimraf@3.0.2:
-    dependencies:
-      glob: 7.2.3
 
   rollup@4.54.0:
     dependencies:
@@ -10305,7 +9400,7 @@ snapshots:
 
   sax@1.4.3: {}
 
-  scheduler@0.26.0: {}
+  scheduler@0.27.0: {}
 
   semver@6.3.1: {}
 
@@ -10388,10 +9483,6 @@ snapshots:
 
   sprintf-js@1.0.3: {}
 
-  stack-utils@2.0.6:
-    dependencies:
-      escape-string-regexp: 2.0.0
-
   stackback@0.0.2: {}
 
   stackframe@1.3.4: {}
@@ -10426,8 +9517,6 @@ snapshots:
 
   strip-final-newline@2.0.0: {}
 
-  strip-json-comments@2.0.1: {}
-
   strip-json-comments@5.0.3: {}
 
   structured-headers@0.4.1: {}
@@ -10461,16 +9550,6 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  tar@7.5.2:
-    dependencies:
-      '@isaacs/fs-minipass': 4.0.1
-      chownr: 3.0.0
-      minipass: 7.1.2
-      minizlib: 3.1.0
-      yallist: 5.0.0
-
-  temp-dir@2.0.0: {}
-
   term-size@2.2.1: {}
 
   terminal-link@2.1.1:
@@ -10484,12 +9563,6 @@ snapshots:
       acorn: 8.15.0
       commander: 2.20.3
       source-map-support: 0.5.21
-
-  test-exclude@6.0.0:
-    dependencies:
-      '@istanbuljs/schema': 0.1.3
-      glob: 7.2.3
-      minimatch: 3.1.2
 
   thenify-all@1.6.0:
     dependencies:
@@ -10526,6 +9599,8 @@ snapshots:
 
   token-stream@1.0.0: {}
 
+  toqr@0.1.1: {}
+
   tr46@0.0.3: {}
 
   tree-kill@1.2.2: {}
@@ -10561,21 +9636,19 @@ snapshots:
       - tsx
       - yaml
 
-  type-detect@4.0.8: {}
-
   type-fest@0.21.3: {}
 
   type-fest@0.7.1: {}
 
   typescript@5.9.3: {}
 
+  typescript@6.0.3: {}
+
   ufo@1.6.1: {}
 
   undici-types@7.16.0: {}
 
   undici-types@7.24.6: {}
-
-  undici@6.22.0: {}
 
   unicode-canonical-property-names-ecmascript@2.0.1: {}
 
@@ -10587,10 +9660,6 @@ snapshots:
   unicode-match-property-value-ecmascript@2.2.1: {}
 
   unicode-property-aliases-ecmascript@2.2.0: {}
-
-  unique-string@2.0.0:
-    dependencies:
-      crypto-random-string: 2.0.0
 
   universalify@0.1.2: {}
 
@@ -10676,15 +9745,9 @@ snapshots:
 
   webidl-conversions@3.0.1: {}
 
-  webidl-conversions@5.0.0: {}
-
   whatwg-fetch@3.6.20: {}
 
-  whatwg-url-without-unicode@8.0.0-3:
-    dependencies:
-      buffer: 5.7.1
-      punycode: 2.3.1
-      webidl-conversions: 5.0.0
+  whatwg-url-minimum@0.1.2: {}
 
   whatwg-url@5.0.0:
     dependencies:
@@ -10707,8 +9770,6 @@ snapshots:
       assert-never: 1.4.0
       babel-walk: 3.0.0-canary-5
 
-  wonka@6.3.5: {}
-
   wrap-ansi@7.0.0:
     dependencies:
       ansi-styles: 4.3.0
@@ -10716,15 +9777,6 @@ snapshots:
       strip-ansi: 6.0.1
 
   wrappy@1.0.2: {}
-
-  write-file-atomic@4.0.2:
-    dependencies:
-      imurmurhash: 0.1.4
-      signal-exit: 3.0.7
-
-  ws@6.2.3:
-    dependencies:
-      async-limiter: 1.0.1
 
   ws@7.5.10: {}
 
@@ -10748,8 +9800,6 @@ snapshots:
 
   yallist@3.1.1: {}
 
-  yallist@5.0.0: {}
-
   yaml@2.8.2: {}
 
   yargs-parser@21.1.1: {}
@@ -10764,6 +9814,6 @@ snapshots:
       y18n: 5.0.8
       yargs-parser: 21.1.1
 
-  yocto-queue@0.1.0: {}
+  zod@3.25.76: {}
 
   zod@4.2.1: {}

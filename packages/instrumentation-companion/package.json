@@ -35,7 +35,7 @@
     "test": "node --test plugin/withRNDriverTouchCompanion.test.js"
   },
   "dependencies": {
-    "@expo/config-plugins": "~54.0.4"
+    "@expo/config-plugins": "~56.0.9"
   },
   "peerDependencies": {
     "expo": "*",
