@@ -1,5 +1,16 @@
 # @unrulysystems/rn-playwright-driver
 
+## 0.7.2
+
+### Patch Changes
+
+- [#27](https://github.com/unrulysystems/rn-playwright-driver/pull/27) [`b8eb24e`](https://github.com/unrulysystems/rn-playwright-driver/commit/b8eb24e9daef7f00605fe06dcf520089f62f58be) Thanks [@alleneubank](https://github.com/alleneubank)! - Harden the runner and driver fixtures for dev-client dogfooding.
+
+  The runner now ships a Node-compatible `rn-driver` bin, supports Android
+  Expo dev-client deep-link launch, and documents runner-owned lifecycle
+  boundaries. The driver Playwright fixture resolves `@playwright/test` from the
+  consumer project so npm and Yarn installs use the app's Playwright instance.
+
 ## 0.7.1
 
 ### Patch Changes
@@ -60,6 +71,7 @@
 ### Minor Changes
 
 - [#8](https://github.com/unrulysystems/rn-playwright-driver/pull/8) [`1fb4220`](https://github.com/unrulysystems/rn-playwright-driver/commit/1fb422097e0d7fe8d6e10e17045cb051487b6384) Thanks [@alleneubank](https://github.com/alleneubank)! - Add a scroll API so tests can reach, assert, and screenshot content below the fold (#7).
+
   - **`Locator.scrollIntoView(options?)` is now implemented** — previously it threw `LocatorError { code: "NOT_SUPPORTED" }`. It runs a bounded loop that measures the element and issues swipe gestures toward it until it is fully in the viewport. Direction is inferred from the element's measured bounds; for not-yet-rendered (virtualized) content, `options.direction` drives a blind scroll. The loop terminates on success, on the scroll boundary (no-progress detection), or after `options.maxScrolls` (default 10) — it never spins.
   - **New `device.scroll(options)`** — a low-level content-delta scroll performed as a single swipe gesture, with no element target. Anchored at the viewport center by default; the sign convention matches the web `scrollBy` (`dy > 0` scrolls down/reveals below-the-fold content, `dx > 0` scrolls right). Gestures stay within a mid-screen safe band and use a low-momentum motion so the scrolled offset approximates the requested delta.
   - New exported types `ScrollOptions` and `ScrollIntoViewOptions`.
