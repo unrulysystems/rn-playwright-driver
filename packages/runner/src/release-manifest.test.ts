@@ -26,7 +26,9 @@ describe('runner release manifest', () => {
     const pkg = manifest()
 
     expect(pkg.name).toBe('@unrulysystems/rn-playwright-driver-runner')
-    expect(pkg.files).toEqual(expect.arrayContaining(['bin', 'dist', 'LICENSE', 'README.md']))
+    expect(pkg.files).toEqual(
+      expect.arrayContaining(['bin', 'CHANGELOG.md', 'dist', 'LICENSE', 'README.md']),
+    )
     expect(pkg.files).not.toContain('src')
     expect(pkg.main).toBe('dist/index.js')
     expect(pkg.types).toBe('dist/index.d.ts')

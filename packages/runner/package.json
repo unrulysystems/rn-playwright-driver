@@ -24,6 +24,7 @@
   },
   "files": [
     "bin",
+    "CHANGELOG.md",
     "dist",
     "LICENSE",
     "README.md"
