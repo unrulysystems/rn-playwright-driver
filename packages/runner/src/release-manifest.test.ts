@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -15,6 +15,7 @@ interface RunnerManifest {
   dependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
   optionalDependencies?: Record<string, string>
+  engines?: Record<string, string>
 }
 
 function manifest(): RunnerManifest {
@@ -35,12 +36,18 @@ describe('runner release manifest', () => {
     expect(pkg.exports).toHaveProperty('.')
 
     const binPath = pkg.bin?.['rn-driver']
-    expect(binPath).toBe('bin/rn-driver.ts')
+    expect(binPath).toBe('bin/rn-driver.mjs')
+    expect(binPath).not.toMatch(/\.tsx?$/)
+    expect(existsSync(join(runnerRoot, 'bin/rn-driver.ts'))).toBe(false)
 
     const bin = readFileSync(join(runnerRoot, binPath ?? ''), 'utf8')
-    expect(bin).toContain('#!/usr/bin/env bun')
+    expect(bin).toContain('#!/usr/bin/env node')
+    expect(bin).not.toContain('#!/usr/bin/env bun')
     expect(bin).toContain("import { run } from '../dist/cli.mjs'")
     expect(statSync(join(runnerRoot, binPath ?? '')).mode & 0o111).not.toBe(0)
+
+    expect(pkg.engines?.node).toBe('>=22.0.0')
+    expect(pkg.engines?.bun).toBeUndefined()
   })
 
   it('does not ship workspace protocol dependencies', () => {

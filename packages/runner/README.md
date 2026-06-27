@@ -29,7 +29,7 @@ this package; your Playwright specs import the driver directly.)
 ## Install
 
 ```bash
-bun add -d @unrulysystems/rn-playwright-driver-runner
+npm install --save-dev @unrulysystems/rn-playwright-driver-runner
 ```
 
 This package orchestrates the platform companions; install and configure them per
@@ -130,11 +130,11 @@ never wedges the next (stale companion ports are freed at startup and teardown).
 
 ## Requirements
 
-- The `rn-driver` CLI runs under **bun**. The `bin` is a thin bun shim (mirroring
-  the driver's `rn-inspect`) so a TypeScript `rn-driver.config.ts` loads without a
-  separate compile step. Install bun: <https://bun.sh>.
+- The `rn-driver` CLI runs under **Node >= 22**. The published `bin` is a thin
+  Node shim that loads built JavaScript from `dist`, so npm/Yarn consumers do not
+  need bun or nub on `PATH`.
 - The readiness probes use the global `WebSocket`/`fetch`, so embedding the
-  library API (the `.` export) standalone requires **bun** or **Node >= 22**.
+  library API (the `.` export) standalone requires **Node >= 22**.
 - The platform companion packages installed and their Expo config plugins added.
 - `xcrun`/`xcodebuild`/`pod` (iOS) and `adb`/`gradle` (Android) on `PATH`.
 

@@ -20,7 +20,7 @@
     "directory": "packages/runner"
   },
   "bin": {
-    "rn-driver": "bin/rn-driver.ts"
+    "rn-driver": "bin/rn-driver.mjs"
   },
   "files": [
     "bin",
@@ -61,7 +61,6 @@
     "vitest": "^4.0.16"
   },
   "engines": {
-    "bun": ">=1.0.0",
     "node": ">=22.0.0"
   }
 }
