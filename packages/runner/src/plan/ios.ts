@@ -11,8 +11,10 @@ export interface PlanIosInput {
   readonly resolved: ResolvedIosTarget
   readonly playwright: PlaywrightConfig | undefined
   readonly timeoutMs: number | undefined
-  /** Spec paths/`--` passthrough appended to the Playwright invocation. */
-  readonly playwrightArgs: readonly string[]
+  /** Positional spec paths; override the config spec list when non-empty. */
+  readonly specs: readonly string[]
+  /** Args after `--`; always appended to the Playwright invocation. */
+  readonly passthrough: readonly string[]
 }
 
 /**
@@ -26,17 +28,31 @@ export interface PlanIosInput {
  * separate `0600` file referenced by `authTokenFile`; it never enters the plan.
  */
 export function planIos(input: PlanIosInput): Plan {
-  const { ios, metro, resolved, playwright, timeoutMs, playwrightArgs } = input
+  const { ios, metro, resolved, playwright, timeoutMs, specs, passthrough } = input
   const isDevClient = ios.launch.kind === 'expo-dev-client'
 
   const steps: Step[] = []
   const push = (step: Step) => steps.push(step)
 
-  // device — boot (and wait for) the target simulator.
+  // device — boot (and wait for) the target simulator. `pickSimulator` can pick a
+  // shutdown sim (newest available when none booted), so issue `simctl boot`
+  // first (REQ-IOS-001); it exits non-zero when already booted ("current state:
+  // Booted"), which is the benign precondition we want, so allowFailure. Then
+  // `bootstatus -b` blocks until the sim is fully booted.
   push({
     id: 'ios.boot',
     stage: 'device',
     description: `Boot simulator ${resolved.simName}`,
+    action: {
+      type: 'command',
+      command: xcrun(['simctl', 'boot', resolved.simUdid]),
+      allowFailure: true,
+    },
+  })
+  push({
+    id: 'ios.boot-wait',
+    stage: 'device',
+    description: `Wait for ${resolved.simName} to finish booting`,
     action: { type: 'command', command: xcrun(['simctl', 'bootstatus', resolved.simUdid, '-b']) },
   })
 
@@ -299,7 +315,7 @@ export function planIos(input: PlanIosInput): Plan {
     steps,
     cleanup,
     driverEnv: buildIosDriverEnv(resolved, metro, timeoutMs),
-    playwright: playwrightCommand(playwright, playwrightArgs),
+    playwright: playwrightCommand(playwright, specs, passthrough),
   }
 }
 

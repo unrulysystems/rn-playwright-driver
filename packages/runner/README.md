@@ -16,8 +16,12 @@ rn-driver test --platform all
 The runner owns the generic lifecycle — simulator/emulator selection, Metro
 ownership, touch-companion startup, secure token passing, cold-launch semantics,
 Hermes target wait, and cleanup — and then sets the driver's environment-variable
-contract and invokes Playwright. The core driver stays orchestration-free; this
-package depends on it, not the other way around.
+contract and invokes Playwright. The dependency direction is one-way at the
+**contract** level: the runner targets the driver's `RN_*` env-var contract and
+drives its companions, while the core driver stays orchestration-free and never
+references the runner. (The runner does not import driver code, so it carries no
+npm dependency on it — install `@unrulysystems/rn-playwright-driver` alongside
+this package; your Playwright specs import the driver directly.)
 
 > See `SPEC.md` (the contract) and `BRIEF.md` (the quality bar) in this package
 > for the full design.

@@ -147,7 +147,14 @@ function validateAndroid(android: unknown, errors: string[]): void {
   requireAndroidActivity('config.android.activity', android.activity, errors)
   optionalString('config.android.appApkPath', android.appApkPath, errors)
   optionalString('config.android.testApkPath', android.testApkPath, errors)
-  optionalString('config.android.instrumentationTarget', android.instrumentationTarget, errors)
+  // instrumentationTarget crosses `adb shell am instrument … -w <target>`; like
+  // packageName/activity, constrain it so no shell metacharacter survives.
+  if (android.instrumentationTarget !== undefined)
+    requireInstrumentationTarget(
+      'config.android.instrumentationTarget',
+      android.instrumentationTarget,
+      errors,
+    )
   if (android.gradleTasks !== undefined && !isStringArray(android.gradleTasks)) {
     errors.push('config.android.gradleTasks: expected an array of strings')
   }
@@ -235,6 +242,20 @@ function requireAndroidActivity(path: string, value: unknown, errors: string[]):
   }
   if (!ANDROID_ACTIVITY_RE.test(value))
     errors.push(`${path}: expected an activity name (e.g. .MainActivity)`)
+}
+
+// `am instrument` target: `<pkg>.test/<runner-class>`. Identifier segments only,
+// split by a single `/` — no shell metacharacters.
+const ANDROID_INSTRUMENTATION_RE =
+  /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*\/[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$/
+
+function requireInstrumentationTarget(path: string, value: unknown, errors: string[]): void {
+  if (typeof value !== 'string' || value.trim() === '') {
+    errors.push(`${path}: expected a non-empty string`)
+    return
+  }
+  if (!ANDROID_INSTRUMENTATION_RE.test(value))
+    errors.push(`${path}: expected an am instrument target (e.g. com.app.test/com.app.Runner)`)
 }
 
 function optionalString(path: string, value: unknown, errors: string[]): void {

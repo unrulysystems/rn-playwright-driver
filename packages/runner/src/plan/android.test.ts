@@ -13,7 +13,8 @@ function inputFor(overrides: Partial<PlanAndroidInput> = {}): PlanAndroidInput {
     resolved: placeholderAndroid(android, metro),
     playwright: { config: 'playwright.config.ts' },
     timeoutMs: undefined,
-    playwrightArgs: [],
+    specs: [],
+    passthrough: [],
     hermesDeviceName: '<android-device>',
     ...overrides,
   }
@@ -114,6 +115,18 @@ describe('planAndroid', () => {
       inputFor({ metro, resolved: placeholderAndroid(androidConfigFixture(), metro) }),
     )
     expect(stepIds(offDefault)).toContain('android.reverse-default')
+  })
+
+  it('REQ-AND-005: both Hermes waits carry a bounded am-start retry', () => {
+    const plan = planAndroid(inputFor())
+    for (const id of ['android.hermes-1', 'android.hermes-2']) {
+      const action = plan.steps.find((s) => s.id === id)?.action
+      expect(action?.type).toBe('probe')
+      if (action?.type === 'probe') {
+        expect(action.retry?.max).toBeGreaterThan(0)
+        expect(action.retry?.command.args.join(' ')).toContain('am start')
+      }
+    }
   })
 
   it('is pure: identical input yields a deep-equal plan', () => {

@@ -33,15 +33,22 @@ export function metroStartStep(metro: ResolvedMetro): Step {
   }
 }
 
-/** The Playwright invocation, shared by both platforms. */
+/**
+ * The Playwright invocation, shared by both platforms (REQ-CLI-005). Spec
+ * positionals and `--` passthrough are kept distinct: positional specs OVERRIDE
+ * the config's spec list, while passthrough flags are ALWAYS appended. This means
+ * a passthrough-only call (e.g. `… -- --grep @smoke`) still runs the configured
+ * specs — it no longer silently drops them.
+ */
 export function playwrightCommand(
   playwright: PlaywrightConfig | undefined,
-  extraArgs: readonly string[],
+  specs: readonly string[],
+  passthrough: readonly string[],
 ): CommandSpec {
   const args = ['playwright', 'test']
   if (playwright?.config) args.push('--config', playwright.config)
-  const specs = extraArgs.length > 0 ? extraArgs : (playwright?.specs ?? [])
-  args.push(...specs)
+  const effectiveSpecs = specs.length > 0 ? specs : (playwright?.specs ?? [])
+  args.push(...effectiveSpecs, ...passthrough)
   args.push('--reporter=line')
   return npx(args)
 }

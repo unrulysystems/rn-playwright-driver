@@ -76,12 +76,10 @@ export async function run(argv: string[]): Promise<number> {
     throw error
   }
 
-  const playwrightArgs = [...specs, ...passthrough]
-
   if (flags.dryRun) {
     for (const platform of platforms) {
       process.stdout.write(
-        `${renderPlan(buildDryRunPlan(config, platform, { playwrightArgs }))}\n\n`,
+        `${renderPlan(buildDryRunPlan(config, platform, { specs, passthrough }))}\n\n`,
       )
     }
     return 0
@@ -92,7 +90,7 @@ export async function run(argv: string[]): Promise<number> {
   let exitCode = 0
   for (const platform of platforms) {
     runner.log(`\n=== platform: ${platform} ===`)
-    const code = await runPlatform(platform, config, { runner, logDir, flags, playwrightArgs })
+    const code = await runPlatform(platform, config, { runner, logDir, flags, specs, passthrough })
     if (code !== 0) exitCode = code
   }
   return exitCode
@@ -102,7 +100,8 @@ interface RunContext {
   readonly runner: NodeProcessRunner
   readonly logDir: string
   readonly flags: CliFlags
-  readonly playwrightArgs: readonly string[]
+  readonly specs: readonly string[]
+  readonly passthrough: readonly string[]
 }
 
 async function runPlatform(
@@ -111,48 +110,34 @@ async function runPlatform(
   ctx: RunContext,
 ): Promise<number> {
   const metro = resolveMetro(config.metro)
-  let plan: Plan
-  if (platform === 'ios') {
-    if (!config.ios) throw new Error('config.ios is required for the ios platform')
-    const resolved = await resolveIosTarget(config.ios, metro, deviceOpt(ctx.flags.device))
-    plan = planIos({
-      ios: config.ios,
-      metro,
-      resolved,
-      playwright: config.playwright,
-      timeoutMs: config.timeoutMs,
-      playwrightArgs: ctx.playwrightArgs,
-    })
-  } else {
-    if (!config.android) throw new Error('config.android is required for the android platform')
-    const { resolved, deviceName } = await resolveAndroidTarget(
-      config.android,
-      metro,
-      deviceOpt(ctx.flags.device),
-    )
-    plan = planAndroid({
-      android: config.android,
-      metro,
-      resolved,
-      playwright: config.playwright,
-      timeoutMs: config.timeoutMs,
-      playwrightArgs: ctx.playwrightArgs,
-      hermesDeviceName: deviceName,
-    })
-  }
-
   const reuseMetro = metro.reuseExisting && (await metroRunning(metro.url))
   if (reuseMetro) ctx.runner.log(`Reusing Metro already running at ${metro.url}`)
 
-  // Metro preflight (REQ-METRO-003): when the runner owns Metro, the port must be
-  // free up front. metro.command pins the port, so the runner fails fast with an
-  // actionable message rather than letting Expo silently bind a different port
-  // the readiness probe would never find.
-  if (!metro.reuseExisting && (await portInUse(metro.host, metro.port))) {
+  // Metro preflight (REQ-METRO-003): if the runner is going to START Metro (it is
+  // not reusing a running one), the port must be free. This runs BEFORE device
+  // resolution so an occupied port fails fast without minting a token file or
+  // touching simctl/adb. Gating on the computed `reuseMetro` (not the bare
+  // `reuseExisting` flag) closes the case where reuseExisting is set but no
+  // packager actually answers — the runner would otherwise start Metro on an
+  // occupied port. metro.command pins the port, so the runner never auto-probes.
+  if (!reuseMetro && (await portInUse(metro.host, metro.port))) {
     process.stderr.write(
       `\nFAILED [${platform}] at stage [metro] metro.preflight: ${metro.host}:${metro.port} is already in use. Free it, set metro.reuseExisting, or choose another metro.port.\n`,
     )
     return STAGE_EXIT_CODES.metro
+  }
+
+  // Device resolution mints the per-run 0600 token file and touches simctl/adb;
+  // map its failures to the `device` stage so a missing simulator/emulator yields
+  // a staged exit code (REQ-DIAG-001), not a raw throw. The token is minted last
+  // in resolution, so a failure here does not leak a file; once the plan is built,
+  // executePlan's finally-cleanup owns token removal.
+  let plan: Plan
+  try {
+    plan = await buildPlatformPlan(platform, config, metro, ctx)
+  } catch (error) {
+    process.stderr.write(`\nFAILED [${platform}] at stage [device]: ${(error as Error).message}\n`)
+    return STAGE_EXIT_CODES.device
   }
 
   try {
@@ -180,6 +165,44 @@ async function runPlatform(
     }
     throw error
   }
+}
+
+/** Resolve the device target (effectful) and build the platform plan. */
+async function buildPlatformPlan(
+  platform: Platform,
+  config: RnDriverConfig,
+  metro: ReturnType<typeof resolveMetro>,
+  ctx: RunContext,
+): Promise<Plan> {
+  if (platform === 'ios') {
+    if (!config.ios) throw new Error('config.ios is required for the ios platform')
+    const resolved = await resolveIosTarget(config.ios, metro, deviceOpt(ctx.flags.device))
+    return planIos({
+      ios: config.ios,
+      metro,
+      resolved,
+      playwright: config.playwright,
+      timeoutMs: config.timeoutMs,
+      specs: ctx.specs,
+      passthrough: ctx.passthrough,
+    })
+  }
+  if (!config.android) throw new Error('config.android is required for the android platform')
+  const { resolved, deviceName } = await resolveAndroidTarget(
+    config.android,
+    metro,
+    deviceOpt(ctx.flags.device),
+  )
+  return planAndroid({
+    android: config.android,
+    metro,
+    resolved,
+    playwright: config.playwright,
+    timeoutMs: config.timeoutMs,
+    specs: ctx.specs,
+    passthrough: ctx.passthrough,
+    hermesDeviceName: deviceName,
+  })
 }
 
 function deviceOpt(device: string | undefined): { device?: string } {

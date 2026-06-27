@@ -1,7 +1,13 @@
 import { type ChildProcess, spawn as nodeSpawn } from 'node:child_process'
 import { createReadStream, openSync } from 'node:fs'
 import { chmod, readFile, rm, writeFile as fsWriteFile } from 'node:fs/promises'
-import type { ExecResult, ProcessRunner, ReadinessProbe, SpawnHandle } from '../plan/types'
+import type {
+  CommandSpec,
+  ExecResult,
+  ProcessRunner,
+  ReadinessProbe,
+  SpawnHandle,
+} from '../plan/types'
 
 const PROBE_INTERVAL_MS = 1_000
 
@@ -17,7 +23,7 @@ const PROBE_INTERVAL_MS = 1_000
 export class NodeProcessRunner implements ProcessRunner {
   private readonly children = new Map<string, ChildProcess>()
 
-  exec(spec: CommandLike, _opts?: { logPath?: string }): Promise<ExecResult> {
+  exec(spec: CommandSpec, _opts?: { logPath?: string }): Promise<ExecResult> {
     return new Promise((resolve, reject) => {
       const usesStdin = Boolean(spec.stdinFromFile) || spec.stdinContents !== undefined
       const child = nodeSpawn(spec.command, [...spec.args], {
@@ -37,7 +43,7 @@ export class NodeProcessRunner implements ProcessRunner {
     })
   }
 
-  spawn(spec: CommandLike, opts: { key: string; logPath: string }): SpawnHandle {
+  spawn(spec: CommandSpec, opts: { key: string; logPath: string }): SpawnHandle {
     const fd = openSync(opts.logPath, 'a')
     const child = nodeSpawn(spec.command, [...spec.args], {
       cwd: spec.cwd,
@@ -135,15 +141,6 @@ export class NodeProcessRunner implements ProcessRunner {
       })
     })
   }
-}
-
-interface CommandLike {
-  readonly command: string
-  readonly args: readonly string[]
-  readonly env?: Readonly<Record<string, string>>
-  readonly cwd?: string
-  readonly stdinFromFile?: string
-  readonly stdinContents?: string
 }
 
 function killGroup(pid: number, signal: NodeJS.Signals): void {

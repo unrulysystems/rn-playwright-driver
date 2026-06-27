@@ -60,7 +60,16 @@ export type StepAction =
       readonly mode?: number
     }
   | { readonly type: 'free-port'; readonly port: number }
-  | { readonly type: 'probe'; readonly probe: ReadinessProbe }
+  | {
+      readonly type: 'probe'
+      readonly probe: ReadinessProbe
+      /**
+       * Bounded retry: if the probe times out, re-run `command` and probe again,
+       * up to `max` extra attempts (REQ-AND-005 — re-issue `am start` when the
+       * app loses a transient Hermes-registration race instead of failing).
+       */
+      readonly retry?: { readonly command: CommandSpec; readonly max: number }
+    }
 
 /** The lifecycle stage a step belongs to. A failure is attributed to its stage. */
 export type Stage =

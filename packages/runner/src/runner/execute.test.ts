@@ -140,17 +140,45 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(result.playwrightCode).toBe(0)
   })
 
-  it('secret-safety: no executed command carries an inline *_TOKEN env value', async () => {
-    const { runner, calls } = makeRunner()
-    await executePlan(plan, runner, { logDir: '/tmp/logs' })
-    for (const call of calls) {
-      const env = call.spec?.env ?? {}
-      for (const key of Object.keys(env)) {
-        expect(key.endsWith('_TOKEN')).toBe(false)
+  it('REQ-AND-005: re-issues am start when a Hermes probe misses, then proceeds', async () => {
+    const androidPlan = buildDryRunPlan(configFixture(), 'android')
+    let hermesProbes = 0
+    const { runner, calls } = makeRunner({
+      probeResult: (p) => {
+        if (p.kind !== 'hermes-target') return true
+        hermesProbes += 1
+        // Miss the very first Hermes probe (forces one retry), then always hit.
+        return hermesProbes !== 1
+      },
+    })
+    const result = await executePlan(androidPlan, runner, { logDir: '/tmp/logs' })
+    expect(result.playwrightCode).toBe(0)
+    const amStarts = calls.filter(
+      (c) => c.type === 'exec' && (c.spec?.args.join(' ').includes('am start') ?? false),
+    )
+    // launch-1 + one retry (hermes-1 missed once) + launch-2 = 3 am-start execs.
+    expect(amStarts.length).toBe(3)
+  })
+
+  it('secret-safety: the token reference travels only by file path, never inline (ios + android)', async () => {
+    const TOKEN_REF = '<token-file>' // the placeholder standing in for the 0600 token file
+    for (const platform of ['ios', 'android'] as const) {
+      const { runner, calls } = makeRunner()
+      await executePlan(buildDryRunPlan(configFixture(), platform), runner, { logDir: '/tmp/logs' })
+      for (const call of calls) {
+        const spec = call.spec
+        if (!spec) continue
+        // The token reference must NEVER be an inline argv element...
+        expect(spec.args).not.toContain(TOKEN_REF)
+        // ...nor inlined as literal stdin contents (the token goes via stdinFromFile).
+        expect(spec.stdinContents ?? '').not.toContain(TOKEN_REF)
+        // No env KEY may be a raw `*_TOKEN` (only `*_TOKEN_FILE` path vars allowed).
+        for (const key of Object.keys(spec.env ?? {})) expect(key.endsWith('_TOKEN')).toBe(false)
+        // Any env VALUE equal to the token ref must be a *_TOKEN_FILE path var.
+        for (const [key, value] of Object.entries(spec.env ?? {})) {
+          if (value === TOKEN_REF) expect(key.endsWith('_TOKEN_FILE')).toBe(true)
+        }
       }
     }
-    // Playwright receives the token FILE path via the merged driver env.
-    const playwright = calls.find((c) => c.spec?.args.includes('playwright'))?.spec
-    expect(playwright?.env).toMatchObject({ RN_TOUCH_XCTEST_TOKEN_FILE: '<token-file>' })
   })
 })

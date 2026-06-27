@@ -117,7 +117,18 @@ async function runStep(
     case 'probe': {
       const key = processKeyForProbe(action.probe)
       const aliveFn = key === null ? () => true : () => isAlive(key)
-      const ready = await runner.probe(action.probe, aliveFn)
+      let ready = await runner.probe(action.probe, aliveFn)
+      // Bounded retry (REQ-AND-005): re-run the retry command (e.g. re-issue
+      // `am start`) and probe again, up to `max` extra attempts.
+      let remaining = action.retry?.max ?? 0
+      while (!ready && remaining > 0) {
+        remaining -= 1
+        if (action.retry) {
+          runner.log(`retry ${step.id}: re-running launch (${remaining} attempt(s) left)`)
+          await runner.exec(action.retry.command)
+        }
+        ready = await runner.probe(action.probe, aliveFn)
+      }
       if (!ready) {
         throw new StageError(
           step.stage,

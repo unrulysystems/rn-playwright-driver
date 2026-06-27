@@ -38,32 +38,35 @@ This performs a native build and starts Metro. Leave it running while you execut
 
 ## Run E2E tests
 
-From `examples/basic-app/`, use the companion-backed platform gates:
+From `examples/basic-app/`, the platform gates run through the `rn-driver` CLI,
+configured by [`rn-driver.config.ts`](./rn-driver.config.ts):
 
 ```bash
-bun run test:e2e:android
-bun run test:e2e:ios
+bun run test:e2e:android   # rn-driver test --platform android
+bun run test:e2e:ios       # rn-driver test --platform ios
+bun run test:e2e           # rn-driver test --platform all
 ```
 
-These scripts build the native app, start Metro, start the platform touch
-companion, and run the touch-oriented Playwright specs with
-`RN_TOUCH_BACKEND=instrumentation` or `RN_TOUCH_BACKEND=xctest`.
+The runner owns the whole native lifecycle — simulator/emulator selection, Metro,
+the touch companion, secure token passing, Hermes target wait, cleanup — then
+sets the driver's environment-variable contract (`RN_TOUCH_BACKEND` is
+`instrumentation` on Android, `xctest` on iOS) and invokes Playwright. You no
+longer set those variables by hand.
+
+The previous hand-rolled shell recipes remain as escape hatches:
+
+```bash
+bun run test:e2e:ios:bash       # scripts/e2e-ios-xctest.sh
+bun run test:e2e:android:bash   # scripts/e2e-android-instrumentation.sh
+```
 
 ## Driver configuration
 
-The driver reads these environment variables at test runtime:
-
-- `RN_METRO_URL` (default: `http://localhost:8081`)
-- `RN_DEVICE_ID`
-- `RN_DEVICE_NAME`
-- `RN_TIMEOUT` (ms)
-- `RN_TOUCH_BACKEND` (`instrumentation` on Android, `xctest` on iOS for the e2e gates)
-
-Example:
-
-```bash
-RN_DEVICE_NAME="iPhone" RN_TIMEOUT=60000 bun run test:e2e
-```
+The runner sets the driver's runtime environment-variable contract for you
+(`RN_METRO_URL`, `RN_DEVICE_NAME`, `RN_TIMEOUT`, `RN_TOUCH_BACKEND`, and the
+companion port/token-file vars). To change them, edit `rn-driver.config.ts`
+(e.g. `timeoutMs`, `metro`, `ios`/`android` device selection) rather than
+exporting environment variables.
 
 ## Notes
 

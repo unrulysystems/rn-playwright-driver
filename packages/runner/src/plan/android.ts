@@ -11,7 +11,10 @@ export interface PlanAndroidInput {
   readonly resolved: ResolvedAndroidTarget
   readonly playwright: PlaywrightConfig | undefined
   readonly timeoutMs: number | undefined
-  readonly playwrightArgs: readonly string[]
+  /** Positional spec paths; override the config spec list when non-empty. */
+  readonly specs: readonly string[]
+  /** Args after `--`; always appended to the Playwright invocation. */
+  readonly passthrough: readonly string[]
   /**
    * The Hermes target device name to pin (`RN_DEVICE_NAME`). Resolved at run
    * time on a real run; a placeholder for `--dry-run`.
@@ -27,7 +30,7 @@ export interface PlanAndroidInput {
  * so the value never enters argv.
  */
 export function planAndroid(input: PlanAndroidInput): Plan {
-  const { android, metro, resolved, playwright, timeoutMs, playwrightArgs, hermesDeviceName } =
+  const { android, metro, resolved, playwright, timeoutMs, specs, passthrough, hermesDeviceName } =
     input
   const serial = resolved.serial
   const gradleTasks = android.gradleTasks ?? [...DEFAULTS.androidGradleTasks]
@@ -147,9 +150,11 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     },
   })
 
-  // app-launch — first launch + wait for a Hermes target.
+  // app-launch — first launch + wait for a Hermes target. The wait re-issues
+  // `am start` on a transient registration miss (REQ-AND-005).
+  const launchCommand = launchCommandFor(android, serial)
   push(launchStep('android.launch-1', android, serial))
-  push(hermesStep('android.hermes-1', android, metro, resolved, hermesDeviceName))
+  push(hermesStep('android.hermes-1', android, metro, resolved, hermesDeviceName, launchCommand))
 
   // companion — forward the port (clearing any stale mapping first) and start
   // the instrumentation server, then wait for an authenticated hello.
@@ -212,7 +217,7 @@ export function planAndroid(input: PlanAndroidInput): Plan {
 
   // app-launch — relaunch so the app picks up the live companion, wait again.
   push(launchStep('android.launch-2', android, serial))
-  push(hermesStep('android.hermes-2', android, metro, resolved, hermesDeviceName))
+  push(hermesStep('android.hermes-2', android, metro, resolved, hermesDeviceName, launchCommand))
 
   const cleanup: CleanupAction[] = [
     {
@@ -256,8 +261,19 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     steps,
     cleanup,
     driverEnv: buildAndroidDriverEnv(resolved, metro, hermesDeviceName, timeoutMs),
-    playwright: playwrightCommand(playwright, playwrightArgs),
+    playwright: playwrightCommand(playwright, specs, passthrough),
   }
+}
+
+function launchCommandFor(android: AndroidConfig, serial: string): CommandSpec {
+  return adb(serial, [
+    'shell',
+    'am',
+    'start',
+    '-W',
+    '-n',
+    `${android.packageName}/${android.activity}`,
+  ])
 }
 
 function launchStep(id: string, android: AndroidConfig, serial: string): Step {
@@ -265,17 +281,7 @@ function launchStep(id: string, android: AndroidConfig, serial: string): Step {
     id,
     stage: 'app-launch',
     description: `Launch ${android.packageName}/${android.activity}`,
-    action: {
-      type: 'command',
-      command: adb(serial, [
-        'shell',
-        'am',
-        'start',
-        '-W',
-        '-n',
-        `${android.packageName}/${android.activity}`,
-      ]),
-    },
+    action: { type: 'command', command: launchCommandFor(android, serial) },
   }
 }
 
@@ -285,6 +291,7 @@ function hermesStep(
   metro: ResolvedMetro,
   resolved: ResolvedAndroidTarget,
   deviceNameMatch: string,
+  launchCommand: CommandSpec,
 ): Step {
   return {
     id,
@@ -300,6 +307,9 @@ function hermesStep(
         deviceNameMatch,
         timeoutMs: resolved.hermesTimeoutMs,
       },
+      // REQ-AND-005: on a transient miss, re-issue `am start` and re-probe.
+      // `appLaunchAttempts` total attempts ⇒ that many minus the first = retries.
+      retry: { command: launchCommand, max: DEFAULTS.appLaunchAttempts - 1 },
     },
   }
 }

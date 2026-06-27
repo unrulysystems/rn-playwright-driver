@@ -16,7 +16,8 @@ function inputFor(
     resolved: placeholderIos(ios, metro),
     playwright: { config: 'playwright.config.ts' },
     timeoutMs: undefined,
-    playwrightArgs: [],
+    specs: [],
+    passthrough: [],
     ...overrides,
   }
 }
@@ -49,6 +50,7 @@ describe('planIos', () => {
     const ids = stepIds(planIos(inputFor('plain')))
     expect(ids).toEqual([
       'ios.boot',
+      'ios.boot-wait',
       'ios.prebuild',
       'ios.scaffold',
       'ios.runtime-config',

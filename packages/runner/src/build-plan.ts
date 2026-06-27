@@ -12,7 +12,10 @@ export interface MetroOverrides {
 
 export interface BuildPlanOptions {
   readonly metroOverrides?: MetroOverrides
-  readonly playwrightArgs?: readonly string[]
+  /** Positional spec paths; override the config spec list when non-empty. */
+  readonly specs?: readonly string[]
+  /** Args after `--`; always appended to the Playwright invocation. */
+  readonly passthrough?: readonly string[]
 }
 
 /**
@@ -26,7 +29,8 @@ export function buildDryRunPlan(
   opts: BuildPlanOptions = {},
 ): Plan {
   const metro = resolveMetro(config.metro, opts.metroOverrides ?? {})
-  const playwrightArgs = opts.playwrightArgs ?? []
+  const specs = opts.specs ?? []
+  const passthrough = opts.passthrough ?? []
 
   if (platform === 'ios') {
     const ios = config.ios
@@ -37,7 +41,8 @@ export function buildDryRunPlan(
       resolved: placeholderIos(ios, metro),
       playwright: config.playwright,
       timeoutMs: config.timeoutMs,
-      playwrightArgs,
+      specs,
+      passthrough,
     })
   }
 
@@ -49,7 +54,8 @@ export function buildDryRunPlan(
     resolved: placeholderAndroid(android, metro),
     playwright: config.playwright,
     timeoutMs: config.timeoutMs,
-    playwrightArgs,
+    specs,
+    passthrough,
     hermesDeviceName: '<android-device>',
   })
 }
