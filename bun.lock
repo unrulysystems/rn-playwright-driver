@@ -22,6 +22,7 @@
         "@unrulysystems/rn-driver-view-tree": "workspace:*",
         "@unrulysystems/rn-playwright-driver": "workspace:*",
         "@unrulysystems/rn-playwright-driver-instrumentation-companion": "workspace:*",
+        "@unrulysystems/rn-playwright-driver-runner": "workspace:*",
         "@unrulysystems/rn-playwright-driver-xctest-companion": "workspace:*",
         "expo": "~54.0.30",
         "expo-status-bar": "~3.0.9",
@@ -119,6 +120,22 @@
         "react-native": "*",
       },
     },
+    "packages/runner": {
+      "name": "@unrulysystems/rn-playwright-driver-runner",
+      "version": "0.1.0",
+      "bin": {
+        "rn-driver": "bin/rn-driver.ts",
+      },
+      "devDependencies": {
+        "@types/node": "^25.0.3",
+        "@typescript/native-preview": "^7.0.0-dev.20251227.1",
+        "jscpd": "^4.0.5",
+        "knip": "^5.78.0",
+        "tsup": "^8.5.1",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.16",
+      },
+    },
     "packages/screenshot": {
       "name": "@unrulysystems/rn-driver-screenshot",
       "version": "0.1.1",
@@ -167,7 +184,7 @@
     },
     "packages/xctest-companion": {
       "name": "@unrulysystems/rn-playwright-driver-xctest-companion",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "bin": {
         "rn-driver-xctest-scaffold": "bin/scaffold.js",
       },
@@ -978,6 +995,8 @@
     "@unrulysystems/rn-playwright-driver": ["@unrulysystems/rn-playwright-driver@workspace:packages/driver"],
 
     "@unrulysystems/rn-playwright-driver-instrumentation-companion": ["@unrulysystems/rn-playwright-driver-instrumentation-companion@workspace:packages/instrumentation-companion"],
+
+    "@unrulysystems/rn-playwright-driver-runner": ["@unrulysystems/rn-playwright-driver-runner@workspace:packages/runner"],
 
     "@unrulysystems/rn-playwright-driver-xctest-companion": ["@unrulysystems/rn-playwright-driver-xctest-companion@workspace:packages/xctest-companion"],
 

@@ -1,0 +1,64 @@
+{
+  "name": "@unrulysystems/rn-playwright-driver-runner",
+  "version": "0.1.0",
+  "description": "Config-backed cross-platform e2e lifecycle runner CLI for rn-playwright-driver",
+  "keywords": [
+    "android",
+    "cli",
+    "e2e",
+    "ios",
+    "playwright",
+    "react-native",
+    "testing"
+  ],
+  "homepage": "https://github.com/unrulysystems/rn-playwright-driver#readme",
+  "license": "MIT",
+  "author": "0xbigboss",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unrulysystems/rn-playwright-driver.git",
+    "directory": "packages/runner"
+  },
+  "bin": {
+    "rn-driver": "bin/rn-driver.ts"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsgo --noEmit",
+    "knip": "knip",
+    "cpd": "jscpd ."
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@typescript/native-preview": "^7.0.0-dev.20251227.1",
+    "jscpd": "^4.0.5",
+    "knip": "^5.78.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
