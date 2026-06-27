@@ -20,7 +20,7 @@ This checklist reflects the current source state and avoids older claims about a
 - [ ] Add device-backed smoke coverage for `@unrulysystems/rn-driver-touch` on iOS DEBUG and Android Instrumentation.
 - [ ] Document the Android native-module launch requirement: plain app launches do not provide `Instrumentation`.
 - [ ] Decide companion package publishing scope: reference source only, or package scripts that start/attach companions.
-- [ ] Run `bun run check` at repo root after the above changes.
+- [ ] Run `nub run check` at repo root after the above changes.
 
 ## Explicit Non-Goals For This Release
 

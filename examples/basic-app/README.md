@@ -12,7 +12,7 @@ Minimal Expo app used to validate the RN Playwright Driver end-to-end. It ships 
 ## Prerequisites
 
 - Node.js 18+
-- Bun
+- nub
 - Expo tooling installed
 - A simulator/device with Hermes debugging enabled
 
@@ -21,17 +21,17 @@ Minimal Expo app used to validate the RN Playwright Driver end-to-end. It ships 
 From repo root:
 
 ```bash
-bun install
+nub ci
 ```
 
 ## Run the app
 
-From `example/`:
+From `examples/basic-app/`:
 
 ```bash
-bun run ios
+nub run ios
 # or
-bun run android
+nub run android
 ```
 
 This performs a native build and starts Metro. Leave it running while you execute tests.
@@ -42,9 +42,9 @@ From `examples/basic-app/`, the platform gates run through the `rn-driver` CLI,
 configured by [`rn-driver.config.ts`](./rn-driver.config.ts):
 
 ```bash
-bun run test:e2e:android   # rn-driver test --platform android
-bun run test:e2e:ios       # rn-driver test --platform ios
-bun run test:e2e           # rn-driver test --platform all
+nub run test:e2e:android   # rn-driver test --platform android
+nub run test:e2e:ios       # rn-driver test --platform ios
+nub run test:e2e           # rn-driver test --platform all
 ```
 
 The runner owns the whole native lifecycle — simulator/emulator selection, Metro,
@@ -56,8 +56,8 @@ longer set those variables by hand.
 The previous hand-rolled shell recipes remain as escape hatches:
 
 ```bash
-bun run test:e2e:ios:bash       # scripts/e2e-ios-xctest.sh
-bun run test:e2e:android:bash   # scripts/e2e-android-instrumentation.sh
+nub run test:e2e:ios:bash       # scripts/e2e-ios-xctest.sh
+nub run test:e2e:android:bash   # scripts/e2e-android-instrumentation.sh
 ```
 
 ## Driver configuration
@@ -75,12 +75,12 @@ exporting environment variables.
 
 ## Useful scripts
 
-From `example/`:
+From `examples/basic-app/`:
 
 ```bash
-bun run check
-bun run lint
-bun run typecheck
+nub run typecheck
+nub run knip
+nub run cpd
 ```
 
 ## Troubleshooting

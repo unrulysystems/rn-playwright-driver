@@ -8,9 +8,11 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
 
-    # bun-overlay supplies an official-binary `bun` that shadows nixpkgs'.
-    bun-overlay = {
-      url = "github:0xbigboss/bun-overlay";
+    # nub-overlay supplies nub from the official prebuilt release tarballs. It
+    # preserves nub's bin/ + runtime/ sibling layout, so TypeScript execution
+    # works the same way inside and outside Nix.
+    nub-overlay = {
+      url = "github:alleneubank/nub-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
@@ -26,11 +28,11 @@
     self,
     nixpkgs,
     flake-utils,
-    bun-overlay,
+    nub-overlay,
     ...
   } @ inputs: let
     overlays = [
-      bun-overlay.overlays.default
+      nub-overlay.overlays.default
     ];
 
     systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
@@ -46,18 +48,16 @@
         devShells.default = pkgs.mkShell {
           name = "rn-playwright-driver-dev";
           nativeBuildInputs = [
-            pkgs.bun
-            pkgs.fnm
+            pkgs.nub
             pkgs.jq
             pkgs.ripgrep
             pkgs.coreutils
             pkgs.lefthook
           ];
+          # nub auto-provisions Node from .node-version on first run, so there is
+          # no version-manager shell hook (fnm/corepack are gone).
           shellHook =
-            ''
-              eval "$(fnm env --use-on-cd --corepack-enabled --shell bash)"
-            ''
-            + (pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+            (pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
               export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
             '')
             + (pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''

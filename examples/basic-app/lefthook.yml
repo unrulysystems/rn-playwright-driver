@@ -5,18 +5,18 @@ pre-commit:
   parallel: true
   commands:
     typecheck:
-      run: bun run typecheck
+      run: nub run typecheck
     lint:
-      run: bun run lint
+      run: nub run lint
     cpd:
-      run: bun run cpd
+      run: nub run cpd
 
 pre-push:
   parallel: true
   commands:
     typecheck:
-      run: bun run typecheck
+      run: nub run typecheck
     knip:
-      run: bun run knip
+      run: nub run knip
     lint:
-      run: bun run lint
+      run: nub run lint

@@ -1,4 +1,5 @@
-const { describe, expect, test } = require('bun:test')
+const assert = require('node:assert/strict')
+const { describe, test } = require('node:test')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
@@ -7,7 +8,7 @@ const appPlugin = require('../app.plugin')
 
 describe('withRNDriverTouchCompanion plugin helpers', () => {
   test('app plugin exports the companion config plugin', () => {
-    expect(appPlugin).toBe(plugin)
+    assert.equal(appPlugin, plugin)
   })
 
   test('exported app plugin registers and runs the Android dangerous mod', async () => {
@@ -29,9 +30,9 @@ describe('withRNDriverTouchCompanion plugin helpers', () => {
         android: { package: 'com.example.app' },
       })
 
-      expect(config.mods.android.manifest).toBeFunction()
-      expect(config.mods.android.appBuildGradle).toBeFunction()
-      expect(config.mods.android.dangerous).toBeFunction()
+      assert.equal(typeof config.mods.android.manifest, 'function')
+      assert.equal(typeof config.mods.android.appBuildGradle, 'function')
+      assert.equal(typeof config.mods.android.dangerous, 'function')
 
       await config.mods.android.dangerous({
         ...config,
@@ -44,11 +45,11 @@ describe('withRNDriverTouchCompanion plugin helpers', () => {
       )
       const manifest = fs.readFileSync(manifestPath, 'utf8')
 
-      expect(fs.existsSync(copiedCompanion)).toBe(true)
-      expect(manifest).toContain('android.permission.ACCESS_NETWORK_STATE')
-      expect(manifest).toContain('android.permission.INTERNET')
-      expect(manifest).toContain('com.rndriver.touchcompanion.RNDriverTouchCompanion')
-      expect(manifest).toContain('android:targetPackage="com.example.app"')
+      assert.equal(fs.existsSync(copiedCompanion), true)
+      assert.equal(manifest.includes('android.permission.ACCESS_NETWORK_STATE'), true)
+      assert.equal(manifest.includes('android.permission.INTERNET'), true)
+      assert.equal(manifest.includes('com.rndriver.touchcompanion.RNDriverTouchCompanion'), true)
+      assert.equal(manifest.includes('android:targetPackage="com.example.app"'), true)
     } finally {
       fs.rmSync(projectRoot, { force: true, recursive: true })
     }
@@ -57,12 +58,18 @@ describe('withRNDriverTouchCompanion plugin helpers', () => {
   test('generates an androidTest manifest for the companion without taking over the app runner', () => {
     const manifest = plugin.androidTestManifest('com.example.app')
 
-    expect(manifest).toContain('package="com.example.app.test"')
-    expect(manifest).toContain('android:name="com.rndriver.touchcompanion.RNDriverTouchCompanion"')
-    expect(manifest).toContain('android:targetPackage="com.example.app"')
-    expect(manifest).toContain('<uses-permission android:name="android.permission.INTERNET" />')
-    expect(manifest).not.toContain('testInstrumentationRunner')
-    expect(manifest).not.toContain('androidx.test.runner.AndroidJUnitRunner')
+    assert.equal(manifest.includes('package="com.example.app.test"'), true)
+    assert.equal(
+      manifest.includes('android:name="com.rndriver.touchcompanion.RNDriverTouchCompanion"'),
+      true,
+    )
+    assert.equal(manifest.includes('android:targetPackage="com.example.app"'), true)
+    assert.equal(
+      manifest.includes('<uses-permission android:name="android.permission.INTERNET" />'),
+      true,
+    )
+    assert.equal(manifest.includes('testInstrumentationRunner'), false)
+    assert.equal(manifest.includes('androidx.test.runner.AndroidJUnitRunner'), false)
   })
 
   test('merges companion entries into an existing androidTest manifest', () => {
@@ -77,11 +84,14 @@ describe('withRNDriverTouchCompanion plugin helpers', () => {
 
     const result = plugin.addCompanionToAndroidTestManifest(existing, 'com.example.app')
 
-    expect(result).toContain('android.permission.ACCESS_NETWORK_STATE')
-    expect(result).toContain('android.permission.INTERNET')
-    expect(result).toContain('android:name="androidx.test.runner.AndroidJUnitRunner"')
-    expect(result).toContain('android:name="com.rndriver.touchcompanion.RNDriverTouchCompanion"')
-    expect(result).toContain('android:targetPackage="com.example.app"')
+    assert.equal(result.includes('android.permission.ACCESS_NETWORK_STATE'), true)
+    assert.equal(result.includes('android.permission.INTERNET'), true)
+    assert.equal(result.includes('android:name="androidx.test.runner.AndroidJUnitRunner"'), true)
+    assert.equal(
+      result.includes('android:name="com.rndriver.touchcompanion.RNDriverTouchCompanion"'),
+      true,
+    )
+    assert.equal(result.includes('android:targetPackage="com.example.app"'), true)
   })
 
   test('does not duplicate companion manifest entries', () => {
@@ -91,8 +101,8 @@ describe('withRNDriverTouchCompanion plugin helpers', () => {
     )
     const twice = plugin.addCompanionToAndroidTestManifest(once, 'com.example.app')
 
-    expect(twice.match(/android\.permission\.INTERNET/g)).toHaveLength(1)
-    expect(twice.match(/RNDriverTouchCompanion/g)).toHaveLength(1)
+    assert.equal(twice.match(/android\.permission\.INTERNET/g)?.length ?? 0, 1)
+    assert.equal(twice.match(/RNDriverTouchCompanion/g)?.length ?? 0, 1)
   })
 
   test('adds androidTest dependencies to an existing dependencies block', () => {
@@ -109,25 +119,25 @@ describe('withRNDriverTouchCompanion plugin helpers', () => {
 
     const result = plugin.addAndroidTestGradleConfig(gradle)
 
-    expect(result).toContain('implementation "com.facebook.react:react-android"')
-    expect(result).toContain('androidTestImplementation "androidx.test:runner:1.6.2"')
-    expect(result).toContain('androidTestImplementation "androidx.test:core:1.6.1"')
-    expect(result).not.toContain('testInstrumentationRunner')
+    assert.equal(result.includes('implementation "com.facebook.react:react-android"'), true)
+    assert.equal(result.includes('androidTestImplementation "androidx.test:runner:1.6.2"'), true)
+    assert.equal(result.includes('androidTestImplementation "androidx.test:core:1.6.1"'), true)
+    assert.equal(result.includes('testInstrumentationRunner'), false)
   })
 
   test('creates a dependencies block when the app build file does not have one', () => {
     const result = plugin.addAndroidTestGradleConfig('android { namespace "com.example.app" }\n')
 
-    expect(result).toContain('dependencies {')
-    expect(result).toContain('androidTestImplementation "androidx.test:runner:1.6.2"')
-    expect(result).toContain('androidTestImplementation "androidx.test:core:1.6.1"')
+    assert.equal(result.includes('dependencies {'), true)
+    assert.equal(result.includes('androidTestImplementation "androidx.test:runner:1.6.2"'), true)
+    assert.equal(result.includes('androidTestImplementation "androidx.test:core:1.6.1"'), true)
   })
 
   test('does not duplicate generated Gradle dependencies', () => {
     const once = plugin.addAndroidTestGradleConfig('dependencies {\n}\n')
     const twice = plugin.addAndroidTestGradleConfig(once)
 
-    expect(twice.match(/androidx\.test:runner/g)).toHaveLength(1)
-    expect(twice.match(/androidx\.test:core/g)).toHaveLength(1)
+    assert.equal(twice.match(/androidx\.test:runner/g)?.length ?? 0, 1)
+    assert.equal(twice.match(/androidx\.test:core/g)?.length ?? 0, 1)
   })
 })

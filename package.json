@@ -6,16 +6,19 @@
     "examples/*"
   ],
   "scripts": {
-    "build": "bun run --filter '*' build",
+    "build": "nub run -r --filter './packages/*' build",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
-    "test": "bun run --filter '@unrulysystems/*' test",
-    "typecheck": "bun run --filter '@unrulysystems/*' typecheck && bun run --filter 'examples-*' typecheck",
-    "knip": "bun run --filter '@unrulysystems/rn-playwright-driver' knip && bun run --filter '@unrulysystems/rn-playwright-driver-runner' knip && bun run --filter 'examples-*' knip",
-    "cpd": "bun run --filter '@unrulysystems/rn-playwright-driver' cpd && bun run --filter '@unrulysystems/rn-playwright-driver-runner' cpd && bun run --filter 'examples-*' cpd",
-    "check": "bun run typecheck && bun run lint && bun run format:check && bun run test",
+    "test": "nub run --filter '@unrulysystems/rn-playwright-driver' test && nub run --filter '@unrulysystems/rn-playwright-driver-runner' test && nub run --filter '@unrulysystems/rn-playwright-driver-instrumentation-companion' test && nub run --filter '@unrulysystems/rn-playwright-driver-xctest-companion' test",
+    "typecheck": "nub run --filter '@unrulysystems/rn-playwright-driver' typecheck && nub run --filter '@unrulysystems/rn-playwright-driver-runner' typecheck && nub run --filter '@unrulysystems/rn-driver-lifecycle' typecheck && nub run --filter '@unrulysystems/rn-driver-touch' typecheck && nub run --filter '@unrulysystems/rn-driver-screenshot' typecheck && nub run --filter '@unrulysystems/rn-driver-shared-types' typecheck && nub run --filter '@unrulysystems/rn-driver-view-tree' typecheck && nub run --filter 'examples-basic-app' typecheck",
+    "knip": "nub run --filter '@unrulysystems/rn-playwright-driver' knip && nub run --filter '@unrulysystems/rn-playwright-driver-runner' knip && nub run --filter 'examples-basic-app' knip",
+    "cpd": "nub run --filter '@unrulysystems/rn-playwright-driver' cpd && nub run --filter '@unrulysystems/rn-playwright-driver-runner' cpd && nub run --filter 'examples-basic-app' cpd",
+    "check": "nub run typecheck && nub run lint && nub run format:check && nub run test",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "nub run build && changeset publish",
     "prepare": "lefthook install"
   },
   "devDependencies": {
@@ -24,5 +27,13 @@
     "lefthook": "^2.0.13",
     "oxfmt": "^0.27.0",
     "oxlint": "^1.68.0"
-  }
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "nub",
+      "version": "^0.2.3",
+      "onFail": "warn"
+    }
+  },
+  "packageManager": "nub@0.2.3"
 }

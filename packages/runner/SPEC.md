@@ -8,7 +8,7 @@ React Native Playwright tests on iOS and Android.
 > two-track plan (runner package + example recipe hardening, in parallel) are
 > ratified. `BRIEF.md` (colocated) is the quality bar. Implementation builds the
 > headless-verifiable interior (config, pure planners, executor, CLI) to a
-> terminal `bun run check`; the live e2e on a real simulator/emulator is the
+> terminal `nub run check`; the live e2e on a real simulator/emulator is the
 > human-attended oracle (Boundary).
 
 ## Problem
@@ -357,12 +357,12 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
       `simctl launch --initialUrl` with terminate-first; the 300s companion
       readiness default is configurable; the companion port is freed at startup
       and in cleanup (REQ-IOS-007/008, REQ-CLEAN-002).
-- [x] Example app migrated to `rn-driver.config.ts`; `bun run test:e2e:ios` and
-      `bun run test:e2e:android` pass through the runner on a real
+- [x] Example app migrated to `rn-driver.config.ts`; `nub run test:e2e:ios` and
+      `nub run test:e2e:android` pass through the runner on a real
       simulator/emulator (the independent oracle).
 - [x] Re-run idempotency: two consecutive runner invocations both pass without
       manual port/process cleanup between them (REQ-CLEAN-001).
-- [x] `bun run check` (typecheck + lint + format + unit tests) is green for the
+- [x] `nub run check` (typecheck + lint + format + unit tests) is green for the
       new package.
 - [x] README/docs config examples typecheck against the exported config schema.
 

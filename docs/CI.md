@@ -123,8 +123,8 @@ ports/processes:
 
 ```bash
 cd examples/basic-app
-bun run test:e2e:android # RN_TOUCH_BACKEND=instrumentation
-bun run test:e2e:ios     # RN_TOUCH_BACKEND=xctest
+nub run test:e2e:android # RN_TOUCH_BACKEND=instrumentation
+nub run test:e2e:ios     # RN_TOUCH_BACKEND=xctest
 ```
 
 Those commands are the official example confidence gates. They replace older
@@ -152,27 +152,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Setup nub
+        uses: nubjs/setup-nub@v0
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: nub ci
 
       - name: Run XCTest companion E2E
         working-directory: examples/basic-app
-        run: bun run test:e2e:ios
+        run: nub run test:e2e:ios
 
   android-e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Setup nub
+        uses: nubjs/setup-nub@v0
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -184,7 +180,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: nub ci
 
       - name: Run instrumentation companion E2E
         uses: reactivecircus/android-emulator-runner@v2
@@ -195,7 +191,7 @@ jobs:
           profile: pixel_6
           script: |
             cd examples/basic-app
-            bun run test:e2e:android
+            nub run test:e2e:android
 ```
 
 ## Environment Variables

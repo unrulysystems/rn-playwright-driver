@@ -63,12 +63,12 @@ adopted.
 ## Commands
 
 ```bash
-bun install
-bun run check
+nub ci
+nub run check
 
 # E2E (requires Metro + device/simulator)
-cd example
-bun run test:e2e
+cd examples/basic-app
+nub run test:e2e
 ```
 
 ## Constraints

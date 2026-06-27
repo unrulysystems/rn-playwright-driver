@@ -30,8 +30,8 @@ failure, a message that names the stage that broke.
 
 ## Floors (the gate, not the ceiling — each with its measurement)
 
-- **Both example e2e gates pass through the runner.** `bun run test:e2e:ios` and
-  `bun run test:e2e:android` (rewired to `rn-driver test`) are green on a real
+- **Both example e2e gates pass through the runner.** `nub run test:e2e:ios` and
+  `nub run test:e2e:android` (rewired to `rn-driver test`) are green on a real
   simulator/emulator. _Measured by:_ the live e2e run (the oracle).
 - **Planner is pure and unit-pinned.** `planIos`/`planAndroid` emit the expected
   ordered Steps for representative configs (both launch kinds, `--skip-build`).
@@ -51,7 +51,7 @@ failure, a message that names the stage that broke.
 - **Dry-run is side-effect-free.** `--dry-run` prints the full plan and exits 0
   having spawned nothing and touched no device. _Measured by:_ a test asserting
   the mock runner received zero effectful calls.
-- **`bun run check` green** for the new package (typecheck + lint + format + unit).
+- **`nub run check` green** for the new package (typecheck + lint + format + unit).
 
 ## Oracle
 

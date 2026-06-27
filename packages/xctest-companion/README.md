@@ -103,7 +103,7 @@ The example script exposes the same attach flow with environment variables:
 ```bash
 RN_TOUCH_XCTEST_LAUNCH=attach \
 RN_TOUCH_XCTEST_APP_LAUNCH_URL='exp+<scheme>://expo-development-client/?url=http://127.0.0.1:8081' \
-bun run test:e2e:ios
+nub run test:e2e:ios
 ```
 
 Build the app, then start the companion UI test in the background:
@@ -129,7 +129,7 @@ Run Playwright against the companion:
 RN_TOUCH_BACKEND=xctest \
 RN_TOUCH_XCTEST_PORT="$RN_TOUCH_XCTEST_PORT" \
 RN_TOUCH_XCTEST_TOKEN_FILE="$RN_TOUCH_XCTEST_TOKEN_FILE" \
-bun run test:e2e
+nub run test:e2e
 ```
 
 For an end-to-end automation script, use
