@@ -13,28 +13,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Setup nub
+        uses: nubjs/setup-nub@v0
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: nub ci
 
       - name: Run typecheck
-        run: bun run typecheck
+        run: nub run typecheck
 
       - name: Run lint
-        run: bun run lint
+        run: nub run lint
 
       - name: Check formatting
-        run: bun run format:check
+        run: nub run format:check
 
       - name: Run tests
-        run: bun run test
+        run: nub run test
 
       - name: Check code duplication
-        run: bun run cpd
+        run: nub run cpd
 
   build:
     name: Build
@@ -42,19 +40,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Setup nub
+        uses: nubjs/setup-nub@v0
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: nub ci
 
-      - name: Build driver package
-        run: bun run --filter '@unrulysystems/rn-playwright-driver' build
+      - name: Build packages
+        run: nub run build
 
   # E2E tests require a real device/simulator and are run locally or on self-hosted runners.
   # Official example confidence gates:
-  # - cd examples/basic-app && bun run test:e2e:android  # Android instrumentation companion
-  # - cd examples/basic-app && bun run test:e2e:ios      # iOS XCTest companion
+  # - cd examples/basic-app && nub run test:e2e:android  # Android instrumentation companion
+  # - cd examples/basic-app && nub run test:e2e:ios      # iOS XCTest companion
   # See docs/CI.md for iOS Simulator and Android Emulator setup.

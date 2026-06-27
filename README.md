@@ -307,8 +307,8 @@ up the companion process/ports:
 
 ```bash
 cd examples/basic-app
-bun run test:e2e:android # Android instrumentation companion
-bun run test:e2e:ios     # iOS XCTest companion
+nub run test:e2e:android # Android instrumentation companion
+nub run test:e2e:ios     # iOS XCTest companion
 ```
 
 For your app, the same shape applies:
@@ -320,8 +320,8 @@ For your app, the same shape applies:
 5. Run Playwright with the matching backend:
 
 ```bash
-RN_TOUCH_BACKEND=instrumentation bun run test:e2e # Android
-RN_TOUCH_BACKEND=xctest bun run test:e2e          # iOS
+RN_TOUCH_BACKEND=instrumentation nub run test:e2e # Android
+RN_TOUCH_BACKEND=xctest nub run test:e2e          # iOS
 ```
 
 See
@@ -335,15 +335,15 @@ token environment variables in local scripts.
 ## Development (Monorepo)
 
 ```bash
-bun install
-bun run check
+nub ci
+nub run check
 ```
 
 Useful scripts (root):
 
-- `bun run build` – build all packages
-- `bun run lint` / `bun run typecheck` – quality checks
-- `bun run check` – typecheck + lint + format:check + test
+- `nub run build` – build all packages
+- `nub run lint` / `nub run typecheck` – quality checks
+- `nub run check` – typecheck + lint + format:check + test
 
 ## Development Notes
 

@@ -7,7 +7,7 @@
  * is the gate that proves it end-to-end.
  *
  * NOTE: requires (same as the other specs here):
- * 1. The RN app running with Metro (bun start)
+ * 1. The RN app running with Metro (nub start)
  * 2. A device/simulator connected with Hermes debugging enabled
  * 3. Native modules installed (view-tree, screenshot, lifecycle)
  *

@@ -1,7 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["rn-driver.config.ts"],
   "project": ["**/*.{ts,tsx}"],
   "ignore": ["node_modules/**", ".expo/**"],
+  "ignoreBinaries": ["oxlint"],
   "ignoreDependencies": [
     "@unrulysystems/rn-playwright-driver",
     "@unrulysystems/rn-driver-touch",

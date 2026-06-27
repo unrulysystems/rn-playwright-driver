@@ -73,8 +73,8 @@ The repo example app owns complete companion-backed scripts:
 
 ```bash
 cd examples/basic-app
-bun run test:e2e:android
-bun run test:e2e:ios
+nub run test:e2e:android
+nub run test:e2e:ios
 ```
 
 ## Requirements

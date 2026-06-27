@@ -2,11 +2,11 @@
  * Example E2E test for the counter app using @unrulysystems/rn-playwright-driver.
  *
  * NOTE: These tests require:
- * 1. The RN app running with Metro (bun start)
+ * 1. The RN app running with Metro (nub start)
  * 2. A device connected with Hermes debugging enabled
  * 3. Native modules installed (view-tree, screenshot, lifecycle, touch)
  *
- * Run with: bun run test:e2e
+ * Run with: nub run test:e2e
  */
 
 import { expect, expectLocator, test } from '@unrulysystems/rn-playwright-driver/test'

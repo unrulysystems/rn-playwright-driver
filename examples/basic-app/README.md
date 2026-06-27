@@ -12,7 +12,7 @@ Minimal Expo app used to validate the RN Playwright Driver end-to-end. It ships 
 ## Prerequisites
 
 - Node.js 18+
-- Bun
+- nub
 - Expo tooling installed
 - A simulator/device with Hermes debugging enabled
 
@@ -21,49 +21,65 @@ Minimal Expo app used to validate the RN Playwright Driver end-to-end. It ships 
 From repo root:
 
 ```bash
-bun install
+nub ci
 ```
 
 ## Run the app
 
-From `example/`:
+From `examples/basic-app/`:
 
 ```bash
-bun run ios
+nub run ios
 # or
-bun run android
+nub run android
 ```
 
 This performs a native build and starts Metro. Leave it running while you execute tests.
 
 ## Run E2E tests
 
-From `examples/basic-app/`, use the companion-backed platform gates:
+From `examples/basic-app/`, the platform gates run through the `rn-driver` CLI,
+configured by [`rn-driver.config.ts`](./rn-driver.config.ts):
 
 ```bash
-bun run test:e2e:android
-bun run test:e2e:ios
+nub run test:e2e:android   # rn-driver test --platform android
+nub run test:e2e:ios       # rn-driver test --platform ios
+nub run test:e2e           # rn-driver test --platform all
 ```
 
-These scripts build the native app, start Metro, start the platform touch
-companion, and run the touch-oriented Playwright specs with
-`RN_TOUCH_BACKEND=instrumentation` or `RN_TOUCH_BACKEND=xctest`.
+The runner owns the whole native lifecycle — simulator/emulator selection, Metro,
+the touch companion, secure token passing, Hermes target wait, cleanup — then
+sets the driver's environment-variable contract (`RN_TOUCH_BACKEND` is
+`instrumentation` on Android, `xctest` on iOS) and invokes Playwright. You no
+longer set those variables by hand. The Playwright config should not use
+`globalSetup` or `globalTeardown` to start Metro, launch the app, manage the
+companion, or clean up runner-owned companion state.
+
+The previous hand-rolled shell recipes remain as escape hatches:
+
+```bash
+nub run test:e2e:ios:bash       # scripts/e2e-ios-xctest.sh
+nub run test:e2e:android:bash   # scripts/e2e-android-instrumentation.sh
+```
 
 ## Driver configuration
 
-The driver reads these environment variables at test runtime:
+The runner sets the driver's runtime environment-variable contract for you
+(`RN_METRO_URL`, `RN_DEVICE_NAME`, `RN_TIMEOUT`, `RN_TOUCH_BACKEND`, and the
+companion port/token-file vars). To change them, edit `rn-driver.config.ts`
+(e.g. `timeoutMs`, `metro`, `ios`/`android` device selection) rather than
+exporting environment variables.
 
-- `RN_METRO_URL` (default: `http://localhost:8081`)
-- `RN_DEVICE_ID`
-- `RN_DEVICE_NAME`
-- `RN_TIMEOUT` (ms)
-- `RN_TOUCH_BACKEND` (`instrumentation` on Android, `xctest` on iOS for the e2e gates)
+This app is configured as a plain Expo/RN app, not an Expo dev-client app:
+`ios.launch.kind` and `android.launch.kind` are both `plain`. Dev-client projects
+need the runner package docs' extra launch config, including an Android
+`scheme`. `launch.initialUrl` defaults to the resolved Metro URL for dev-client
+launches.
 
-Example:
-
-```bash
-RN_DEVICE_NAME="iPhone" RN_TIMEOUT=60000 bun run test:e2e
-```
+`expo prebuild` runs inside the runner process and inherits that process
+environment. The intended stable marker for test-only app config is `RN_E2E=1`,
+but the runner does not emit it yet; do not rely on it as implemented behavior in
+this example.
 
 ## Notes
 
@@ -72,12 +88,12 @@ RN_DEVICE_NAME="iPhone" RN_TIMEOUT=60000 bun run test:e2e
 
 ## Useful scripts
 
-From `example/`:
+From `examples/basic-app/`:
 
 ```bash
-bun run check
-bun run lint
-bun run typecheck
+nub run typecheck
+nub run knip
+nub run cpd
 ```
 
 ## Troubleshooting

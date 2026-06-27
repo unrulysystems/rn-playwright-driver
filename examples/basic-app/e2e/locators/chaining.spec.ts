@@ -4,7 +4,7 @@
  * Tests chaining methods: getByTestId, getByText, getByRole, nth, first, last.
  *
  * NOTE: These tests require:
- * 1. The RN app running with Metro (bun start)
+ * 1. The RN app running with Metro (nub start)
  * 2. A device connected with Hermes debugging enabled
  * 3. Native modules installed (view-tree, screenshot, lifecycle)
  */
