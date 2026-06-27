@@ -1,5 +1,5 @@
 import type { IosConfig, PlaywrightConfig } from '../config'
-import { DEFAULTS } from '../constants'
+import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
 import { buildIosDriverEnv } from './env'
 import type { ResolvedIosTarget, ResolvedMetro } from './resolved'
 import { cmd, metroStartStep, npx, playwrightCommand } from './shared'
@@ -251,6 +251,9 @@ export function planIos(input: PlanIosInput): Plan {
         tokenFile: resolved.tokenFile,
         timeoutMs: resolved.companionReadyTimeoutMs,
       },
+      // Abort early if `xcodebuild test` reports a build/test failure (it lingers "alive" after, so
+      // the 300s readiness budget would otherwise be burnt waiting for a companion that cannot bind).
+      failureMarkers: COMPANION_FAILURE_MARKERS.ios,
     },
   })
 

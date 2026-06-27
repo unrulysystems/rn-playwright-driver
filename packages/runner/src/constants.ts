@@ -57,3 +57,18 @@ export const DEFAULTS = {
 
 /** Placeholder shown in `--dry-run` output wherever a secret file path appears. */
 export const SECRET_PLACEHOLDER = '<token-file>'
+
+/**
+ * Terminal markers in a companion process's captured log that mean the build/test will NOT come up,
+ * so the companion-ready probe must abort EARLY instead of waiting out the (cold-build) timeout. A
+ * failed `xcodebuild test` prints `** BUILD FAILED **` / `** TEST FAILED **` and then lingers for
+ * tens of seconds doing reporting/cleanup — so the process stays "alive" and the readiness probe
+ * would otherwise burn the full `iosCompanionReadyTimeoutMs` (300s) before failing. `am instrument`
+ * prints `INSTRUMENTATION_FAILED` / `Process crashed` when the companion cannot start. These are the
+ * substrings the probe scans for; the planners attach the per-platform set to the companion-ready
+ * probe step (see ios.ts / android.ts).
+ */
+export const COMPANION_FAILURE_MARKERS = {
+  ios: ['** BUILD FAILED **', '** TEST FAILED **'],
+  android: ['INSTRUMENTATION_FAILED', 'Process crashed'],
+} as const

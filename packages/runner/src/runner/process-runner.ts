@@ -4,10 +4,12 @@ import { chmod, readFile, rm, writeFile as fsWriteFile } from 'node:fs/promises'
 import type {
   CommandSpec,
   ExecResult,
+  ProbeWatch,
   ProcessRunner,
   ReadinessProbe,
   SpawnHandle,
 } from '../plan/types'
+import { findFailureMarker, ProbeFailure } from './probe-failure'
 
 const PROBE_INTERVAL_MS = 1_000
 
@@ -118,10 +120,19 @@ export class NodeProcessRunner implements ProcessRunner {
     if (pids.length > 0) await delay(1_000)
   }
 
-  probe(probe: ReadinessProbe, isAlive: () => boolean): Promise<boolean> {
+  probe(probe: ReadinessProbe, isAlive: () => boolean, watch?: ProbeWatch): Promise<boolean> {
     const deadline = Date.now() + probe.timeoutMs
     const attempt = async (): Promise<boolean> => {
       for (;;) {
+        // Fail fast: a terminal build/test failure marker in the backing process's log means it will
+        // never become ready, so abort now (throwing the real error) instead of polling until the
+        // cold-build timeout. Checked BEFORE isAlive because a failed `xcodebuild test` lingers
+        // "alive" doing reporting after it has already printed `** BUILD FAILED **`.
+        if (watch) {
+          const log = await readWatchedLog(watch.logPath)
+          const marker = findFailureMarker(log, watch.failureMarkers)
+          if (marker) throw new ProbeFailure(marker, lastLines(log, 12))
+        }
         if (!isAlive()) return false
         if (await probeOnce(probe)) return true
         if (Date.now() >= deadline) return false
@@ -172,6 +183,39 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
+}
+
+/**
+ * Read a watched companion log for the fast-fail marker scan — FAIL-CLOSED.
+ *
+ * `spawn()` creates the log file synchronously (`openSync(logPath, 'a')`) before the
+ * companion-ready probe ever polls, and the companion is never a skipped step, so the file is
+ * guaranteed to exist whenever a watched probe reads it. Any read failure (missing file, `EACCES`,
+ * `EISDIR`, removed/locked log) therefore signals a real defect — the wrong log path or a broken
+ * watch — not an expected transient. Swallowing it to `''` would silently disable marker detection
+ * and revert to the opaque 300s readiness timeout, hiding the underlying defect. Surface it loudly.
+ */
+export async function readWatchedLog(path: string): Promise<string> {
+  try {
+    return await readFile(path, 'utf8')
+  } catch (error) {
+    // The CLI surfaces `error.message` only (see cli.ts), so the underlying cause must live IN the
+    // message — not just in `cause` — for the real reason (EACCES / EISDIR / missing path) to reach
+    // the user instead of an opaque "cannot read" line.
+    throw new Error(
+      `cannot read companion log for fast-fail marker detection (${path}): ${String(error)}`,
+      { cause: error },
+    )
+  }
+}
+
+/** The last `n` non-empty lines of a log, for surfacing the failing build/test context in the error. */
+function lastLines(text: string, n: number): string {
+  return text
+    .split('\n')
+    .filter((line) => line.trim().length > 0)
+    .slice(-n)
+    .join('\n')
 }
 
 async function probeOnce(probe: ReadinessProbe): Promise<boolean> {

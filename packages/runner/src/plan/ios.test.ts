@@ -105,6 +105,17 @@ describe('planIos', () => {
     expect(customReady?.type === 'probe' && customReady.probe.timeoutMs).toBe(120_000)
   })
 
+  it('FU-2b: companion-ready watches for xcodebuild build/test failure markers (fast-fail)', () => {
+    const ready = planIos(inputFor('plain')).steps.find(
+      (s) => s.id === 'ios.companion-ready',
+    )?.action
+    expect(ready?.type).toBe('probe')
+    const markers = ready?.type === 'probe' ? ready.failureMarkers : undefined
+    // The probe must abort the readiness wait the moment `xcodebuild test` reports failure rather
+    // than burning the 300s budget (it lingers "alive" after printing the marker).
+    expect(markers).toEqual(expect.arrayContaining(['** BUILD FAILED **', '** TEST FAILED **']))
+  })
+
   it('FU-3: frees the companion port at startup and in cleanup', () => {
     const plan = planIos(inputFor('plain'))
     const startupFree = plan.steps.find((s) => s.id === 'ios.free-port')

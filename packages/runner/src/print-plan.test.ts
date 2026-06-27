@@ -23,6 +23,19 @@ describe('renderPlan', () => {
     expect(text).toContain('(skip-build: skipped)')
   })
 
+  it('renders the companion-ready fast-fail markers so dry-run stays faithful (REQ-CLI-002)', () => {
+    // The probe aborts EARLY on a terminal build/test marker; an auditable plan must surface that.
+    const ios = renderPlan(buildDryRunPlan(configFixture(), 'ios'))
+    expect(ios).toMatch(/probe xctest-hello .*\[fast-fail on: .*\*\* BUILD FAILED \*\*.*\]/)
+    expect(ios).toContain('** TEST FAILED **')
+
+    const android = renderPlan(buildDryRunPlan(configFixture(), 'android'))
+    expect(android).toMatch(
+      /probe instrumentation-hello .*\[fast-fail on: .*INSTRUMENTATION_FAILED.*\]/,
+    )
+    expect(android).toContain('Process crashed')
+  })
+
   it('never prints a secret value — only the placeholder token-file path', () => {
     const text = renderPlan(buildDryRunPlan(configFixture(), 'android'))
     expect(text).toContain('<token-file>')

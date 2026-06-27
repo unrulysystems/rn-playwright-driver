@@ -42,8 +42,15 @@ function renderAction(action: StepAction): string {
       return `write ${action.path}${action.mode ? ` (mode ${action.mode.toString(8)})` : ''}`
     case 'free-port':
       return `free-port ${action.port}`
-    case 'probe':
-      return `probe ${renderProbe(action.probe)}`
+    case 'probe': {
+      // Fast-fail markers change what the probe DOES (abort early instead of waiting out the
+      // timeout), so the audited dry-run plan must show them to stay faithful (REQ-CLI-002,
+      // REQ-DIAG-003, BRIEF "Faithfulness").
+      const fastFail = action.failureMarkers?.length
+        ? ` [fast-fail on: ${action.failureMarkers.join(', ')}]`
+        : ''
+      return `probe ${renderProbe(action.probe)}${fastFail}`
+    }
     default: {
       const _exhaustive: never = action
       throw new Error(`unhandled action: ${JSON.stringify(_exhaustive)}`)
