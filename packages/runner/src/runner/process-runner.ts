@@ -85,6 +85,9 @@ export class NodeProcessRunner implements ProcessRunner {
   async freePort(port: number): Promise<void> {
     // The sim/device-hosted companion binds the host loopback, so it is visible
     // and killable via lsof on the host even though it runs "inside" the device.
+    // This SIGTERMs whatever LISTENs on the port — the companion port is assumed
+    // DEDICATED to the runner's companion (config `*.companion.port`, default
+    // 9999). Do not point it at a port shared with an unrelated service.
     const pids = await this.lsofPids(port)
     for (const pid of pids) {
       try {
@@ -180,7 +183,12 @@ async function probeOnce(probe: ReadinessProbe): Promise<boolean> {
 
 async function metroStatusOk(metroUrl: string): Promise<boolean> {
   try {
-    const response = await fetch(`${metroUrl}/status`)
+    // AbortSignal bounds a single attempt: without it a server that accepts the
+    // socket but stalls before headers/body would hang the poll loop past its
+    // deadline, since probe() only re-checks the deadline between attempts.
+    const response = await fetch(`${metroUrl}/status`, {
+      signal: AbortSignal.timeout(PROBE_INTERVAL_MS),
+    })
     const body = await response.text()
     return body.includes('packager-status:running')
   } catch {
@@ -200,7 +208,9 @@ async function hermesTargetPresent(
   probe: Extract<ReadinessProbe, { kind: 'hermes-target' }>,
 ): Promise<boolean> {
   try {
-    const response = await fetch(`${probe.metroUrl}/json`)
+    const response = await fetch(`${probe.metroUrl}/json`, {
+      signal: AbortSignal.timeout(PROBE_INTERVAL_MS),
+    })
     if (!response.ok) return false
     const targets = (await response.json()) as MetroTarget[]
     return targets.some((target) => {

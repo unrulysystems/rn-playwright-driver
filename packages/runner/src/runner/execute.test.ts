@@ -48,8 +48,11 @@ function makeRunner(
       calls.push({ type: 'free', label: String(port) })
       return Promise.resolve()
     },
-    probe(probe) {
+    probe(probe, isAlive) {
       calls.push({ type: 'probe', label: probe.kind })
+      // Mirror production: probe() fails fast when its backing process is dead,
+      // so the mock must honor the isAlive callback rather than ignore it.
+      if (!isAlive()) return Promise.resolve(false)
       return Promise.resolve(opts.probeResult ? opts.probeResult(probe) : true)
     },
     log() {},
@@ -117,7 +120,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
 
   it('honors skipStep/skipCleanup so a reused Metro is neither started nor killed', async () => {
     const { runner, calls } = makeRunner()
-    await executePlan(plan, runner, {
+    const result = await executePlan(plan, runner, {
       logDir: '/tmp/logs',
       skipStep: (step) => step.id === 'metro.start',
       skipCleanup: (action) => action.type === 'kill-process' && action.processKey === 'metro',
@@ -127,6 +130,14 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     // The companion is still managed.
     expect(labels(calls, 'spawn')).toContain('companion')
     expect(labels(calls, 'kill')).toContain('companion')
+    // REGRESSION (reused Metro): metro.start is skipped, so there is no metro
+    // process handle. metro.ready must NOT fail-fast on the missing handle (the
+    // reused Metro is external) — the run must still reach Playwright. Because
+    // the mock probe now honors isAlive, a regression in execute's "no handle =>
+    // alive" gating would surface here as a metro-stage StageError.
+    expect(labels(calls, 'probe')).toContain('metro-status')
+    expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(true)
+    expect(result.playwrightCode).toBe(0)
   })
 
   it('secret-safety: no executed command carries an inline *_TOKEN env value', async () => {

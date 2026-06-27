@@ -160,9 +160,12 @@ does not invent a new driver API; it produces this contract:
 - **REQ-METRO-002** Otherwise the runner starts Metro via `metro.command`,
   redirects its output to a captured log, and waits for
   `${url}/status → packager-status:running` within a bounded timeout.
-- **REQ-METRO-003** Port resolution: honor `metro.url` if set; else probe from
-  `metro.port` upward for a free port; fail if an explicitly-requested port is
-  occupied.
+- **REQ-METRO-003** Port resolution: honor `metro.url` if set; else use
+  `metro.port` (default 8081). When the runner owns Metro (not `reuseExisting`),
+  it verifies the port is free before starting Metro and fails fast at the
+  `metro` stage if occupied. It does not auto-probe a different port, because
+  `metro.command` pins the port the packager binds — moving the port silently
+  would desync the command from the readiness probe.
 - **REQ-METRO-004** Metro started by the runner is owned by the runner and is
   terminated in cleanup; reused Metro is never terminated.
 
@@ -260,8 +263,10 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
   startup (REQ-IOS-006) so a crashed prior run never wedges the next. _(FU-3)_
 - **REQ-CLEAN-003** Android cleanup removes `adb reverse`/`forward` mappings,
   the device-private token file, and force-stops the app.
-- **REQ-CLEAN-004** Cleanup terminates only resources the runner started (its
-  Metro, its companion); it never kills a reused Metro.
+- **REQ-CLEAN-004** Cleanup terminates the resources the runner manages — its
+  spawned Metro and companion, `adb` mappings, the per-run token file — and frees
+  the **dedicated** companion port (`*.companion.port`, default 9999), which must
+  not be shared with an unrelated service; it never kills a reused Metro.
 
 ### Diagnostics — `REQ-DIAG-*`
 

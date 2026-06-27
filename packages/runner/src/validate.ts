@@ -107,8 +107,19 @@ function validateIos(ios: unknown, errors: string[]): void {
   optionalString('config.ios.uitestScheme', ios.uitestScheme, errors)
   optionalString('config.ios.destination', ios.destination, errors)
   validateCompanion('config.ios.companion', ios.companion, errors)
-  if (ios.defaults !== undefined && !isRecord(ios.defaults)) {
-    errors.push('config.ios.defaults: expected an object of key -> string|number|boolean')
+  if (ios.defaults !== undefined) {
+    if (!isRecord(ios.defaults)) {
+      errors.push('config.ios.defaults: expected an object of key -> string|number|boolean')
+    } else {
+      // planIos feeds each value into `simctl defaults write`; a non-primitive
+      // would stringify to `[object Object]` and write a bogus default.
+      for (const [key, value] of Object.entries(ios.defaults)) {
+        const kind = typeof value
+        if (kind !== 'string' && kind !== 'number' && kind !== 'boolean') {
+          errors.push(`config.ios.defaults.${key}: expected string|number|boolean`)
+        }
+      }
+    }
   }
   const launch = validateLaunch('config.ios.launch', ios.launch, errors)
   if (launch && launch.kind === 'expo-dev-client' && launch.mode !== 'attach') {
@@ -127,8 +138,13 @@ function validateAndroid(android: unknown, errors: string[]): void {
     return
   }
   reportUnknownKeys('config.android', android, ANDROID_KEYS, errors)
-  requireString('config.android.packageName', android.packageName, errors)
-  requireString('config.android.activity', android.activity, errors)
+  // packageName/activity are interpolated into `adb shell run-as <pkg> sh -c '…'`
+  // and `am start -n <pkg>/<activity>`; a value with shell metacharacters (e.g.
+  // a quote) could break out of the single-quoted remote script and inject
+  // device-shell commands. Constrain to the Android identifier grammar so no
+  // metacharacter survives validation (security, defense-in-depth).
+  requireAndroidPackage('config.android.packageName', android.packageName, errors)
+  requireAndroidActivity('config.android.activity', android.activity, errors)
   optionalString('config.android.appApkPath', android.appApkPath, errors)
   optionalString('config.android.testApkPath', android.testApkPath, errors)
   optionalString('config.android.instrumentationTarget', android.instrumentationTarget, errors)
@@ -194,6 +210,31 @@ function isStringArray(value: unknown): value is string[] {
 function requireString(path: string, value: unknown, errors: string[]): void {
   if (typeof value !== 'string' || value.trim() === '')
     errors.push(`${path}: required non-empty string`)
+}
+
+// Dotted Android application id, e.g. `com.company.app`. Each segment starts with
+// a letter; only letters, digits, and underscores — no shell metacharacters.
+const ANDROID_PACKAGE_RE = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/
+// Activity, e.g. `.MainActivity` or `com.company.app.MainActivity`. Optional
+// leading dot (relative form), then dot-joined identifier segments.
+const ANDROID_ACTIVITY_RE = /^\.?[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$/
+
+function requireAndroidPackage(path: string, value: unknown, errors: string[]): void {
+  if (typeof value !== 'string' || value.trim() === '') {
+    errors.push(`${path}: required non-empty string`)
+    return
+  }
+  if (!ANDROID_PACKAGE_RE.test(value))
+    errors.push(`${path}: expected a valid Android application id (e.g. com.company.app)`)
+}
+
+function requireAndroidActivity(path: string, value: unknown, errors: string[]): void {
+  if (typeof value !== 'string' || value.trim() === '') {
+    errors.push(`${path}: required non-empty string`)
+    return
+  }
+  if (!ANDROID_ACTIVITY_RE.test(value))
+    errors.push(`${path}: expected an activity name (e.g. .MainActivity)`)
 }
 
 function optionalString(path: string, value: unknown, errors: string[]): void {

@@ -24,6 +24,8 @@ export interface ExecuteOptions {
   readonly skipBuild?: boolean
   /** Per-run log directory for background-process output. */
   readonly logDir: string
+  /** Stream per-step progress (`--verbose`). Stage failures are always logged. */
+  readonly verbose?: boolean
   /** Skip a step entirely (e.g. don't start Metro when reusing a running one). */
   readonly skipStep?: (step: Step) => boolean | Promise<boolean>
   /** Skip a cleanup action (e.g. don't kill a Metro the runner did not start). */
@@ -48,17 +50,22 @@ export async function executePlan(
   const processes = new Map<string, SpawnHandle>()
   const isAlive = (key: string): boolean => {
     const handle = processes.get(key)
-    return handle ? runner.isAlive(handle) : false
+    // No handle means the backing process was intentionally skipped (e.g. a
+    // reused external Metro whose `metro.start` step was skipped) — treat it as
+    // alive so the probe polls the URL to its timeout instead of failing
+    // instantly. Fail-fast applies only to a process the runner started that has
+    // since died (handle present and dead).
+    return handle ? runner.isAlive(handle) : true
   }
 
   try {
     for (const step of plan.steps) {
       if (opts.skipBuild && step.skippable) {
-        runner.log(`skip (skip-build): ${step.id}`)
+        if (opts.verbose) runner.log(`skip (skip-build): ${step.id}`)
         continue
       }
       if (opts.skipStep && (await opts.skipStep(step))) {
-        runner.log(`skip: ${step.id}`)
+        if (opts.verbose) runner.log(`skip: ${step.id}`)
         continue
       }
       await runStep(step, runner, opts, processes, isAlive)
@@ -82,7 +89,7 @@ async function runStep(
   processes: Map<string, SpawnHandle>,
   isAlive: (key: string) => boolean,
 ): Promise<void> {
-  runner.log(`→ ${step.id}: ${step.description}`)
+  if (opts.verbose) runner.log(`→ ${step.id}: ${step.description}`)
   const action = step.action
 
   switch (action.type) {

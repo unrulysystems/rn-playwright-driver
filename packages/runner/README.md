@@ -126,8 +126,11 @@ never wedges the next (stale companion ports are freed at startup and teardown).
 
 ## Requirements
 
-- Run under **bun** or **Node >= 22** (the readiness probes use the global
-  `WebSocket`/`fetch`).
+- The `rn-driver` CLI runs under **bun**. The `bin` is a thin bun shim (mirroring
+  the driver's `rn-inspect`) so a TypeScript `rn-driver.config.ts` loads without a
+  separate compile step. Install bun: <https://bun.sh>.
+- The readiness probes use the global `WebSocket`/`fetch`, so embedding the
+  library API (the `.` export) standalone requires **bun** or **Node >= 22**.
 - The platform companion packages installed and their Expo config plugins added.
 - `xcrun`/`xcodebuild`/`pod` (iOS) and `adb`/`gradle` (Android) on `PATH`.
 

@@ -83,7 +83,7 @@ export async function resolveAndroidTarget(
   }
 }
 
-interface SimDevice {
+export interface SimDevice {
   readonly udid: string
   readonly name: string
   readonly state?: string
@@ -95,7 +95,6 @@ async function selectSimulator(
   ios: IosConfig,
   deviceOverride?: string,
 ): Promise<{ udid: string; name: string }> {
-  const explicit = parseUdid(deviceOverride) ?? parseUdid(ios.destination)
   const data = JSON.parse(
     await capture('xcrun', ['simctl', 'list', 'devices', 'available', '--json']),
   ) as {
@@ -103,18 +102,43 @@ async function selectSimulator(
   }
   const all: SimDevice[] = Object.entries(data.devices ?? {})
     .flatMap(([runtime, list]) => list.map((device) => ({ ...device, runtime })))
-    .filter((device) => device.isAvailable !== false && device.name.startsWith('iPhone'))
+    .filter((device) => device.isAvailable !== false)
+  return pickSimulator(all, deviceOverride, ios.destination)
+}
 
-  if (explicit) {
-    const match = all.find((device) => device.udid === explicit)
-    if (!match) throw new Error(`requested iOS simulator not found: ${explicit}`)
+/**
+ * Pure simulator selection (REQ-IOS-001 / REQ-CLI-007). Precedence:
+ *   1. an explicit UDID (from `--device` or `ios.destination`) — ANY device type,
+ *      so an explicitly-named iPad/non-iPhone sim is honored, not filtered out;
+ *   2. `--device <name>` matched by exact then substring name (also any type);
+ *   3. auto-select: the newest booted iPhone, else the newest available iPhone.
+ * The iPhone-only filter applies ONLY to step 3's auto-selection.
+ */
+export function pickSimulator(
+  devices: readonly SimDevice[],
+  deviceOverride: string | undefined,
+  destination: string | undefined,
+): { udid: string; name: string } {
+  const explicitUdid = parseUdid(deviceOverride) ?? parseUdid(destination)
+  if (explicitUdid) {
+    const match = devices.find((device) => device.udid === explicitUdid)
+    if (!match) throw new Error(`requested iOS simulator not found: ${explicitUdid}`)
     return { udid: match.udid, name: match.name }
   }
 
-  const byNewest = (a: SimDevice, b: SimDevice) =>
+  if (deviceOverride) {
+    const byName =
+      devices.find((device) => device.name === deviceOverride) ??
+      devices.find((device) => device.name.includes(deviceOverride))
+    if (!byName) throw new Error(`requested iOS simulator not found by name: ${deviceOverride}`)
+    return { udid: byName.udid, name: byName.name }
+  }
+
+  const byNewest = (a: SimDevice, b: SimDevice): number =>
     compareRuntime(runtimeVersion(b.runtime), runtimeVersion(a.runtime))
-  const booted = all.filter((device) => device.state === 'Booted').toSorted(byNewest)
-  const pick = booted[0] ?? [...all].toSorted(byNewest)[0]
+  const iphones = devices.filter((device) => device.name.startsWith('iPhone'))
+  const booted = iphones.filter((device) => device.state === 'Booted').sort(byNewest)
+  const pick = booted[0] ?? [...iphones].sort(byNewest)[0]
   if (!pick) throw new Error('no available iPhone simulator found')
   return { udid: pick.udid, name: pick.name }
 }

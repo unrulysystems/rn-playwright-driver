@@ -1,4 +1,5 @@
 import { mkdtemp } from 'node:fs/promises'
+import net from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { parseArgs } from 'node:util'
@@ -143,10 +144,22 @@ async function runPlatform(
   const reuseMetro = metro.reuseExisting && (await metroRunning(metro.url))
   if (reuseMetro) ctx.runner.log(`Reusing Metro already running at ${metro.url}`)
 
+  // Metro preflight (REQ-METRO-003): when the runner owns Metro, the port must be
+  // free up front. metro.command pins the port, so the runner fails fast with an
+  // actionable message rather than letting Expo silently bind a different port
+  // the readiness probe would never find.
+  if (!metro.reuseExisting && (await portInUse(metro.host, metro.port))) {
+    process.stderr.write(
+      `\nFAILED [${platform}] at stage [metro] metro.preflight: ${metro.host}:${metro.port} is already in use. Free it, set metro.reuseExisting, or choose another metro.port.\n`,
+    )
+    return STAGE_EXIT_CODES.metro
+  }
+
   try {
     const result = await executePlan(plan, ctx.runner, {
       logDir: ctx.logDir,
       skipBuild: ctx.flags.skipBuild,
+      verbose: ctx.flags.verbose,
       skipStep: (step) => reuseMetro && step.id === 'metro.start',
       skipCleanup: (action) =>
         reuseMetro && action.type === 'kill-process' && action.processKey === 'metro',
@@ -175,11 +188,28 @@ function deviceOpt(device: string | undefined): { device?: string } {
 
 async function metroRunning(metroUrl: string): Promise<boolean> {
   try {
-    const response = await fetch(`${metroUrl}/status`)
+    // Bounded: a server that accepts the socket but never responds must not wedge
+    // the reuse-existing preflight before any plan step runs.
+    const response = await fetch(`${metroUrl}/status`, { signal: AbortSignal.timeout(2_000) })
     return (await response.text()).includes('packager-status:running')
   } catch {
     return false
   }
+}
+
+/** True if something already accepts a TCP connection on host:port. */
+function portInUse(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host, port })
+    const finish = (inUse: boolean): void => {
+      socket.destroy()
+      resolve(inUse)
+    }
+    socket.setTimeout(1_000)
+    socket.once('connect', () => finish(true))
+    socket.once('timeout', () => finish(false))
+    socket.once('error', () => finish(false))
+  })
 }
 
 function resolvePlatforms(platform: string | undefined): Platform[] {
