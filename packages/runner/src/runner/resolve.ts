@@ -35,8 +35,14 @@ export async function resolveIosTarget(
   const { udid, name } = await selectSimulator(ios, opts.device)
   await terminateStaleOnOtherSims(udid, ios.bundleId)
 
-  const tokenFile = await mintTokenFile()
   const scheme = uitestScheme(ios)
+  // Resolve the scaffold bin from the project cwd (same one the runner executes
+  // under) so a hoisted monorepo finds the repo-root-installed companion. This can
+  // throw (companion not installed / no bin entry) — do it BEFORE minting the token
+  // file so a resolution failure never orphans a `0600` secret on disk (the plan's
+  // remove-file cleanup only runs once the plan is built and executed).
+  const scaffoldBin = resolveScaffoldBin(process.cwd())
+  const tokenFile = await mintTokenFile()
 
   return {
     simUdid: udid,
@@ -48,9 +54,7 @@ export async function resolveIosTarget(
     hermesTimeoutMs: DEFAULTS.hermesTargetTimeoutMs,
     tokenFile,
     runtimeConfigFile: path.join('ios', scheme, 'RNDriverTouchCompanionRuntimeConfig.json'),
-    // Resolve the scaffold bin from the project cwd (same one the runner executes
-    // under) so a hoisted monorepo finds the repo-root-installed companion.
-    scaffoldBin: resolveScaffoldBin(process.cwd()),
+    scaffoldBin,
     initialUrl: ios.launch.initialUrl ?? metro.url,
   }
 }
