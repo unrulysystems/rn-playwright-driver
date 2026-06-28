@@ -66,6 +66,17 @@ describe('planAndroid', () => {
     expect(args).toContain('rn-driver-touch-token')
   })
 
+  it('instrument-ready watches for am-instrument failure markers (fast-fail)', () => {
+    const ready = planAndroid(inputFor()).steps.find(
+      (s) => s.id === 'android.instrument-ready',
+    )?.action
+    expect(ready?.type).toBe('probe')
+    const markers = ready?.type === 'probe' ? ready.failureMarkers : undefined
+    // Abort the readiness wait when `am instrument` reports the companion crashed / failed to start
+    // instead of polling until the timeout.
+    expect(markers).toEqual(expect.arrayContaining(['INSTRUMENTATION_FAILED', 'Process crashed']))
+  })
+
   it('REQ-AND: run-as redirect steps send the whole sh -c script as a single adb arg', () => {
     // Regression: passing `sh -c <script>` as separate adb args lets `adb shell`
     // re-split them, so the device's OUTER shell (uid `shell`, cwd `/`) performs

@@ -29,19 +29,19 @@
     "@unrulysystems/rn-playwright-driver-instrumentation-companion": "workspace:*",
     "@unrulysystems/rn-playwright-driver-runner": "workspace:*",
     "@unrulysystems/rn-playwright-driver-xctest-companion": "workspace:*",
-    "expo": "~54.0.30",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5"
+    "expo": "~56.0.12",
+    "expo-status-bar": "~56.0.4",
+    "react": "19.2.3",
+    "react-native": "0.85.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/node": "^25.9.3",
-    "@types/react": "~19.1.0",
+    "@types/react": "~19.2.17",
     "@typescript/native-preview": "^7.0.0-dev.20251227.1",
     "jscpd": "^4.0.5",
     "knip": "^5.78.0",
     "lefthook": "^2.0.13",
-    "typescript": "~5.9.2"
+    "typescript": "~6.0.3"
   }
 }

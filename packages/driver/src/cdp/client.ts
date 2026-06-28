@@ -68,7 +68,7 @@ export class CDPClient {
       throw new Error('CDP client: no WebSocket URL configured')
     }
 
-    this.ws = new WebSocket(this.wsUrl)
+    this.ws = new WebSocket(this.wsUrl, { origin: originForWebSocketUrl(this.wsUrl) })
 
     await new Promise<void>((resolve, reject) => {
       const onOpen = () => {
@@ -438,4 +438,16 @@ export class CDPClient {
   private handleError(err: Error) {
     console.error('CDP WebSocket error:', err)
   }
+}
+
+function originForWebSocketUrl(wsUrl: string): string {
+  const url = new URL(wsUrl)
+  url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:'
+  url.pathname = '/'
+  url.search = ''
+  url.hash = ''
+  if (url.hostname === 'localhost' || url.hostname === '0.0.0.0') {
+    url.hostname = '127.0.0.1'
+  }
+  return url.origin
 }

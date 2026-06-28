@@ -1,19 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { buildDryRunPlan } from '../build-plan'
 import { configFixture } from '../fixtures'
-import type { CommandSpec, ProcessRunner, ReadinessProbe } from '../plan/types'
+import type { CommandSpec, ProbeWatch, ProcessRunner, ReadinessProbe } from '../plan/types'
 import { executePlan, StageError } from './execute'
+import { ProbeFailure } from './probe-failure'
 
 interface Recorded {
   readonly type: 'exec' | 'spawn' | 'kill' | 'write' | 'rm' | 'free' | 'probe'
   readonly label: string
   readonly spec?: CommandSpec
+  /** The probe's early-abort watch, recorded so tests can assert the executor wired it through. */
+  readonly watch?: ProbeWatch | undefined
 }
 
 function makeRunner(
   opts: {
     execCode?: (spec: CommandSpec) => number
     probeResult?: (probe: ReadinessProbe) => boolean
+    /** Simulate the real probe's fast-fail: return a marker for a probe to throw ProbeFailure. */
+    probeFailure?: (probe: ReadinessProbe) => string | null
   } = {},
 ): { runner: ProcessRunner; calls: Recorded[] } {
   const calls: Recorded[] = []
@@ -48,8 +53,14 @@ function makeRunner(
       calls.push({ type: 'free', label: String(port) })
       return Promise.resolve()
     },
-    probe(probe, isAlive) {
-      calls.push({ type: 'probe', label: probe.kind })
+    probe(probe, isAlive, watch) {
+      calls.push({ type: 'probe', label: probe.kind, watch })
+      // Mirror production: a terminal build/test failure marker in the watched log throws
+      // ProbeFailure (early abort) — only possible when the executor wired a `watch` through.
+      if (watch && opts.probeFailure) {
+        const marker = opts.probeFailure(probe)
+        if (marker) return Promise.reject(new ProbeFailure(marker, 'simulated build log tail'))
+      }
       // Mirror production: probe() fails fast when its backing process is dead,
       // so the mock must honor the isAlive callback rather than ignore it.
       if (!isAlive()) return Promise.resolve(false)
@@ -105,6 +116,27 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(labels(calls, 'free')).toContain('9999')
     expect(labels(calls, 'rm')).toContain('<token-file>')
     // Playwright never ran.
+    expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(false)
+  })
+
+  it('fast-fails the companion stage when xcodebuild reports a build failure (no readiness wait)', async () => {
+    const { runner, calls } = makeRunner({
+      probeFailure: (p) => (p.kind === 'xctest-hello' ? '** BUILD FAILED **' : null),
+    })
+    const error = await executePlan(plan, runner, { logDir: '/tmp/logs' }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(StageError)
+    expect(error).toMatchObject({ stage: 'companion', stepId: 'ios.companion-ready' })
+    // The real build failure is surfaced, NOT an opaque readiness timeout.
+    expect((error as StageError).message).toContain('** BUILD FAILED **')
+    expect((error as StageError).message).not.toContain('readiness timed out')
+    // The executor wired the early-abort watch (companion log path + ios markers) into the probe.
+    const companionProbe = calls.find((c) => c.type === 'probe' && c.label === 'xctest-hello')
+    expect(companionProbe?.watch?.failureMarkers).toEqual(
+      expect.arrayContaining(['** BUILD FAILED **', '** TEST FAILED **']),
+    )
+    expect(companionProbe?.watch?.logPath).toContain('companion')
+    // Cleanup still runs defensively; Playwright never does.
+    expect(labels(calls, 'kill')).toEqual(expect.arrayContaining(['companion', 'metro']))
     expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(false)
   })
 

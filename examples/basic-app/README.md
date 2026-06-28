@@ -2,16 +2,16 @@
 
 Minimal Expo app used to validate the RN Playwright Driver end-to-end. It ships a tiny counter UI plus Playwright tests that exercise the driver API, optional native modules, and view-tree locators.
 
-## What’s inside
+## What's inside
 
 - Expo app entry: `index.ts` (installs the driver harness)
 - UI under test: `App.tsx` (counter with testIDs)
-- E2E tests: `e2e/counter.spec.ts`
+- E2E tests: `e2e/`
 - Playwright config: `playwright.config.ts`
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 24.17.0 (repo `.node-version`)
 - nub
 - Expo tooling installed
 - A simulator/device with Hermes debugging enabled
@@ -85,6 +85,13 @@ this example.
 
 - The app entry (`index.ts`) installs the driver harness unconditionally for convenience in this example. In real apps, follow the dev-only harness pattern described in the root README.
 - Native modules are pulled in via workspace dependencies; if you remove a module, related tests will skip based on reported capabilities.
+- SDK 56 iOS builds set `expo.ios.deploymentTarget` to `16.4`.
+- `npx expo-doctor@latest --verbose` should pass Expo SDK schema/version/native
+  tooling checks. Its remaining failures are expected in this nub monorepo:
+  `knip` is both a package script and local bin, the app uses the repo-root
+  `lock.yaml` instead of an app-local npm/yarn/pnpm lockfile, and nub exposes
+  same-version workspace package installs that Expo Doctor reports as duplicate
+  native dependencies.
 
 ## Useful scripts
 

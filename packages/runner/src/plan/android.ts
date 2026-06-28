@@ -1,5 +1,5 @@
 import type { AndroidConfig, PlaywrightConfig } from '../config'
-import { DEFAULTS } from '../constants'
+import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
 import { buildAndroidDriverEnv } from './env'
 import type { ResolvedAndroidTarget, ResolvedMetro } from './resolved'
 import { metroStartStep, npx, playwrightCommand } from './shared'
@@ -213,6 +213,9 @@ export function planAndroid(input: PlanAndroidInput): Plan {
         tokenFile: resolved.tokenFile,
         timeoutMs: resolved.companionReadyTimeoutMs,
       },
+      // Abort early if `am instrument` reports the companion failed to start (crash / missing
+      // androidTest target) instead of waiting out the readiness budget.
+      failureMarkers: COMPANION_FAILURE_MARKERS.android,
     },
   })
 

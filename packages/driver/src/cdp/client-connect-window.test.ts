@@ -19,6 +19,10 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 
+const wsState = vi.hoisted(() => ({
+  constructorCalls: [] as Array<{ url: string; options: unknown }>,
+}))
+
 // A fake `ws` socket: opens on the next microtask, answers `Runtime.enable` and
 // `Runtime.evaluate` (the await-promise probe), and — crucially — emits a
 // console event while handling `Runtime.enable`, simulating the app logging in
@@ -30,8 +34,9 @@ vi.mock('ws', async () => {
     static OPEN = 1
     readyState = FakeWebSocket.OPEN
 
-    constructor(_url: string) {
+    constructor(url: string, options: unknown) {
       super()
+      wsState.constructorCalls.push({ url, options })
       // Open asynchronously so doConnect's `on('open')` listener is registered
       // before the event fires (mirrors a real socket handshake).
       queueMicrotask(() => this.emit('open'))
@@ -80,6 +85,18 @@ import { CDPClient } from './client'
 const WS_URL = 'ws://localhost:8081/debugger'
 
 describe('CDPClient connect-window event loss', () => {
+  it('sends an Origin header compatible with React Native inspector proxy checks', async () => {
+    const client = new CDPClient()
+
+    await client.connect('ws://localhost:8081/inspector/debug?device=1&page=1')
+
+    expect(wsState.constructorCalls.at(-1)).toEqual({
+      url: 'ws://localhost:8081/inspector/debug?device=1&page=1',
+      options: { origin: 'http://127.0.0.1:8081' },
+    })
+    await client.disconnect()
+  })
+
   it('DROPS an event emitted before the caller subscribes (today RNDevice ordering)', async () => {
     const client = new CDPClient()
     const received: Array<Record<string, unknown>> = []

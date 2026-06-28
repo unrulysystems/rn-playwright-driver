@@ -69,6 +69,13 @@ export type StepAction =
        * app loses a transient Hermes-registration race instead of failing).
        */
       readonly retry?: { readonly command: CommandSpec; readonly max: number }
+      /**
+       * Terminal failure substrings to watch for in the backing process's captured log. If one
+       * appears, the readiness wait aborts EARLY (the build/test failed and will never become
+       * ready) instead of burning the full timeout. Set by the planner on the companion-ready step
+       * (see COMPANION_FAILURE_MARKERS); the executor pairs them with the process's log path.
+       */
+      readonly failureMarkers?: readonly string[]
     }
 
 /** The lifecycle stage a step belongs to. A failure is attributed to its stage. */
@@ -125,6 +132,16 @@ export interface SpawnHandle {
 }
 
 /**
+ * Early-abort watch for a readiness probe: the captured log of the probe's backing process plus the
+ * terminal failure substrings to scan it for. When a marker appears, the probe throws and the run
+ * fails fast with the real build/test error instead of an opaque readiness timeout.
+ */
+export interface ProbeWatch {
+  readonly logPath: string
+  readonly failureMarkers: readonly string[]
+}
+
+/**
  * The single OS boundary. The pure planners never touch this; the executor uses
  * it to interpret a {@link Plan}. Tests inject a mock to assert order, readiness
  * gating, cleanup, and secret-safety without real devices.
@@ -145,8 +162,13 @@ export interface ProcessRunner {
   removeFile(path: string): Promise<void>
   /** Free a TCP listener bound to `port` (lsof + kill). Idempotent. */
   freePort(port: number): Promise<void>
-  /** Poll a readiness probe; resolves true when ready, false on timeout. */
-  probe(probe: ReadinessProbe, isAlive: () => boolean): Promise<boolean>
+  /**
+   * Poll a readiness probe; resolves true when ready, false on timeout. When `watch` is given, the
+   * probe also scans the backing process's log each poll and THROWS {@link ProbeFailure} the moment
+   * a terminal failure marker appears (build/test failed) — so a doomed companion fails fast instead
+   * of waiting out the cold-build timeout.
+   */
+  probe(probe: ReadinessProbe, isAlive: () => boolean, watch?: ProbeWatch): Promise<boolean>
   /** Structured log sink. Never receives secret values. */
   log(line: string): void
 }

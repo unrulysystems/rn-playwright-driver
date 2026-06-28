@@ -7,6 +7,7 @@ import type {
   SpawnHandle,
   Step,
 } from '../plan/types'
+import { ProbeFailure } from './probe-failure'
 
 export class StageError extends Error {
   readonly stage: Stage
@@ -117,24 +118,41 @@ async function runStep(
     case 'probe': {
       const key = processKeyForProbe(action.probe)
       const aliveFn = key === null ? () => true : () => isAlive(key)
-      let ready = await runner.probe(action.probe, aliveFn)
-      // Bounded retry (REQ-AND-005): re-run the retry command (e.g. re-issue
-      // `am start`) and probe again, up to `max` extra attempts.
-      let remaining = action.retry?.max ?? 0
-      while (!ready && remaining > 0) {
-        remaining -= 1
-        if (action.retry) {
-          runner.log(`retry ${step.id}: re-running launch (${remaining} attempt(s) left)`)
-          await runner.exec(action.retry.command)
+      // Watch the backing process's captured log for terminal build/test failure markers so a
+      // doomed companion (e.g. `xcodebuild test` printed `** BUILD FAILED **`) fails fast via
+      // ProbeFailure instead of burning the full readiness budget. Only for a process-backed probe
+      // whose step declares markers (the companion-ready steps).
+      const watch =
+        key !== null && action.failureMarkers && action.failureMarkers.length > 0
+          ? { logPath: logPathFor(opts.logDir, key), failureMarkers: action.failureMarkers }
+          : undefined
+      try {
+        let ready = await runner.probe(action.probe, aliveFn, watch)
+        // Bounded retry (REQ-AND-005): re-run the retry command (e.g. re-issue
+        // `am start`) and probe again, up to `max` extra attempts.
+        let remaining = action.retry?.max ?? 0
+        while (!ready && remaining > 0) {
+          remaining -= 1
+          if (action.retry) {
+            runner.log(`retry ${step.id}: re-running launch (${remaining} attempt(s) left)`)
+            await runner.exec(action.retry.command)
+          }
+          ready = await runner.probe(action.probe, aliveFn, watch)
         }
-        ready = await runner.probe(action.probe, aliveFn)
-      }
-      if (!ready) {
-        throw new StageError(
-          step.stage,
-          step.id,
-          `readiness timed out after ${action.probe.timeoutMs}ms`,
-        )
+        if (!ready) {
+          throw new StageError(
+            step.stage,
+            step.id,
+            `readiness timed out after ${action.probe.timeoutMs}ms`,
+          )
+        }
+      } catch (error) {
+        // A terminal build/test failure detected in the companion log: surface the real error,
+        // attributed to this stage, instead of the opaque readiness timeout.
+        if (error instanceof ProbeFailure) {
+          throw new StageError(step.stage, step.id, error.message)
+        }
+        throw error
       }
       return
     }
