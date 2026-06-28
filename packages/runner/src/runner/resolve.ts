@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { chmod, mkdtemp, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
@@ -34,8 +35,14 @@ export async function resolveIosTarget(
   const { udid, name } = await selectSimulator(ios, opts.device)
   await terminateStaleOnOtherSims(udid, ios.bundleId)
 
-  const tokenFile = await mintTokenFile()
   const scheme = uitestScheme(ios)
+  // Resolve the scaffold bin from the project cwd (same one the runner executes
+  // under) so a hoisted monorepo finds the repo-root-installed companion. This can
+  // throw (companion not installed / no bin entry) — do it BEFORE minting the token
+  // file so a resolution failure never orphans a `0600` secret on disk (the plan's
+  // remove-file cleanup only runs once the plan is built and executed).
+  const scaffoldBin = resolveScaffoldBin(process.cwd())
+  const tokenFile = await mintTokenFile()
 
   return {
     simUdid: udid,
@@ -47,8 +54,38 @@ export async function resolveIosTarget(
     hermesTimeoutMs: DEFAULTS.hermesTargetTimeoutMs,
     tokenFile,
     runtimeConfigFile: path.join('ios', scheme, 'RNDriverTouchCompanionRuntimeConfig.json'),
+    scaffoldBin,
     initialUrl: ios.launch.initialUrl ?? metro.url,
   }
+}
+
+/** The companion package + the scaffold bin key it declares in `package.json#bin`. */
+const COMPANION_PACKAGE = '@unrulysystems/rn-playwright-driver-xctest-companion'
+const SCAFFOLD_BIN_NAME = 'rn-driver-xctest-scaffold'
+
+/**
+ * Resolve the XCTest scaffold bin to an ABSOLUTE path, hoist-safely.
+ *
+ * `createRequire(<cwd>/package.json)` resolves from the consumer project and walks
+ * node_modules up to the repo root, so a Yarn-berry hoisted monorepo — where the
+ * companion's bin lands in the REPO-ROOT `node_modules` and the app workspace's
+ * `.bin` is empty — resolves correctly. The cwd-relative `node_modules/.bin/...`
+ * literal this replaces cannot: the runner's cwd is the app workspace. Reading the
+ * installed package's own `bin` field pins the installed version, so this stays
+ * deterministic (no `npx` registry/version drift — the goal of #22) while becoming
+ * hoist-safe. Spawned as `node <abs scaffold.js>`, so it needs no exec bit/shebang.
+ */
+export function resolveScaffoldBin(cwd: string): string {
+  const requireFromProject = createRequire(path.join(cwd, 'package.json'))
+  const pkgJsonPath = requireFromProject.resolve(`${COMPANION_PACKAGE}/package.json`)
+  const pkg = requireFromProject(pkgJsonPath) as { bin?: Record<string, string> }
+  const relBin = pkg.bin?.[SCAFFOLD_BIN_NAME]
+  if (!relBin) {
+    throw new Error(
+      `${COMPANION_PACKAGE} does not declare bin["${SCAFFOLD_BIN_NAME}"]; cannot resolve the XCTest scaffold`,
+    )
+  }
+  return path.join(path.dirname(pkgJsonPath), relBin)
 }
 
 /**

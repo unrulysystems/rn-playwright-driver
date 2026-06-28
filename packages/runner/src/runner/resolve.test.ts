@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { pickSimulator, type SimDevice } from './resolve'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { afterEach, describe, expect, it } from 'vitest'
+import { pickSimulator, resolveScaffoldBin, type SimDevice } from './resolve'
 
 const RT = (v: string) => `com.apple.CoreSimulator.SimRuntime.iOS-${v}`
 
@@ -82,5 +85,65 @@ describe('pickSimulator', () => {
   it('throws when no iPhone is available and no explicit selection is given', () => {
     const onlyIpad = DEVICES.filter((d) => d.name.startsWith('iPad'))
     expect(() => pickSimulator(onlyIpad, undefined, undefined)).toThrow(/no available iPhone/)
+  })
+})
+
+const COMPANION_PACKAGE = '@unrulysystems/rn-playwright-driver-xctest-companion'
+
+describe('resolveScaffoldBin', () => {
+  const tmpRoots: string[] = []
+
+  afterEach(() => {
+    for (const dir of tmpRoots.splice(0)) rmSync(dir, { recursive: true, force: true })
+  })
+
+  /**
+   * Lay out a HOISTED monorepo: the companion package (with its `bin`) lives only in
+   * the repo-root `node_modules`, and the app workspace's own `node_modules/.bin` is
+   * empty. This is the exact Yarn-berry shape that ENOENTs the old cwd-relative
+   * `node_modules/.bin/rn-driver-xctest-scaffold` literal. Returns the app-workspace
+   * cwd and the absolute path the bin SHOULD resolve to.
+   */
+  function hoistedMonorepo(bin: Record<string, string> | undefined): {
+    cwd: string
+    companionDir: string
+  } {
+    const root = mkdtempSync(path.join(tmpdir(), 'rn-hoist-'))
+    tmpRoots.push(root)
+
+    // Companion installed at the repo root (hoisted), NOT in the app workspace.
+    const companionDir = path.join(root, 'node_modules', COMPANION_PACKAGE)
+    mkdirSync(companionDir, { recursive: true })
+    writeFileSync(
+      path.join(companionDir, 'package.json'),
+      JSON.stringify({ name: COMPANION_PACKAGE, version: '0.0.0-test', ...(bin ? { bin } : {}) }),
+    )
+
+    // App workspace with an EMPTY local .bin — the relative literal would miss here.
+    const cwd = path.join(root, 'packages', 'app')
+    mkdirSync(path.join(cwd, 'node_modules', '.bin'), { recursive: true })
+    writeFileSync(path.join(cwd, 'package.json'), JSON.stringify({ name: 'app', version: '0.0.0' }))
+
+    return { cwd, companionDir }
+  }
+
+  it('resolves the scaffold bin to an absolute path when it is hoisted to the repo root', () => {
+    const { cwd, companionDir } = hoistedMonorepo({
+      'rn-driver-xctest-scaffold': 'bin/scaffold.js',
+    })
+
+    const resolved = resolveScaffoldBin(cwd)
+
+    // Walked node_modules up from the app workspace to the repo root (hoist-safe),
+    // NOT `<cwd>/node_modules/.bin/...` which is empty here. require.resolve returns
+    // a realpath, so normalize the expected dir (macOS /var -> /private/var symlink).
+    expect(resolved).toBe(path.join(realpathSync(companionDir), 'bin', 'scaffold.js'))
+    expect(path.isAbsolute(resolved)).toBe(true)
+    expect(resolved).not.toContain(path.join('packages', 'app', 'node_modules'))
+  })
+
+  it('throws when the companion does not declare the scaffold bin', () => {
+    const { cwd } = hoistedMonorepo(undefined)
+    expect(() => resolveScaffoldBin(cwd)).toThrow(/does not declare bin/)
   })
 })
