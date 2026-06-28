@@ -141,12 +141,35 @@ describe('planIos', () => {
     expect(plan.steps.find((s) => s.id === 'ios.runtime-config')?.skippable).toBeFalsy()
   })
 
-  it('uses the workspace-local XCTest scaffold bin instead of resolving from npm', () => {
-    const plan = planIos(inputFor('plain'))
-    const scaffold = plan.steps.find((s) => s.id === 'ios.scaffold')?.action
-    expect(scaffold?.type === 'command' && scaffold.command.command).toBe(
-      'node_modules/.bin/rn-driver-xctest-scaffold',
+  it('spawns the XCTest scaffold as `node <abs scaffoldBin>` (hoist-safe, no cwd-relative bin)', () => {
+    // The resolver hands planIos an ABSOLUTE scaffold path (createRequire-resolved,
+    // so it works when a monorepo hoists the companion bin to the repo root). The
+    // plan must spawn it via `node <abs>` rather than the old cwd-relative
+    // `node_modules/.bin/...` literal that ENOENTs in a hoisted workspace.
+    const scaffoldBin =
+      '/abs/node_modules/@unrulysystems/rn-playwright-driver-xctest-companion/bin/scaffold.js'
+    const ios = iosConfigFixture()
+    const metro = resolveMetro({ command: 'npx expo start' })
+    const plan = planIos(
+      inputFor('plain', { resolved: { ...placeholderIos(ios, metro), scaffoldBin } }),
     )
+    const scaffold = plan.steps.find((s) => s.id === 'ios.scaffold')?.action
+    expect(scaffold?.type).toBe('command')
+    if (scaffold?.type !== 'command') throw new Error('expected command')
+    expect(scaffold.command.command).toBe('node')
+    expect(scaffold.command.args[0]).toBe(scaffoldBin)
+    expect(scaffold.command.args[0]).toMatch(/\/bin\/scaffold\.js$/)
+    // Never the cwd-relative literal that breaks in a hoisted monorepo.
+    expect(scaffold.command.command).not.toBe('node_modules/.bin/rn-driver-xctest-scaffold')
+    // The scaffold args (ios dir, project name, resolved uitest scheme) are preserved.
+    expect(scaffold.command.args.slice(1)).toEqual([
+      '--ios-dir',
+      'ios',
+      '--project-name',
+      ios.appScheme,
+      '--uitest-scheme',
+      placeholderIos(ios, metro).uitestScheme,
+    ])
   })
 
   it('emits the driver env contract with a token FILE, never an inline token', () => {
