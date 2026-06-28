@@ -1,6 +1,6 @@
 {
   "name": "@unrulysystems/rn-driver-view-tree",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Native view tree module for rn-playwright-driver",
   "keywords": [
     "expo",
