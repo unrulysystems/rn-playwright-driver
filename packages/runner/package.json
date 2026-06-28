@@ -1,6 +1,6 @@
 {
   "name": "@unrulysystems/rn-playwright-driver-runner",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Config-backed cross-platform e2e lifecycle runner CLI for rn-playwright-driver",
   "keywords": [
     "android",
