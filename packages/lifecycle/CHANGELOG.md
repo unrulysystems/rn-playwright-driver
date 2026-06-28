@@ -1,6 +1,6 @@
-# @unrulysystems/rn-driver-screenshot
+# @unrulysystems/rn-driver-lifecycle
 
-## 0.1.2
+## 0.1.1
 
 ### Patch Changes
 
@@ -11,9 +11,3 @@
   on localhost Metro servers. The runner also fast-fails companion readiness when
   captured iOS or Android companion logs contain terminal build, test, or
   instrumentation failure markers instead of waiting for the full probe timeout.
-
-## 0.1.1
-
-### Patch Changes
-
-- Fix the Android Gradle dependency project name for the renamed view-tree package.

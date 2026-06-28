@@ -1,6 +1,6 @@
 {
   "name": "@unrulysystems/rn-driver-lifecycle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Native lifecycle module for rn-playwright-driver",
   "keywords": [
     "expo",
