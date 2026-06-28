@@ -75,10 +75,14 @@ export function planIos(input: PlanIosInput): Plan {
     description: 'Scaffold XCTest companion target',
     action: {
       type: 'command',
+      // Spawn the scaffold as `node <abs scaffoldBin>` — the resolver pins the
+      // companion's bin to an absolute path that is hoist-safe (works when a
+      // monorepo hoists it to the repo root) and exec-bit/shebang-independent.
       // Pass the resolved UI-test scheme so a custom `ios.uitestScheme` scaffolds
       // the SAME target that companion startup later builds (default is
       // `${appScheme}UITests`).
-      command: cmd('node_modules/.bin/rn-driver-xctest-scaffold', [
+      command: cmd('node', [
+        resolved.scaffoldBin,
         '--ios-dir',
         'ios',
         '--project-name',

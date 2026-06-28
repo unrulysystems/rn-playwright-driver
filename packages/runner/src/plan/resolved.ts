@@ -30,6 +30,12 @@ export interface ResolvedIosTarget {
   readonly tokenFile: string
   /** Path to the per-run companion runtime-config JSON. */
   readonly runtimeConfigFile: string
+  /**
+   * Absolute path to the `rn-driver-xctest-scaffold` entry, resolved hoist-safely
+   * from the project cwd (works in Yarn-berry monorepos where the bin is hoisted to
+   * the repo root). Spawned as `node <scaffoldBin>`.
+   */
+  readonly scaffoldBin: string
   /** Metro URL handed to the dev launcher (`simctl launch --initialUrl`). */
   readonly initialUrl: string
 }
@@ -102,6 +108,7 @@ export function placeholderIos(ios: IosConfig, metro: ResolvedMetro): ResolvedIo
     hermesTimeoutMs: DEFAULTS.hermesTargetTimeoutMs,
     tokenFile: SECRET_PLACEHOLDER,
     runtimeConfigFile: '<runtime-config>',
+    scaffoldBin: '<scaffold-bin>',
     initialUrl: ios.launch.initialUrl ?? metro.url,
   }
 }
