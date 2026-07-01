@@ -624,6 +624,16 @@ export interface Device {
   // --- Screenshots (Phase 3 - require native module) ---
   screenshot(options?: { clip?: ElementBounds }): Promise<Buffer>
 
+  // --- Device file I/O (host-side; see SPEC.md REQ-FILES-*) ---
+  /**
+   * Host-side access to the running app's sandbox — read back files the app
+   * wrote (exports, caches, snapshots) and assert their bytes, or push fixtures.
+   * REQUIRES: {@link DeviceOptions.target} context (supplied by the runner env)
+   * and the platform's host tool (`simctl`/`devicectl`/`adb`). Available after
+   * {@link Device.connect}.
+   */
+  readonly files: DeviceFiles
+
   // --- Navigation/Lifecycle (Phase 3 - require native module) ---
   openURL(url: string): Promise<void>
   reload(): Promise<void>

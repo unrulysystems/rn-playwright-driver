@@ -6,6 +6,8 @@
  * `src/touch/cli-backend.ts`. See `packages/driver/SPEC.md` REQ-XPORT-006.
  */
 
+import { spawn } from 'node:child_process'
+
 export interface HostExecResult {
   /** Raw stdout bytes (binary-safe — a pulled file streams through here). */
   stdout: Buffer
@@ -38,3 +40,66 @@ export type HostFileExec = (
   args: readonly string[],
   options?: HostFileExecOptions,
 ) => Promise<HostExecResult>
+
+/** Thrown by the default exec when stdout exceeds `maxBuffer`; mapped to `TOO_LARGE`. */
+export class HostExecMaxBufferError extends Error {
+  constructor(readonly maxBuffer: number) {
+    super(`host command stdout exceeded maxBuffer (${maxBuffer} bytes)`)
+    this.name = 'HostExecMaxBufferError'
+  }
+}
+
+/**
+ * Default {@link HostFileExec} backed by `child_process.spawn` — captures stdout
+ * as a Buffer (binary-safe), writes `options.stdin` to the child, enforces
+ * `maxBuffer` by killing the child on overflow, and reports a non-zero exit via
+ * `code` rather than throwing (spawn-level failures still reject).
+ */
+export function createDefaultHostFileExec(): HostFileExec {
+  return (command, args, options = {}) =>
+    new Promise<HostExecResult>((resolve, reject) => {
+      const child = spawn(command, [...args], { stdio: ['pipe', 'pipe', 'pipe'] })
+      const stdout: Buffer[] = []
+      const stderr: Buffer[] = []
+      let stdoutLen = 0
+      let settled = false
+      const finish = (fn: () => void) => {
+        if (settled) return
+        settled = true
+        if (timer) clearTimeout(timer)
+        fn()
+      }
+      const timer =
+        options.timeoutMs !== undefined
+          ? setTimeout(() => {
+              child.kill('SIGKILL')
+              finish(() =>
+                reject(
+                  new Error(`host command timed out after ${options.timeoutMs}ms: ${command}`),
+                ),
+              )
+            }, options.timeoutMs)
+          : undefined
+      child.stdout.on('data', (chunk: Buffer) => {
+        stdoutLen += chunk.length
+        if (options.maxBuffer !== undefined && stdoutLen > options.maxBuffer) {
+          child.kill('SIGKILL')
+          finish(() => reject(new HostExecMaxBufferError(options.maxBuffer as number)))
+          return
+        }
+        stdout.push(chunk)
+      })
+      child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk))
+      child.on('error', (error) => finish(() => reject(error)))
+      child.on('close', (code) =>
+        finish(() =>
+          resolve({
+            stdout: Buffer.concat(stdout),
+            stderr: Buffer.concat(stderr).toString('utf8'),
+            code: code ?? -1,
+          }),
+        ),
+      )
+      child.stdin.end(options.stdin ?? Buffer.alloc(0))
+    })
+}

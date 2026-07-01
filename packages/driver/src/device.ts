@@ -1,6 +1,9 @@
 import { CDPClient, type CDPClientOptions } from './cdp/client'
 import { discoverTargets, selectTarget } from './cdp/discovery'
 import { parseConsoleEvent, parseExceptionEvent } from './cdp/runtime-events'
+import { createDeviceFiles } from './files/device-files'
+import { FileIoError } from './files/errors'
+import { createDefaultTransportFactory } from './files/transports'
 import { buildCapabilitiesExpression, buildHarnessCall } from './harness-expressions'
 import type { Locator } from './locator'
 import { buildRoleSelector, createLocator, LocatorError } from './locator'
@@ -12,6 +15,7 @@ import type {
   Capabilities,
   Device,
   DeviceEventMap,
+  DeviceFiles,
   DeviceOptions,
   DriverEvent,
   ElementBounds,
@@ -68,6 +72,9 @@ export class RNDevice implements Device {
   private _touchBackend: TouchBackend | null = null
   private _touchBackendInfo: TouchBackendInfo | null = null
   private _platform: 'ios' | 'android' = 'ios'
+  // Host-side file I/O, built in connect() once the platform is known. Null until
+  // connected — the `files` getter throws a clear error before then.
+  private _files: DeviceFiles | null = null
   // Runtime-event listeners, keyed by event name. Function identity is the
   // unsubscribe key; payloads are cast at the typed on()/emit() boundary.
   private readonly _listeners = new Map<string, Set<(payload: unknown) => void>>()
@@ -129,6 +136,14 @@ export class RNDevice implements Device {
     }
     this._touchBackendInfo = backendInfo
     this._pointer.setBackend(backend)
+
+    // Host-side file I/O. Targeting is validated lazily (per op) so a device
+    // without file targeting only fails when device.files is actually used.
+    this._files = createDeviceFiles({
+      platform: this._platform,
+      target: this.options.target,
+      selectTransport: createDefaultTransportFactory(),
+    })
   }
 
   async disconnect(): Promise<void> {
@@ -144,6 +159,7 @@ export class RNDevice implements Device {
       this._touchBackend = null
     }
     this._touchBackendInfo = null
+    this._files = null
     await this.cdp.disconnect()
   }
 
@@ -450,6 +466,13 @@ export class RNDevice implements Device {
   }
 
   // --- Platform Info ---
+
+  get files(): DeviceFiles {
+    if (!this._files) {
+      throw new FileIoError('UNAVAILABLE', 'device.files is available after connect()')
+    }
+    return this._files
+  }
 
   get platform(): 'ios' | 'android' {
     return this._platform
