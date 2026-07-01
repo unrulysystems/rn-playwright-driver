@@ -113,7 +113,10 @@ the app-written file on both platforms:
   so it can reach anything that UID can — the private data dir **and**
   app-accessible external storage (e.g. `/sdcard/…`) — but nothing another app or
   the system owns (the kernel enforces this; unreachable paths fail closed as
-  `TRANSPORT_FAILED`). `..` is rejected so the touched path stays legible. Pass a
+  `TRANSPORT_FAILED`). `..` is rejected so the touched path stays legible, and a
+  path containing shell metacharacters (quotes, backtick, `$`, backslash, or a
+  newline) is rejected `UNSUPPORTED` before adb runs — the path is interpolated
+  into a device-side `run-as … sh -c` command, so it must stay a plain path. Pass a
   full path you intend; the standard `document`/`cache`/`data` roots are the
   sandbox-relative alternative.
 - Android requires a **debuggable** build (`run-as`); iOS requires a

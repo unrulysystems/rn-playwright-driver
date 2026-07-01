@@ -58,8 +58,19 @@ export function resolveRemotePath(
     return { absolute: true, path: remotePath }
   }
 
-  const normalized = normalizeUnderRoot(remotePath)
+  // Fail closed on an unknown root. `root` is typed `FileRoot`, but a JS caller
+  // (device.files is public) can pass a typo like `'documents'`; without this it
+  // would index to `undefined` and silently produce a `subpath: 'undefined/…'`
+  // that push/pull both hit — the same wrong location, violating REQ-FILES-003.
+  // `''` (the `data` root) is a valid value, so test for `undefined`, not falsy.
   const rootDir = ROOT_DIRS[platform][root]
+  if (rootDir === undefined) {
+    throw new FileIoError(
+      'UNSUPPORTED',
+      `device.files: unknown root ${JSON.stringify(root)} — expected 'document', 'cache', 'data', or 'absolute'`,
+    )
+  }
+  const normalized = normalizeUnderRoot(remotePath)
   return { absolute: false, subpath: rootDir === '' ? normalized : `${rootDir}/${normalized}` }
 }
 

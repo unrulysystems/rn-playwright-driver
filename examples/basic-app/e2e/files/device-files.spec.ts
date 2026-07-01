@@ -80,6 +80,21 @@ test.describe('device.files', () => {
     expect(Buffer.compare(pulled, payload)).toBe(0)
   })
 
+  test("push then pull round-trips through the 'data' root (container/home root, REQ-FILES-003)", async ({
+    device,
+  }) => {
+    // The `data` root maps to the container root itself (iOS `<data>`, Android
+    // `/data/data/<pkg>`) — the only named root the E2E floor did not exercise. A
+    // nested subpath keeps it clear of the document/cache subdirs the other tests use.
+    const name = `rn-driver-data/${randomBytes(6).toString('hex')}.bin`
+    const payload = randomBytes(384)
+
+    await device.files.push(payload, name, { root: 'data' })
+    const pulled = await device.files.pull(name, { root: 'data' })
+
+    expect(Buffer.compare(pulled, payload)).toBe(0)
+  })
+
   test('pull of a missing path fails closed with NOT_FOUND (REQ-FILES-005)', async ({ device }) => {
     // Random per-run name so stale sandbox state can't make this pass/fail for
     // the wrong reason (no remove API to clean a fixed name across runs).

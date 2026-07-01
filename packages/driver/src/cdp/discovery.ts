@@ -38,11 +38,21 @@ export async function discoverTargets(metroUrl: string): Promise<DebugTarget[]> 
 }
 
 /**
+ * The device name a Metro target embeds in a trailing parenthetical, e.g.
+ * `com.acme.app (iPhone 17)` → `iPhone 17`. Used to make exact-name selection work
+ * for targets that carry no separate `deviceName` field. Returns undefined when the
+ * title has no trailing `(…)`.
+ */
+function titleParenthetical(title: string | undefined): string | undefined {
+  return title?.match(/\(([^)]+)\)\s*$/)?.[1]
+}
+
+/**
  * Select a specific debug target from discovered targets.
  *
  * Selection priority:
  * 1. deviceId (exact match)
- * 2. deviceName (substring match — throws if ambiguous)
+ * 2. deviceName (exact name/title match preferred, else substring — throws if ambiguous)
  * 3. pageIndex (default: 0)
  *
  * Throws if no matching target is found, or if a deviceName is ambiguous.
@@ -73,9 +83,15 @@ export function selectTarget(
     // Prefer an EXACT name/title match before falling back to substring: the runner
     // emits the selected simulator's exact name (RN_DEVICE_NAME), so `iPhone 17`
     // must resolve to `iPhone 17` even when `iPhone 17 Pro` is also connected —
-    // substring-only matching would wrongly call that ambiguous.
+    // substring-only matching would wrongly call that ambiguous. A `deviceName`-less
+    // Metro target embeds the name in a trailing parenthetical (`com.acme.app
+    // (iPhone 17)`), so match that exactly too — otherwise it would fall through to
+    // substring and be ambiguous with `… (iPhone 17 Pro)`.
     const exact = targets.filter(
-      (t) => t.deviceName?.toLowerCase() === needle || t.title?.toLowerCase() === needle,
+      (t) =>
+        t.deviceName?.toLowerCase() === needle ||
+        t.title?.toLowerCase() === needle ||
+        titleParenthetical(t.title)?.toLowerCase() === needle,
     )
     const matches =
       exact.length > 0

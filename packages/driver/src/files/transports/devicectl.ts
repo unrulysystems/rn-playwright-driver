@@ -88,6 +88,19 @@ export function createDevicectlTransport(
     throw classifyCliFailure('devicectl', remote, detail, result.code)
   }
 
+  // Run one `devicectl copy` and map a spawn-level failure to the taxonomy — a
+  // local try/catch, matching the simctl/adb transports (shared by pull and push).
+  const runCopy = async (args: readonly string[]): Promise<Awaited<ReturnType<HostFileExec>>> => {
+    try {
+      return await exec(config.xcrunPath, args)
+    } catch (error) {
+      throw new FileIoError(
+        'TRANSPORT_FAILED',
+        `device.files: devicectl failed: ${errorMessage(error)}`,
+      )
+    }
+  }
+
   return {
     async pull(path, { maxBuffer }) {
       const remote = containerRelative(path)
@@ -95,14 +108,7 @@ export function createDevicectlTransport(
       const dest = join(dir, 'payload')
       const jsonOut = join(dir, 'result.json')
       try {
-        const result = await exec(config.xcrunPath, copy('from', remote, dest, jsonOut)).catch(
-          (error: unknown) => {
-            throw new FileIoError(
-              'TRANSPORT_FAILED',
-              `device.files: devicectl failed: ${errorMessage(error)}`,
-            )
-          },
-        )
+        const result = await runCopy(copy('from', remote, dest, jsonOut))
         await assertOk(result, remote, jsonOut)
         try {
           // Fast-fail on a known-large staged payload, then a BOUNDED read so peak
@@ -157,14 +163,7 @@ export function createDevicectlTransport(
             { cause: error },
           )
         }
-        const result = await exec(config.xcrunPath, copy('to', src, remote, jsonOut)).catch(
-          (error: unknown) => {
-            throw new FileIoError(
-              'TRANSPORT_FAILED',
-              `device.files: devicectl failed: ${errorMessage(error)}`,
-            )
-          },
-        )
+        const result = await runCopy(copy('to', src, remote, jsonOut))
         await assertOk(result, remote, jsonOut)
       } finally {
         // Best-effort temp cleanup; a cleanup failure must not mask the result.

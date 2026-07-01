@@ -40,6 +40,15 @@ describe('selectTarget', () => {
     expect(selectTarget(targets, { deviceName: 'iPhone 17' })).toBe(exact)
   })
 
+  it('prefers an exact title parenthetical when targets carry no deviceName field', () => {
+    // Metro targets without a `deviceName` embed the device in a trailing paren:
+    // `iPhone 17` must resolve to `… (iPhone 17)`, not be ambiguous with
+    // `… (iPhone 17 Pro)`.
+    const exact = target({ id: 'a', title: 'com.acme.app (iPhone 17)' })
+    const targets = [exact, target({ id: 'b', title: 'com.acme.app (iPhone 17 Pro)' })]
+    expect(selectTarget(targets, { deviceName: 'iPhone 17' })).toBe(exact)
+  })
+
   it('still substring-matches when there is no exact name match', () => {
     // `iPhone 17 P` matches only `iPhone 17 Pro` as a substring — unambiguous.
     const pro = target({ id: 'b', deviceName: 'iPhone 17 Pro' })

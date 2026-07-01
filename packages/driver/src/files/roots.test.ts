@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { FileRoot } from '../types'
 import { FileIoError } from './errors'
 import { resolveRemotePath } from './roots'
 
@@ -46,6 +47,19 @@ describe('resolveRemotePath — named roots (REQ-FILES-003)', () => {
     expect(() => resolveRemotePath('android', 'absolute', '/data/data/pkg/../x')).toThrow(
       /must not contain '\.\.'/,
     )
+  })
+
+  it('fails closed with UNSUPPORTED for an unknown root, never an undefined subpath', () => {
+    // A JS caller (device.files is public) can pass a typo past the FileRoot type.
+    // It must not silently resolve to `subpath: 'undefined/x'` that push/pull share.
+    try {
+      resolveRemotePath('android', 'documents' as unknown as FileRoot, 'x')
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect(error).toBeInstanceOf(FileIoError)
+      expect((error as FileIoError).code).toBe('UNSUPPORTED')
+      expect((error as FileIoError).message).toMatch(/unknown root/)
+    }
   })
 })
 
