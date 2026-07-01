@@ -147,6 +147,11 @@ export function targetFromEnv(env: TestEnvironment): TargetContext | undefined {
   if (env.ANDROID_SERIAL) target.serial = env.ANDROID_SERIAL
   const iosKind = parseIosTargetKind(env.RN_IOS_TARGET_KIND)
   if (iosKind) target.iosKind = iosKind
+  // Reuse RN_TOUCH_CLI_ADB_PATH as the adb BINARY location — deliberately, unlike
+  // the serial above. The path names which `adb` executable to run; it is
+  // device-NEUTRAL, so sharing it with touch cannot misroute file I/O to the wrong
+  // device (that risk is the serial's, pinned to ANDROID_SERIAL only). Absent it,
+  // the transport falls back to DEFAULT_ADB_PATH. One adb binary serves both.
   if (env.RN_TOUCH_CLI_ADB_PATH) target.adbPath = env.RN_TOUCH_CLI_ADB_PATH
   return Object.keys(target).length > 0 ? target : undefined
 }

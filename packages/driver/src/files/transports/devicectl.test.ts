@@ -165,6 +165,27 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     expect(reads).toEqual([]) // bounded before the read
   })
 
+  it('rejects TOO_LARGE when the staged payload grows past the size probe (bounded read, REQ-FILES-008)', async () => {
+    // Size probe passes (0), but the bounded read detects the staged file grew over
+    // the cap and throws HostFileTooLargeError — devicectl must map it to TOO_LARGE,
+    // symmetric with simctl. Guards the devicectl.ts readFileBounded/mapping branch.
+    const { exec } = fakeExec(ok)
+    const { fs } = fakeFs()
+    const grown: HostFs = {
+      ...fs,
+      size: async () => 0, // passes the fast-fail
+      readFileBounded: async (_p, maxBytes) => {
+        throw new HostFileTooLargeError(maxBytes) // the bounded read detects the growth
+      },
+    }
+    await expect(
+      createDevicectlTransport(CONFIG, exec, grown).pull(
+        { absolute: false, subpath: 'Documents/grows.bin' },
+        { maxBuffer: 1_000 },
+      ),
+    ).rejects.toMatchObject({ code: 'TOO_LARGE' })
+  })
+
   it('maps a staged-payload read failure to TRANSPORT_FAILED, not NOT_FOUND (REQ-FILES-007)', async () => {
     // `copy from` succeeded, so the remote file existed; a missing/unreadable
     // HOST-staged payload is a staging failure, not a missing remote file.

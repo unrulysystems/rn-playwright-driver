@@ -120,7 +120,14 @@ export function createDefaultHostFileExec(): HostFileExec {
       child.on('close', (code) =>
         finish(() =>
           resolve({
-            stdout: Buffer.concat(stdout),
+            // Accumulate chunks then `concat` — the standard stream-capture pattern
+            // (as `child_process.execFile` itself does). A subprocess pipe has no
+            // length to pre-size from, and pre-allocating `maxBuffer` (64 MiB for a
+            // pull) would waste memory on the common small-file pull; the concat's
+            // transient second copy only materializes for a near-cap pull. Hard
+            // memory is still bounded: the `maxBuffer` kill above caps stdout and
+            // STDERR_CAP caps stderr.
+            stdout: Buffer.concat(stdout, stdoutLen),
             stderr: Buffer.concat(stderr).toString('utf8'),
             code: code ?? -1,
           }),

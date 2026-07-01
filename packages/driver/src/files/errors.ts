@@ -9,7 +9,8 @@
  *
  * - `NOT_FOUND` — the remote path does not exist.
  * - `UNAVAILABLE` — required targeting context (udid/bundleId/serial/package) is
- *   missing for the active platform, so no transport can run.
+ *   missing OR present-but-unusable (e.g. a malformed package name that fails the
+ *   shell-safety check) for the active platform, so no transport can run.
  * - `UNSUPPORTED` — the requested root/transport combination is not supported
  *   (e.g. the `absolute` root on a physical iOS device: devicectl is
  *   domain-scoped and cannot reach outside the app container).

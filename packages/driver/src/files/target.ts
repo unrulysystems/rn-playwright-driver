@@ -66,7 +66,9 @@ export function resolveFileTarget(
   if (!packageName) missing('the app package name', 'target.packageName', 'RN_APP_PACKAGE')
   if (!ANDROID_PACKAGE.test(packageName)) {
     // Guard the device-shell interpolation: a crafted RN_APP_PACKAGE must not
-    // smuggle shell commands into `run-as <pkg> sh -c …`.
+    // smuggle shell commands into `run-as <pkg> sh -c …`. Classified UNAVAILABLE
+    // (not UNSUPPORTED): the package IS present but unusable, so — like missing
+    // context — no transport can run (see errors.ts UNAVAILABLE).
     throw new FileIoError(
       'UNAVAILABLE',
       `device.files: invalid Android package name ${JSON.stringify(packageName)} — expected a reverse-DNS id like com.example.app`,

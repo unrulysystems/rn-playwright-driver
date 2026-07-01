@@ -162,17 +162,23 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
   exceeded). Each carries the normalized underlying message; the three tools'
   differing failure signatures are mapped to this taxonomy.
 - **REQ-FILES-008** `pull` is bounded by `options.maxBuffer` (default 64 MiB) on
-  **every** transport, never a truncated `Buffer`: Android caps the stdout
-  stream; the iOS transports `stat` the file (simctl) or the staged payload
-  (devicectl) as a cheap fast-fail, then perform a **bounded read**
-  (`HostFs.readFileBounded`) that allocates at most `maxBuffer + 1` bytes and
-  rejects `TOO_LARGE` without buffering the excess — so a file that **grows or is
-  swapped between the probe and the read** (a racing/compromised or merely
-  concurrently-written app) still cannot exhaust the worker. `push` is bounded
-  symmetrically by the **same** bounded read (`readFileBoundedFromDisk`): a
-  host-file source rejects `TOO_LARGE` on a cheap size fast-fail, then the bounded
-  read holds the cap even if the file grows past the probe; a `Buffer` source
-  (never probed) is caught by a final length re-check.
+  **every** transport, never a truncated `Buffer`. Two mechanisms, by transport:
+  - **Android** caps the adb stdout **stream**: the exec kills the child once
+    stdout exceeds `maxBuffer` (`HostExecMaxBufferError` → `TOO_LARGE`). Capture
+    accumulates chunks then `concat`s — the standard stream pattern (no length to
+    pre-size a subprocess pipe from), so a near-cap pull sees a transient second
+    copy; hard memory is still bounded by the kill.
+  - **iOS** (simctl/devicectl) `stat`s the file/staged payload as a cheap fast-fail,
+    then performs a **bounded read** (`readFileBoundedFromDisk`) into a **single**
+    buffer sized to the file (capped): a stable read peaks at ≈`filesize+1` ≤
+    `maxBuffer + 1` (no chunk-list `concat`, so no ~2x), and a file that **grows or
+    is swapped between the probe and the read** (a racing/compromised or merely
+    concurrently-written app) triggers a one-time reallocation to the cap and still
+    rejects `TOO_LARGE` past it — never exhausting the worker.
+    `push` is bounded symmetrically by the **same** bounded read: a host-file source
+    rejects `TOO_LARGE` on the size fast-fail, then the bounded read holds the cap
+    even if the file grows past the probe; a `Buffer` source (never probed) is caught
+    by a final length re-check.
 
 ### Transports — `REQ-XPORT-*`
 

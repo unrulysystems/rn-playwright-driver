@@ -19,34 +19,43 @@ export class HostFileTooLargeError extends Error {
   }
 }
 
-/** Chunk size for the streaming bounded read; small enough that a tiny file costs a tiny buffer. */
-const BOUNDED_READ_CHUNK = 64 * 1024
-
 /**
  * Read at most `maxBytes` from `path`, throwing {@link HostFileTooLargeError} if
- * the file is larger — WITHOUT ever buffering the excess. Reads one byte past the
- * cap purely to detect overflow, and allocates in {@link BOUNDED_READ_CHUNK}
- * chunks so a tiny file costs a tiny buffer (not the full cap). Shared by the iOS
- * pull transports and `device.files` push, so both enforce the same memory bound
- * even when the file grows between a size probe and the read (REQ-FILES-008).
+ * the file is larger — WITHOUT ever buffering the excess. Reads into ONE buffer
+ * (no chunk list + `concat`, so no ~2x transient) sized to the file, so:
+ *   - a small file costs a small buffer (not the full 64 MiB cap),
+ *   - a stable read peaks at ~filesize+1 ≤ maxBytes+1 (honors REQ-FILES-008),
+ *   - a file that GREW past the initial size hint mid-read triggers a single
+ *     reallocation up to the hard cap and still rejects past it.
+ * Shared by the iOS pull transports and `device.files` push, so both enforce the
+ * same bound even when the file changes size between a size probe and the read.
  */
 export async function readFileBoundedFromDisk(path: string, maxBytes: number): Promise<Buffer> {
-  const overflowCap = maxBytes + 1 // one byte past the cap is enough to know it's too large
+  const overflowCap = maxBytes + 1 // read one byte past the cap to detect "too large"
   const handle = await open(path, 'r')
   try {
-    const chunks: Buffer[] = []
+    // Size the buffer to the file (capped): the common case allocates ~filesize,
+    // never the full cap. `+ 1` lets a read that exactly fills it prove EOF.
+    const hint = Math.min((await handle.stat()).size, maxBytes) + 1
+    let buf = Buffer.allocUnsafe(hint)
     let total = 0
-    while (total < overflowCap) {
-      const want = Math.min(BOUNDED_READ_CHUNK, overflowCap - total)
-      const chunk = Buffer.allocUnsafe(want)
-      const { bytesRead } = await handle.read(chunk, 0, want, total)
+    for (;;) {
+      // The file grew past our hint but is still under the cap — grow once to the
+      // hard cap and copy forward (rare: only a concurrent/racing writer).
+      if (total === buf.length && buf.length < overflowCap) {
+        const grown = Buffer.allocUnsafe(overflowCap)
+        buf.copy(grown, 0, 0, total)
+        buf = grown
+      }
+      if (total >= overflowCap) break // already one past the cap → too large
+      const { bytesRead } = await handle.read(buf, total, buf.length - total, total)
       if (bytesRead === 0) break // EOF
-      // Only ever expose the bytes actually read — allocUnsafe leaves the tail uninitialized.
-      chunks.push(bytesRead === want ? chunk : chunk.subarray(0, bytesRead))
       total += bytesRead
     }
     if (total > maxBytes) throw new HostFileTooLargeError(maxBytes)
-    return Buffer.concat(chunks, total)
+    // Only ever expose the bytes actually read — allocUnsafe leaves the tail
+    // uninitialized, and the hint may over-allocate by up to one byte.
+    return buf.subarray(0, total)
   } finally {
     await handle.close()
   }
