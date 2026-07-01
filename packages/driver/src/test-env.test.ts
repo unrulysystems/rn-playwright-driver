@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { touchOptionsFromEnv } from './test-env'
+import { targetFromEnv, touchOptionsFromEnv } from './test-env'
 
 describe('touchOptionsFromEnv', () => {
   it('reads instrumentation auth from a token file when the token env var is unset', () => {
@@ -152,5 +152,44 @@ describe('touchOptionsFromEnv', () => {
       },
     })
     expect(readTextFile).toHaveBeenCalledWith('/tmp/rn-xctest-token')
+  })
+})
+
+describe('targetFromEnv', () => {
+  it('maps the iOS file-I/O contract into a target', () => {
+    expect(
+      targetFromEnv({
+        RN_APP_BUNDLE_ID: 'com.acme.app',
+        RN_SIM_UDID: 'UDID-1',
+        RN_IOS_TARGET_KIND: 'simulator',
+      }),
+    ).toEqual({ bundleId: 'com.acme.app', udid: 'UDID-1', iosKind: 'simulator' })
+  })
+
+  it('maps the Android contract, defaulting the serial from ANDROID_SERIAL', () => {
+    expect(
+      targetFromEnv({ RN_APP_PACKAGE: 'com.acme.app', ANDROID_SERIAL: 'emulator-5554' }),
+    ).toEqual({ packageName: 'com.acme.app', serial: 'emulator-5554' })
+  })
+
+  it('prefers RN_TOUCH_ADB_SERIAL over ANDROID_SERIAL and reuses the adb path', () => {
+    expect(
+      targetFromEnv({
+        RN_APP_PACKAGE: 'com.acme.app',
+        RN_TOUCH_ADB_SERIAL: 'pin-1',
+        ANDROID_SERIAL: 'other',
+        RN_TOUCH_CLI_ADB_PATH: '/opt/adb',
+      }),
+    ).toMatchObject({ serial: 'pin-1', adbPath: '/opt/adb' })
+  })
+
+  it('ignores an invalid RN_IOS_TARGET_KIND (leaves iosKind unset → simulator default)', () => {
+    expect(targetFromEnv({ RN_SIM_UDID: 'UDID-1', RN_IOS_TARGET_KIND: 'nonsense' })).toEqual({
+      udid: 'UDID-1',
+    })
+  })
+
+  it('returns undefined when no targeting env is present', () => {
+    expect(targetFromEnv({ RN_METRO_URL: 'http://localhost:8081' })).toBeUndefined()
   })
 })

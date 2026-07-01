@@ -1,4 +1,6 @@
-import type { TouchBackendConfig, TouchBackendType } from './types'
+import type { IosTargetKind, TargetContext, TouchBackendConfig, TouchBackendType } from './types'
+
+const IOS_TARGET_KINDS = ['simulator', 'device'] as const satisfies readonly IosTargetKind[]
 
 const DEFAULT_TOUCH_INSTRUMENTATION_PORT = 9999
 const DEFAULT_TOUCH_XCTEST_PORT = 9999
@@ -106,6 +108,34 @@ function xctestOptionsFromEnv(
     port: parsePort(env.RN_TOUCH_XCTEST_PORT) ?? DEFAULT_TOUCH_XCTEST_PORT,
     ...(authToken === undefined ? {} : { authToken }),
   }
+}
+
+function parseIosTargetKind(value: string | undefined): IosTargetKind | undefined {
+  return value !== undefined && (IOS_TARGET_KINDS as readonly string[]).includes(value)
+    ? (value as IosTargetKind)
+    : undefined
+}
+
+/**
+ * Resolve the device/app targeting context for host-side file I/O (`device.files`)
+ * from the runner's env contract. Returns undefined when no targeting env is set,
+ * so a bare Playwright run without the runner simply has no `target`. The
+ * fail-closed check for whether the ACTIVE platform has the fields it needs lives
+ * in `resolveFileTarget` (thrown at file-op time). See SPEC.md REQ-TGT-002/003.
+ */
+export function targetFromEnv(env: TestEnvironment): TargetContext | undefined {
+  const target: TargetContext = {}
+  if (env.RN_APP_BUNDLE_ID) target.bundleId = env.RN_APP_BUNDLE_ID
+  if (env.RN_APP_PACKAGE) target.packageName = env.RN_APP_PACKAGE
+  if (env.RN_SIM_UDID) target.udid = env.RN_SIM_UDID
+  // Reuse the adb serial/path the touch backend already resolves, so file I/O and
+  // touch pin the same device.
+  const serial = env.RN_TOUCH_ADB_SERIAL ?? env.ANDROID_SERIAL
+  if (serial) target.serial = serial
+  const iosKind = parseIosTargetKind(env.RN_IOS_TARGET_KIND)
+  if (iosKind) target.iosKind = iosKind
+  if (env.RN_TOUCH_CLI_ADB_PATH) target.adbPath = env.RN_TOUCH_CLI_ADB_PATH
+  return Object.keys(target).length > 0 ? target : undefined
 }
 
 export function touchOptionsFromEnv(

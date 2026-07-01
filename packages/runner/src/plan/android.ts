@@ -276,7 +276,13 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     platform: 'android',
     steps,
     cleanup,
-    driverEnv: buildAndroidDriverEnv(resolved, metro, hermesDeviceName, timeoutMs),
+    driverEnv: buildAndroidDriverEnv(
+      resolved,
+      metro,
+      hermesDeviceName,
+      timeoutMs,
+      android.packageName,
+    ),
     playwright: playwrightCommand(playwright, specs, passthrough),
   }
 }

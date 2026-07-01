@@ -333,7 +333,7 @@ export function planIos(input: PlanIosInput): Plan {
     platform: 'ios',
     steps,
     cleanup,
-    driverEnv: buildIosDriverEnv(resolved, metro, timeoutMs),
+    driverEnv: buildIosDriverEnv(resolved, metro, timeoutMs, ios.bundleId),
     playwright: playwrightCommand(playwright, specs, passthrough),
   }
 }

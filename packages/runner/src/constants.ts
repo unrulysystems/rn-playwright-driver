@@ -26,6 +26,12 @@ export const ENV = {
   instrumentationPort: 'RN_TOUCH_INSTRUMENTATION_PORT',
   instrumentationTokenFile: 'RN_TOUCH_INSTRUMENTATION_TOKEN_FILE',
   androidSerial: 'ANDROID_SERIAL',
+  // Device/app targeting for host-side file I/O (device.files) — see
+  // packages/driver/SPEC.md REQ-TGT-002. Non-secret (ids/paths only).
+  appBundleId: 'RN_APP_BUNDLE_ID',
+  simUdid: 'RN_SIM_UDID',
+  iosTargetKind: 'RN_IOS_TARGET_KIND',
+  appPackage: 'RN_APP_PACKAGE',
 } as const
 
 /** Touch backend forced per platform (companion-first, fail-closed). */
