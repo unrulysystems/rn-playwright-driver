@@ -68,15 +68,27 @@ export function selectTarget(
   // Match by deviceName (substring, case-insensitive)
   if (options.deviceName) {
     const needle = options.deviceName.toLowerCase()
-    const match = targets.find(
+    const matches = targets.filter(
       (t) =>
         t.deviceName?.toLowerCase().includes(needle) || t.title?.toLowerCase().includes(needle),
     )
-    if (!match) {
+    if (matches.length === 0) {
       const available = targets.map((t) => t.deviceName ?? t.title ?? 'unknown').join(', ')
       throw new Error(`No target matching "${options.deviceName}". Available: ${available}`)
     }
-    return match
+    // Fail closed on ambiguity. Metro's CDP targets expose no device UDID (only a
+    // name/title), so two same-named simulators cannot be told apart here — and
+    // `device.files` pins the container by UDID. Silently taking the first match
+    // could evaluate against one simulator while file I/O hits another's sandbox
+    // (a confused deputy). A loud error beats that; use a unique simulator name.
+    if (matches.length > 1) {
+      const available = matches.map((t) => t.title ?? t.deviceName ?? 'unknown').join(', ')
+      throw new Error(
+        `Ambiguous device target: ${matches.length} runtimes match "${options.deviceName}" (${available}). ` +
+          `Metro exposes no UDID to disambiguate, and device.files targets by UDID — use a unique simulator name.`,
+      )
+    }
+    return matches[0] as DebugTarget
   }
 
   // Default: select by page index. The presence check also covers out-of-range

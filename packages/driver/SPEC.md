@@ -314,15 +314,16 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   promote to verified once a real-device E2E passes.
 - `../runner/SPEC.md`'s env-contract table should absorb the `REQ-TGT-002` vars on
   its next edit (drift surfaced here, not silently applied).
-- **iOS CDP/file-I/O keying (known limitation):** CDP attachment pins by
-  `RN_DEVICE_NAME` (substring match, `cdp/discovery.ts`) while `device.files`
-  pins by `RN_SIM_UDID`. With **duplicate simulator names** on a shared Metro
-  these can diverge (evaluate in one runtime, pull from another sim's container).
-  In the runner flow this is largely theoretical — it boots one sim by UDID on
-  its own Metro. Pinning CDP by UDID would require confirming Metro reports the
-  sim UDID as the CDP target `deviceId` (blindly emitting `RN_DEVICE_ID=simUdid`
-  risks a "no matching target" regression) and touches CDP-selection code; it is
-  deferred pending live verification. Use unique simulator names meanwhile.
+- **iOS CDP/file-I/O keying:** CDP attachment pins by `RN_DEVICE_NAME` (substring
+  match) while `device.files` pins by `RN_SIM_UDID`. A live check confirmed Metro
+  exposes **no device UDID** in its CDP targets — only a name/title — so CDP
+  cannot be pinned by UDID (emitting `RN_DEVICE_ID=simUdid` would match nothing
+  and regress attach). With **duplicate simulator names** on a shared Metro, the
+  two identities could otherwise diverge (evaluate in one runtime, pull another
+  sim's container). `selectTarget` now **fails closed on that ambiguity**: more
+  than one runtime matching the name throws rather than silently taking the first
+  (`cdp/discovery.ts`). Use a **unique simulator name** to disambiguate. In the
+  runner flow this is moot — it boots one sim on its own Metro.
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 
