@@ -134,12 +134,12 @@ export function targetFromEnv(env: TestEnvironment): TargetContext | undefined {
   if (env.RN_APP_BUNDLE_ID) target.bundleId = env.RN_APP_BUNDLE_ID
   if (env.RN_APP_PACKAGE) target.packageName = env.RN_APP_PACKAGE
   if (env.RN_SIM_UDID) target.udid = env.RN_SIM_UDID
-  // Pin the adb serial to ANDROID_SERIAL — the canonical device the runner
-  // launched and the driver env contract emits (SPEC.md REQ-TGT / driver env).
-  // RN_TOUCH_ADB_SERIAL is only a touch-specific override; preferring it would
-  // let a stale value point file I/O at a different device than the app runs on.
-  const serial = env.ANDROID_SERIAL ?? env.RN_TOUCH_ADB_SERIAL
-  if (serial) target.serial = serial
+  // Pin the adb serial to ANDROID_SERIAL ONLY — the capability-neutral device
+  // the runner launched and the driver env contract emits (SPEC.md REQ-TGT).
+  // Do NOT fall back to the touch-specific RN_TOUCH_ADB_SERIAL: a stale value
+  // would silently route file I/O to a different device than the app/CDP target;
+  // absent ANDROID_SERIAL, leave serial unset so file ops fail closed UNAVAILABLE.
+  if (env.ANDROID_SERIAL) target.serial = env.ANDROID_SERIAL
   const iosKind = parseIosTargetKind(env.RN_IOS_TARGET_KIND)
   if (iosKind) target.iosKind = iosKind
   if (env.RN_TOUCH_CLI_ADB_PATH) target.adbPath = env.RN_TOUCH_CLI_ADB_PATH

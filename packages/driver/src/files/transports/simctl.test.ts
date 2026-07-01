@@ -42,6 +42,9 @@ function fakeFs(overrides: Partial<HostFs>): {
     // Identity realpath by default: no symlinks, so every joined path resolves
     // to itself and the container-containment check passes.
     realpath: async (path) => path,
+    // Default size 0 keeps the pull memory bound a no-op for the behavioral
+    // tests; the dedicated size-guard test overrides it to trip TOO_LARGE.
+    size: async () => 0,
     ...overrides,
   }
   return { fs, reads, writes }
@@ -55,7 +58,7 @@ describe('simctl transport', () => {
 
     const bytes = await transport.pull(
       { absolute: false, subpath: 'Documents/obs.csv' },
-      { maxBuffer: 1 },
+      { maxBuffer: 4096 },
     )
 
     expect(calls[0]).toEqual({
@@ -64,6 +67,35 @@ describe('simctl transport', () => {
     })
     expect(reads).toEqual(['/sim/Containers/Data/App/ABC/Documents/obs.csv'])
     expect(bytes.toString()).toBe('@/sim/Containers/Data/App/ABC/Documents/obs.csv')
+  })
+
+  it('rejects TOO_LARGE when the sandbox file exceeds maxBuffer, before reading it', async () => {
+    const { exec } = fakeExec(() => ok('/sim/ABC'))
+    const { fs, reads } = fakeFs({ size: async () => 5_000 })
+
+    await expect(
+      createSimctlTransport(CONFIG, exec, fs).pull(
+        { absolute: false, subpath: 'Documents/big.bin' },
+        { maxBuffer: 1_000 },
+      ),
+    ).rejects.toMatchObject({ code: 'TOO_LARGE' })
+    expect(reads).toEqual([]) // bounded before the read
+  })
+
+  it('maps a container that vanished after resolution into the taxonomy (not a raw error)', async () => {
+    const { exec } = fakeExec(() => ok('/sim/ABC'))
+    const { fs } = fakeFs({
+      realpath: async () => {
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+      },
+    })
+
+    await expect(
+      createSimctlTransport(CONFIG, exec, fs).pull(
+        { absolute: false, subpath: 'Documents/x' },
+        { maxBuffer: 10 },
+      ),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 
   it('writes to the joined host path on push', async () => {

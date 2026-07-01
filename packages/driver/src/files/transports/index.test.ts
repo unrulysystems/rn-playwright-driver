@@ -22,6 +22,7 @@ function harness() {
     mkdtempDir: async () => '/tmp/x',
     remove: async () => {},
     realpath: async (path) => path,
+    size: async () => 1,
   }
   return { commands, deps: { exec, fs } }
 }

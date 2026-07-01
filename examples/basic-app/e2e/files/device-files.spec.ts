@@ -59,6 +59,24 @@ test.describe('device.files', () => {
     expect(pulled.toString('utf8')).toBe(content)
   })
 
+  test('pull reads a file the app wrote via expo-file-system at the cache root (REQ-FILES-003)', async ({
+    device,
+  }) => {
+    // The document-root oracle above does not prove the `cache` root maps to the
+    // app's real cacheDirectory; a mis-mapped cache root would 404 or return the
+    // wrong bytes. Have the app write to Paths.cache, then pull with root:'cache'.
+    const name = 'rn-driver-app-cache.txt'
+    const content = `app-cache-${randomBytes(8).toString('hex')}`
+
+    const uri = await device.evaluate<string>(
+      `globalThis.__RN_DRIVER_EXAMPLE__.writeCacheFile(${JSON.stringify(name)}, ${JSON.stringify(content)})`,
+    )
+    expect(uri).toContain(name)
+
+    const pulled = await device.files.pull(name, { root: 'cache' })
+    expect(pulled.toString('utf8')).toBe(content)
+  })
+
   test('pull of a missing path fails closed with NOT_FOUND (REQ-FILES-005)', async ({ device }) => {
     // Random per-run name so stale sandbox state can't make this pass/fail for
     // the wrong reason (no remove API to clean a fixed name across runs).

@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import type { TargetContext } from '../types'
 import { createDeviceFiles, type FileTransport } from './device-files'
@@ -163,6 +166,29 @@ describe('createDeviceFiles — push', () => {
     expect(readLocalFile).toHaveBeenCalledWith('./fixtures/seed.json')
     expect(pushes[0]?.data.toString()).toBe('from-disk')
     expect(pushes[0]?.path).toEqual({ absolute: false, subpath: 'Documents/seed.json' })
+  })
+
+  it('reads a real host file through the default fs wiring (no injected readers)', async () => {
+    // Exercises the default fs.stat (size probe) + fs.readFile path that the
+    // README's `push('./fixtures/…')` usage relies on — the other push tests
+    // inject fakes and would not catch a default-wiring regression.
+    const dir = await mkdtemp(join(tmpdir(), 'rn-driver-df-'))
+    try {
+      const src = join(dir, 'seed.json')
+      await writeFile(src, 'real-disk-bytes')
+      const { pushes, select } = fakeTransport()
+      const files = createDeviceFiles({
+        platform: 'android',
+        target: ANDROID_TARGET,
+        selectTransport: select,
+      })
+
+      await files.push(src, 'seed.json')
+
+      expect(pushes[0]?.data.toString()).toBe('real-disk-bytes')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 
   it('rejects TOO_LARGE for a local source over maxBuffer, before reading it', async () => {

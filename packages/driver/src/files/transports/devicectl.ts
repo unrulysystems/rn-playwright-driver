@@ -89,7 +89,7 @@ export function createDevicectlTransport(
   }
 
   return {
-    async pull(path) {
+    async pull(path, { maxBuffer }) {
       const remote = containerRelative(path)
       const dir = await stageDir()
       const dest = join(dir, 'payload')
@@ -105,8 +105,18 @@ export function createDevicectlTransport(
         )
         await assertOk(result, remote, jsonOut)
         try {
+          // Bound worker memory: the staged payload size is controlled by
+          // app/test data; fail closed before buffering it (REQ-FILES-008).
+          const size = await fs.size(dest)
+          if (size > maxBuffer) {
+            throw new FileIoError(
+              'TOO_LARGE',
+              `device.files: ${remote} is ${size} bytes, exceeds maxBuffer ${maxBuffer}`,
+            )
+          }
           return await fs.readFile(dest)
         } catch (error) {
+          if (error instanceof FileIoError) throw error
           throw mapNodeFsError(error, remote)
         }
       } finally {

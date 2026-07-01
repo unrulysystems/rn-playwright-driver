@@ -34,6 +34,7 @@ function fakeFs(files: Record<string, string> = {}) {
       removed.push(path)
     },
     realpath: async (path) => path,
+    size: async () => 4, // 'DATA'; size-guard tests override
   }
   return { fs, removed, written }
 }
@@ -48,7 +49,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
 
     const bytes = await transport.pull(
       { absolute: false, subpath: 'Documents/obs.csv' },
-      { maxBuffer: 1 },
+      { maxBuffer: 4096 },
     )
 
     expect(calls[0]).toEqual({
@@ -131,6 +132,27 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     expect(calls).toHaveLength(0)
   })
 
+  it('rejects TOO_LARGE when the staged payload exceeds maxBuffer, before reading it', async () => {
+    const { exec } = fakeExec(ok)
+    const reads: string[] = []
+    const { fs } = fakeFs()
+    const guarded: HostFs = {
+      ...fs,
+      size: async () => 5_000,
+      readFile: async (p) => {
+        reads.push(p)
+        return Buffer.from('DATA')
+      },
+    }
+    await expect(
+      createDevicectlTransport(CONFIG, exec, guarded).pull(
+        { absolute: false, subpath: 'Documents/big.bin' },
+        { maxBuffer: 1_000 },
+      ),
+    ).rejects.toMatchObject({ code: 'TOO_LARGE' })
+    expect(reads).toEqual([]) // bounded before the read
+  })
+
   it('maps a staging read failure into the FileIoError taxonomy, not a raw error (REQ-FILES-007)', async () => {
     const { exec } = fakeExec(ok) // devicectl copy succeeds; the host read then fails
     const fs: HostFs = {
@@ -141,6 +163,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
       mkdtempDir: async () => '/tmp/dc',
       remove: async () => {},
       realpath: async (path) => path,
+      size: async () => 0,
     }
     await expect(
       createDevicectlTransport(CONFIG, exec, fs).pull(
@@ -160,6 +183,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
       mkdtempDir: async () => '/tmp/dc',
       remove: async () => {},
       realpath: async (path) => path,
+      size: async () => 0,
     }
     await expect(
       createDevicectlTransport(CONFIG, exec, fs).push(
@@ -179,6 +203,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
       },
       remove: async () => {},
       realpath: async (path) => path,
+      size: async () => 0,
     }
     await expect(
       createDevicectlTransport(CONFIG, exec, fs).pull(
@@ -188,9 +213,12 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
-  it('preserves nested subpaths in the container destination on push (REQ-FILES-006)', async () => {
-    // devicectl copies to a container-relative path; the tool creates the
-    // intermediate container directories, so the nested subpath is passed verbatim.
+  it('passes a nested subpath verbatim as the --destination argv (REQ-FILES-006, argv-only)', async () => {
+    // ARGV COVERAGE ONLY: this asserts the driver forwards the nested
+    // container-relative path unchanged. Whether `devicectl device copy to`
+    // actually creates the intermediate container directories is a device-side
+    // behavior verified by the pending real-device walkthrough (iOS-device ships
+    // provisional), NOT proven here — the fake HostFileExec always succeeds.
     const { exec, calls } = fakeExec(ok)
     const { fs } = fakeFs()
     await createDevicectlTransport(CONFIG, exec, fs).push(

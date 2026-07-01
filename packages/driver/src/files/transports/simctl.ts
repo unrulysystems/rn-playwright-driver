@@ -3,7 +3,7 @@
  * `xcrun simctl get_app_container`, then read/write it with plain host fs. See
  * `packages/driver/SPEC.md` REQ-XPORT-002.
  */
-import { dirname, join, sep } from 'node:path'
+import { basename, dirname, join, sep } from 'node:path'
 import type { FileTransport } from '../device-files'
 import { FileIoError } from '../errors'
 import type { HostFileExec } from '../host-file-exec'
@@ -18,17 +18,32 @@ function isEnoent(error: unknown): boolean {
 }
 
 /**
- * Confirm `full` resolves — through symlinks — to a location inside the app
- * container before reading/writing it with host privileges. The textual `..`
- * check in `resolveRemotePath` and the `absolute`-root rejection are string-only;
- * an app under test can still plant an in-container symlink (e.g.
- * `Documents/x -> /etc/passwd`) whose target escapes the sandbox. Resolve the
- * longest existing ancestor (a nested push targets a not-yet-created tail) and
- * assert containment; a symlink at any existing component is caught.
+ * Resolve `full` to the canonical, symlink-free path to operate on, confirming
+ * it stays inside the app container. The textual `..` check in
+ * `resolveRemotePath` and the `absolute`-root rejection are string-only; an app
+ * under test can plant an in-container symlink (e.g. `Documents/x -> /etc/passwd`)
+ * whose target escapes the sandbox. This resolves the longest existing ancestor
+ * (a nested push targets a not-yet-created tail), asserts containment, and
+ * REBUILDS the path under that canonical ancestor — so the subsequent read/write
+ * never re-follows a symlinked component. The residual is a narrow TOCTOU: a
+ * cooperative app-under-test is assumed (see SPEC REQ-XPORT-002); this is not a
+ * security boundary against an app deliberately racing the runner.
  */
-async function assertInsideContainer(fs: HostFs, container: string, full: string): Promise<void> {
-  const containerReal = await fs.realpath(container)
+async function resolveInsideContainer(
+  fs: HostFs,
+  container: string,
+  full: string,
+): Promise<string> {
+  let containerReal: string
+  try {
+    containerReal = await fs.realpath(container)
+  } catch (error) {
+    // A container that vanished after get_app_container succeeded is a transport
+    // failure, not a raw Node error escaping the taxonomy (REQ-FILES-007).
+    throw mapNodeFsError(error, container)
+  }
   let ancestor = full
+  const tail: string[] = []
   for (;;) {
     let real: string
     try {
@@ -38,6 +53,7 @@ async function assertInsideContainer(fs: HostFs, container: string, full: string
       if (!isEnoent(error)) throw mapNodeFsError(error, full)
       const parent = dirname(ancestor)
       if (parent === ancestor) throw mapNodeFsError(error, full) // hit fs root
+      tail.unshift(basename(ancestor))
       ancestor = parent
       continue
     }
@@ -47,7 +63,8 @@ async function assertInsideContainer(fs: HostFs, container: string, full: string
         `device.files: path resolves outside the app container (symlink escape): ${full}`,
       )
     }
-    return
+    // Operate under the canonical prefix, bypassing any symlinked ancestor.
+    return tail.length > 0 ? join(real, ...tail) : real
   }
 }
 
@@ -117,24 +134,32 @@ export function createSimctlTransport(
   }
 
   return {
-    async pull(path) {
+    async pull(path, { maxBuffer }) {
       const container = await resolveContainer()
-      const full = hostPath(container, path)
-      await assertInsideContainer(fs, container, full)
+      const safe = await resolveInsideContainer(fs, container, hostPath(container, path))
       try {
-        return await fs.readFile(full)
+        // Bound worker memory: fail closed BEFORE reading a large sandbox file
+        // into one Buffer, symmetric with the Android transport (REQ-FILES-008).
+        const size = await fs.size(safe)
+        if (size > maxBuffer) {
+          throw new FileIoError(
+            'TOO_LARGE',
+            `device.files: ${safe} is ${size} bytes, exceeds maxBuffer ${maxBuffer}`,
+          )
+        }
+        return await fs.readFile(safe)
       } catch (error) {
-        throw mapNodeFsError(error, full)
+        if (error instanceof FileIoError) throw error
+        throw mapNodeFsError(error, safe)
       }
     },
     async push(path, data) {
       const container = await resolveContainer()
-      const full = hostPath(container, path)
-      await assertInsideContainer(fs, container, full)
+      const safe = await resolveInsideContainer(fs, container, hostPath(container, path))
       try {
-        await fs.writeFile(full, data)
+        await fs.writeFile(safe, data)
       } catch (error) {
-        throw mapNodeFsError(error, full)
+        throw mapNodeFsError(error, safe)
       }
     },
   }

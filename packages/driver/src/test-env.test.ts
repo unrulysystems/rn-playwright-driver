@@ -185,10 +185,12 @@ describe('targetFromEnv', () => {
     ).toMatchObject({ serial: 'emulator-5554', adbPath: '/opt/adb' })
   })
 
-  it('falls back to RN_TOUCH_ADB_SERIAL when ANDROID_SERIAL is absent', () => {
-    expect(
-      targetFromEnv({ RN_APP_PACKAGE: 'com.acme.app', RN_TOUCH_ADB_SERIAL: 'pin-1' }),
-    ).toMatchObject({ serial: 'pin-1' })
+  it('does NOT fall back to RN_TOUCH_ADB_SERIAL — leaves serial unset (fail closed)', () => {
+    // A stale touch override must never become the file-I/O device; absent
+    // ANDROID_SERIAL, file ops fail closed UNAVAILABLE rather than route wrong.
+    const target = targetFromEnv({ RN_APP_PACKAGE: 'com.acme.app', RN_TOUCH_ADB_SERIAL: 'stale' })
+    expect(target?.serial).toBeUndefined()
+    expect(target).toMatchObject({ packageName: 'com.acme.app' })
   })
 
   it('throws on an invalid RN_IOS_TARGET_KIND (fail closed, not a silent simulator default)', () => {

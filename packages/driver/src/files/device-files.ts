@@ -97,12 +97,14 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
         }
       } else {
         data = source
-        if (data.length > maxBuffer) {
-          throw new FileIoError(
-            'TOO_LARGE',
-            `device.files: push payload is ${data.length} bytes, exceeds maxBuffer ${maxBuffer}`,
-          )
-        }
+      }
+      // Re-check the actual byte length: a file can grow between the size probe
+      // and the read, and a Buffer source is never probed. Bound unconditionally.
+      if (data.length > maxBuffer) {
+        throw new FileIoError(
+          'TOO_LARGE',
+          `device.files: push payload is ${data.length} bytes, exceeds maxBuffer ${maxBuffer}`,
+        )
       }
       await transportFor(target).push(path, data)
     },

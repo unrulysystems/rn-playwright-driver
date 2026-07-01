@@ -62,10 +62,11 @@ type FileRoot = 'document' | 'cache' | 'data' | 'absolute' // default: 'document
 
 interface FilePullOptions {
   root?: FileRoot
-  maxBuffer?: number // Android stdout cap; default 64 MiB
+  maxBuffer?: number // read memory cap (all transports); default 64 MiB
 }
 interface FilePushOptions {
   root?: FileRoot
+  maxBuffer?: number // source size cap; default 64 MiB
 }
 
 interface DeviceFiles {
@@ -152,13 +153,14 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
   (underlying tool nonzero exit / unparseable output), `TOO_LARGE` (cap
   exceeded). Each carries the normalized underlying message; the three tools'
   differing failure signatures are mapped to this taxonomy.
-- **REQ-FILES-008** Android `pull` streams the file to stdout bounded by
-  `options.maxBuffer` (default 64 MiB). Overflow rejects `TOO_LARGE`,
-  fail-closed, never a truncated `Buffer`. iOS transports copy to a file and are
-  not subject to this cap. `push` is bounded symmetrically: a host-file source
-  larger than `options.maxBuffer` (default 64 MiB) rejects `TOO_LARGE` **before**
-  it is read into memory (a `Buffer` source is checked by length), so an
-  oversized fixture cannot exhaust the worker.
+- **REQ-FILES-008** `pull` is bounded by `options.maxBuffer` (default 64 MiB) on
+  **every** transport, never a truncated `Buffer`: Android caps the stdout
+  stream; the iOS transports `stat` the file (simctl) or the staged payload
+  (devicectl) and reject `TOO_LARGE` **before** reading it into a `Buffer`, so a
+  large sandbox file cannot exhaust the worker. `push` is bounded symmetrically:
+  a host-file source larger than `options.maxBuffer` rejects `TOO_LARGE` before
+  it is read in, and the resulting `Buffer` length is re-checked (guarding a file
+  that grows after the probe, and any `Buffer` source).
 
 ### Transports — `REQ-XPORT-*`
 
@@ -168,11 +170,16 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
 get_app_container <udid> <bundleId> data`, then reads/writes the host path at
   `<container>/<root-subpath>/<remotePath>`. Before dereferencing with host
   privileges it resolves the target through symlinks (the longest existing
-  ancestor, since a nested `push` has a not-yet-created tail) and rejects
-  `UNSUPPORTED` if it escapes the container. The textual no-escape rule
-  (`REQ-FILES-004`) is string-only; this closes an app-planted in-container
-  symlink (e.g. `Documents/x -> /etc/passwd`) that would otherwise read/write
-  arbitrary host files.
+  ancestor, since a nested `push` has a not-yet-created tail), rejects
+  `UNSUPPORTED` if it escapes the container, and then **rebuilds the operation
+  path under that canonical ancestor** so the read/write cannot re-follow a
+  symlinked component. The textual no-escape rule (`REQ-FILES-004`) is
+  string-only; this closes an app-planted in-container symlink (e.g.
+  `Documents/x -> /etc/passwd`) that would otherwise read/write arbitrary host
+  files. **Threat model:** `device.files` assumes a _cooperative_ app-under-test
+  (the developer's own app); the check closes static symlink escape and shrinks
+  the check→use window to a narrow TOCTOU, but it is not a hardened boundary
+  against an app deliberately racing the runner on its own container.
 - **REQ-XPORT-003** iOS-device uses `xcrun devicectl device copy from|to --device
 <udid> --domain-type appDataContainer --domain-identifier <bundleId> --source
 <container-relative> --destination <path> --json-output <file>`. `pull` stages
@@ -268,30 +275,31 @@ $?'`: the bytes are recovered by splitting on the LAST sentinel occurrence, and
 
 Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 
-- [ ] `device.files.pull`/`push` typed and exported; `FileIoError` taxonomy
+- [x] `device.files.pull`/`push` typed and exported; `FileIoError` taxonomy
       implemented (`REQ-FILES-001/002/007`).
-- [ ] Root resolution unit-tested for every root × platform, incl. the no-escape
+- [x] Root resolution unit-tested for every root × platform, incl. the no-escape
       rule for non-`absolute` roots (`REQ-FILES-003/004`).
-- [ ] Transport argv **and** error mapping unit-tested via an injected
+- [x] Transport argv **and** error mapping unit-tested via an injected
       `HostFileExec` recorder for all four transports, including the `devicectl`
       from/to argv (`REQ-XPORT-*`).
-- [ ] Fail-closed cases asserted: missing path → `NOT_FOUND`; `maxBuffer` overflow
+- [x] Fail-closed cases asserted: missing path → `NOT_FOUND`; `maxBuffer` overflow
       → `TOO_LARGE`; missing targeting context → `UNAVAILABLE`; `absolute` on
-      iOS-device → `UNSUPPORTED` (`REQ-FILES-005/008`, `REQ-TGT-004`,
-      `REQ-XPORT-007`).
-- [ ] e2e in `examples/basic-app`: the app writes a file via `expo-file-system`,
-      a test `pull`s it and asserts the bytes, on an iOS **simulator** and an
-      Android **emulator** (the independent oracle) (`REQ-XPORT-002/004`).
-- [ ] `push` → `pull` byte round-trip e2e on simulator + emulator.
-- [ ] Runner env contract extended; `planIos`/`planAndroid` (or env-builder) tests
+      iOS → `UNSUPPORTED` (`REQ-FILES-005/008`, `REQ-TGT-004`, `REQ-XPORT-007`).
+- [x] e2e in `examples/basic-app`: the app writes a file via `expo-file-system`,
+      a test `pull`s it and asserts the bytes for the `document` **and** `cache`
+      roots, on an iOS **simulator** and an Android **emulator** (the independent
+      oracle) (`REQ-XPORT-002/004`).
+- [x] `push` → `pull` byte round-trip e2e on simulator + emulator (incl. a nested
+      remote path exercising parent-dir creation).
+- [x] Runner env contract extended; `planIos`/`planAndroid` (or env-builder) tests
       assert the new vars; the fixture maps them into `target`
       (`REQ-TGT-002/003`).
 - [ ] Android **physical** verified on an attached debuggable device (manual
-      walkthrough) — or recorded as pending if no device is available.
-- [ ] iOS-device `devicectl` transport unit-verified and shipped **provisional**;
+      walkthrough) — **pending** (no attached device in CI).
+- [x] iOS-device `devicectl` transport unit-verified and shipped **provisional**;
       a real-device walkthrough is recorded as pending, not blocking ship.
-- [ ] `nub run check` green (typecheck + lint + format + unit tests).
-- [ ] README documents `device.files`, the roots table, per-platform support, and
+- [x] `nub run check` green (typecheck + lint + format + unit tests).
+- [x] README documents `device.files`, the roots table, per-platform support, and
       the provisional iOS-device note.
 
 ## Open items
@@ -300,6 +308,15 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   promote to verified once a real-device E2E passes.
 - `../runner/SPEC.md`'s env-contract table should absorb the `REQ-TGT-002` vars on
   its next edit (drift surfaced here, not silently applied).
+- **iOS CDP/file-I/O keying (known limitation):** CDP attachment pins by
+  `RN_DEVICE_NAME` (substring match, `cdp/discovery.ts`) while `device.files`
+  pins by `RN_SIM_UDID`. With **duplicate simulator names** on a shared Metro
+  these can diverge (evaluate in one runtime, pull from another sim's container).
+  In the runner flow this is largely theoretical — it boots one sim by UDID on
+  its own Metro. Pinning CDP by UDID would require confirming Metro reports the
+  sim UDID as the CDP target `deviceId` (blindly emitting `RN_DEVICE_ID=simUdid`
+  risks a "no matching target" regression) and touches CDP-selection code; it is
+  deferred pending live verification. Use unique simulator names meanwhile.
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 
