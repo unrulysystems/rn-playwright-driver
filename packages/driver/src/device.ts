@@ -1,5 +1,5 @@
 import { CDPClient, type CDPClientOptions } from './cdp/client'
-import { discoverTargets, selectTarget } from './cdp/discovery'
+import { discoverTargets, selectTargetForConnect } from './cdp/discovery'
 import { parseConsoleEvent, parseExceptionEvent } from './cdp/runtime-events'
 import { createDeviceFiles } from './files/device-files'
 import { FileIoError } from './files/errors'
@@ -104,13 +104,10 @@ export class RNDevice implements Device {
   async connect(): Promise<void> {
     const metroUrl = this.options.metroUrl ?? DEFAULT_METRO_URL
     const targets = await discoverTargets(metroUrl)
-    // filePinned only when device.files targets a CONCRETE device — a udid (iOS)
-    // or serial (Android). A target carrying just an app/tool identity (bundleId,
-    // packageName, adbPath) pins no device, so it must NOT trip the confused-deputy
-    // guard and fail a legitimate multi-runtime connect.
-    const t = this.options.target
-    const filePinned = t?.udid !== undefined || t?.serial !== undefined
-    const target = selectTarget(targets, this.options, filePinned)
+    // selectTargetForConnect derives the file-pin from target.udid/serial and
+    // fails closed on the device.files confused-deputy (a pinned file target but
+    // ambiguous CDP selection among multiple runtimes).
+    const target = selectTargetForConnect(targets, this.options)
 
     // Register the console + exception forwarders BEFORE connecting. cdp.connect()
     // sends Runtime.enable internally, after which the runtime starts emitting

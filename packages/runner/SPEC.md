@@ -103,15 +103,19 @@ The runner's job ends by setting the variables the Playwright fixture already
 reads (`packages/driver/src/test-env.ts`, README "Configuration"). The runner
 does not invent a new driver API; it produces this contract:
 
-| Variable                                                               | Scope   | Meaning                                            |
-| ---------------------------------------------------------------------- | ------- | -------------------------------------------------- |
-| `RN_METRO_URL`                                                         | both    | Metro URL resolved by the runner                   |
-| `RN_DEVICE_NAME`                                                       | both    | Hermes target device-name pin                      |
-| `RN_TIMEOUT`                                                           | both    | Driver request timeout from config/defaults        |
-| `RN_TOUCH_BACKEND`                                                     | both    | `xctest` (iOS) / `instrumentation` (Android)       |
-| `RN_TOUCH_XCTEST_PORT`, `RN_TOUCH_XCTEST_TOKEN_FILE`                   | iOS     | XCTest companion port and token-file path          |
-| `RN_TOUCH_INSTRUMENTATION_PORT`, `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` | Android | Instrumentation companion port and token-file path |
-| `ANDROID_SERIAL`                                                       | Android | adb device pin                                     |
+| Variable                                                               | Scope   | Meaning                                                 |
+| ---------------------------------------------------------------------- | ------- | ------------------------------------------------------- |
+| `RN_METRO_URL`                                                         | both    | Metro URL resolved by the runner                        |
+| `RN_DEVICE_NAME`                                                       | both    | Hermes target device-name pin                           |
+| `RN_TIMEOUT`                                                           | both    | Driver request timeout from config/defaults             |
+| `RN_TOUCH_BACKEND`                                                     | both    | `xctest` (iOS) / `instrumentation` (Android)            |
+| `RN_TOUCH_XCTEST_PORT`, `RN_TOUCH_XCTEST_TOKEN_FILE`                   | iOS     | XCTest companion port and token-file path               |
+| `RN_TOUCH_INSTRUMENTATION_PORT`, `RN_TOUCH_INSTRUMENTATION_TOKEN_FILE` | Android | Instrumentation companion port and token-file path      |
+| `ANDROID_SERIAL`                                                       | Android | adb device pin                                          |
+| `RN_APP_BUNDLE_ID`                                                     | iOS     | App bundle id for `device.files` (`simctl`/`devicectl`) |
+| `RN_SIM_UDID`                                                          | iOS     | iOS UDID (simulator or device) for `device.files`       |
+| `RN_IOS_TARGET_KIND`                                                   | iOS     | `simulator` (default) \| `device` transport select      |
+| `RN_APP_PACKAGE`                                                       | Android | App package for `device.files` (`adb run-as`)           |
 
 The CLI `--device` option pins simulator/emulator selection before this output
 contract is produced. Token/config files are referenced by path only; token

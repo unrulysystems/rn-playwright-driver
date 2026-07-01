@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type DebugTarget, selectTarget } from './discovery'
+import { type DebugTarget, selectTarget, selectTargetForConnect } from './discovery'
 
 const target = (over: Partial<DebugTarget>): DebugTarget => ({
   id: 'id',
@@ -16,29 +16,16 @@ describe('selectTarget', () => {
     )
   })
 
-  it('fails closed when more than one runtime matches the deviceName (confused-deputy guard)', () => {
+  it('fails closed when more than one runtime matches the deviceName (ambiguity guard)', () => {
     // Two same-named simulators; Metro exposes no UDID to disambiguate. A silent
-    // first-pick could attach to the wrong runtime. Throw. When file I/O is NOT
-    // pinned the message must NOT claim a device.files divergence.
+    // first-pick could attach to the wrong runtime — throw with a generic message.
     const targets = [
       target({ id: 'a', deviceName: 'iPhone 17', title: 'com.acme.app (iPhone 17)' }),
       target({ id: 'b', deviceName: 'iPhone 17', title: 'com.acme.app (iPhone 17)' }),
     ]
-    try {
-      selectTarget(targets, { deviceName: 'iPhone 17' })
-      expect.unreachable('should have thrown')
-    } catch (error) {
-      expect((error as Error).message).toMatch(/Ambiguous device target/)
-      expect((error as Error).message).not.toMatch(/device\.files/)
-    }
-  })
-
-  it('adds the device.files divergence note to the ambiguity error only when file I/O is pinned', () => {
-    const targets = [
-      target({ id: 'a', deviceName: 'iPhone 17' }),
-      target({ id: 'b', deviceName: 'iPhone 17' }),
-    ]
-    expect(() => selectTarget(targets, { deviceName: 'iPhone 17' }, true)).toThrow(/device\.files/)
+    expect(() => selectTarget(targets, { deviceName: 'iPhone 17' })).toThrow(
+      /Ambiguous device target/,
+    )
   })
 
   it('throws a clear error when no target matches the deviceName', () => {
@@ -47,7 +34,7 @@ describe('selectTarget', () => {
     ).toThrow(/No target matching/)
   })
 
-  it('still matches an exact deviceId (unaffected by the name-ambiguity guard)', () => {
+  it('still matches an exact deviceId', () => {
     const t = target({ deviceId: 'UDID-1', deviceName: 'iPhone 17' })
     expect(selectTarget([target({ deviceId: 'UDID-2' }), t], { deviceId: 'UDID-1' })).toBe(t)
   })
@@ -56,32 +43,56 @@ describe('selectTarget', () => {
     const first = target({ id: 'first' })
     expect(selectTarget([first, target({ id: 'second' })])).toBe(first)
   })
+})
 
-  it('fails closed when file I/O is pinned, no CDP selector is given, and multiple runtimes exist', () => {
-    // The PROGRAMMATIC confused-deputy: createDevice({ target }) pins file I/O but
-    // gives no deviceId/deviceName/pageIndex, so CDP would default to the first of
-    // several runtimes — a different app than device.files targets.
-    const targets = [
-      target({ id: 'a', deviceName: 'iPhone 17' }),
-      target({ id: 'b', deviceName: 'Pixel 8' }),
-    ]
-    expect(() => selectTarget(targets, {}, true)).toThrow(/Ambiguous CDP target/)
+describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
+  const two = [
+    target({ id: 'a', deviceName: 'iPhone 17' }),
+    target({ id: 'b', deviceName: 'Pixel 8' }),
+  ]
+
+  it('derives filePinned from target.udid and fails closed on ambiguous multi-runtime selection', () => {
+    // A concrete iOS device pin (udid) with no CDP selector + >1 runtime → throw.
+    expect(() => selectTargetForConnect(two, { target: { udid: 'UDID-1' } })).toThrow(
+      /Ambiguous CDP target/,
+    )
   })
 
-  it('does not guard when file I/O is not pinned (multiple runtimes default to the first)', () => {
-    // filePinned=false (e.g. a target with only bundleId/adbPath, no udid/serial)
-    // must NOT fail a legitimate multi-runtime connect.
-    const first = target({ id: 'first' })
-    expect(selectTarget([first, target({ id: 'second' })], {}, false)).toBe(first)
+  it('derives filePinned from target.serial (Android) and fails closed the same way', () => {
+    expect(() => selectTargetForConnect(two, { target: { serial: 'emulator-5554' } })).toThrow(
+      /Ambiguous CDP target/,
+    )
+  })
+
+  it('does NOT guard when the target carries no concrete device pin (bundleId only)', () => {
+    // Only an app/tool identity → not filePinned → a legitimate multi-runtime
+    // connect must default to the first target, not fail closed.
+    expect(selectTargetForConnect(two, { target: {} })).toBe(two[0])
+    expect(selectTargetForConnect(two, {})).toBe(two[0])
   })
 
   it('allows a pinned single runtime (no ambiguity to guard)', () => {
     const only = target({ id: 'only', deviceName: 'iPhone 17' })
-    expect(selectTarget([only], {}, true)).toBe(only)
+    expect(selectTargetForConnect([only], { target: { udid: 'UDID-1' } })).toBe(only)
   })
 
   it('honors an explicit pageIndex even when file I/O is pinned (deliberate caller choice)', () => {
     const second = target({ id: 'second' })
-    expect(selectTarget([target({ id: 'first' }), second], { pageIndex: 1 }, true)).toBe(second)
+    expect(
+      selectTargetForConnect([target({ id: 'first' }), second], {
+        target: { udid: 'UDID-1' },
+        pageIndex: 1,
+      }),
+    ).toBe(second)
+  })
+
+  it('honors an explicit deviceName even when file I/O is pinned', () => {
+    const t = target({ id: 'b', deviceName: 'Pixel 8' })
+    expect(
+      selectTargetForConnect([target({ id: 'a', deviceName: 'iPhone 17' }), t], {
+        target: { serial: 'emulator-5554' },
+        deviceName: 'Pixel 8',
+      }),
+    ).toBe(t)
   })
 })

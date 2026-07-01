@@ -14,8 +14,8 @@ append `REQ-*` domains to this file.
 
 The targeting requirements (`REQ-TGT-*`) extend the runner's env-var contract
 (`../runner/SPEC.md` → "The environment-variable contract"). They are owned here
-for this feature; the runner SPEC's env table absorbs them on its next edit (see
-Open items — surfaced, not silently applied).
+for this feature and are now also listed in the runner SPEC's env table (drift
+reconciled).
 
 ## Problem
 
@@ -280,8 +280,8 @@ $?'`: the bytes are recovered by splitting on the LAST sentinel occurrence, and
 - **Provisional transport (medium):** the iOS-device `devicectl` path ships
   unverified-on-hardware. It is labeled **provisional** in docs and stays so until
   a real-device walkthrough passes (test-realism). Unit-verified before ship.
-- **Cross-package contract (low):** the runner env extension (`REQ-TGT-002`);
-  keep `../runner/SPEC.md` in sync (Open items).
+- **Cross-package contract (low):** the runner env extension (`REQ-TGT-002`) is
+  reflected in `../runner/SPEC.md`'s env table (in sync).
 - **Outward-facing (boundary):** publishing, version bumps, PRs, issue
   edits/closing — all human (repo policy).
 
@@ -294,8 +294,9 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 - [x] Root resolution unit-tested for every root × platform, incl. the no-escape
       rule for non-`absolute` roots (`REQ-FILES-003/004`).
 - [x] Transport argv **and** error mapping unit-tested via an injected
-      `HostFileExec` recorder for all four transports, including the `devicectl`
-      from/to argv (`REQ-XPORT-*`).
+      `HostFileExec` recorder for all three transport implementations (simctl,
+      devicectl, adb — the last covering both pull and push), including the
+      `devicectl` from/to argv (`REQ-XPORT-*`).
 - [x] Fail-closed cases asserted: missing path → `NOT_FOUND`; `maxBuffer` overflow
       → `TOO_LARGE`; missing targeting context → `UNAVAILABLE`; `absolute` on
       iOS → `UNSUPPORTED` (`REQ-FILES-005/008`, `REQ-TGT-004`, `REQ-XPORT-007`).
@@ -320,8 +321,9 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 
 - The iOS-device transport stays **provisional** pending hardware verification;
   promote to verified once a real-device E2E passes.
-- `../runner/SPEC.md`'s env-contract table should absorb the `REQ-TGT-002` vars on
-  its next edit (drift surfaced here, not silently applied).
+- `../runner/SPEC.md`'s env-contract table now lists the `REQ-TGT-002` file-I/O
+  targeting vars (`RN_APP_BUNDLE_ID`/`RN_SIM_UDID`/`RN_IOS_TARGET_KIND`/
+  `RN_APP_PACKAGE`) — drift reconciled.
 - **iOS CDP/file-I/O keying:** CDP attachment pins by `RN_DEVICE_NAME` (substring
   match) while `device.files` pins by `RN_SIM_UDID`. A live check confirmed Metro
   exposes **no device UDID** in its CDP targets — only a name/title — so CDP
@@ -340,7 +342,7 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   `ANDROID_SERIAL`; confirm during TDD.
 - **iOS-simulator containment TOCTOU (accepted residual).** `resolveInsideContainer`
   validates the canonical path, then `pull`/`push` operate on it by path — a
-  check→use window an app *racing its own test runner* could exploit (REQ-XPORT-002
+  check→use window an app _racing its own test runner_ could exploit (REQ-XPORT-002
   threat model). Portable Node cannot close it: there is no atomic resolve-then-open
   (`openat2`/`RESOLVE_BENEATH` is Linux-only and unexposed by Node). It is hardened
   (canonical-path rebuild + post-read length re-check) and **accepted as a documented

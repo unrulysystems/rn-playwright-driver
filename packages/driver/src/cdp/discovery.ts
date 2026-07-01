@@ -42,23 +42,16 @@ export async function discoverTargets(metroUrl: string): Promise<DebugTarget[]> 
  *
  * Selection priority:
  * 1. deviceId (exact match)
- * 2. deviceName (substring match)
+ * 2. deviceName (substring match — throws if ambiguous)
  * 3. pageIndex (default: 0)
  *
- * Throws if no matching target is found, or if the selection is ambiguous.
- *
- * @param filePinned True when `device.files` is pinned to a concrete device
- *   (`DeviceOptions.target` with a udid/serial). Metro's CDP targets expose no
- *   UDID (see below), so CDP cannot be pinned to the same device — with more than
- *   one runtime and no explicit CDP selector, silently defaulting to the first
- *   target would evaluate against a different app than file I/O reads/writes (a
- *   confused deputy). When set, that case fails closed instead of guessing. Kept
- *   OFF the public `TargetSelectionOptions` — it is internal, derived state.
+ * Throws if no matching target is found, or if a deviceName is ambiguous.
+ * Pure over its selector inputs; the device.files confused-deputy guard lives in
+ * {@link selectTargetForConnect}, which wraps this.
  */
 export function selectTarget(
   targets: DebugTarget[],
   options: TargetSelectionOptions = {},
-  filePinned = false,
 ): DebugTarget {
   if (targets.length === 0) {
     throw new Error('No Hermes debug targets found. Is the app running with Metro connected?')
@@ -87,35 +80,16 @@ export function selectTarget(
     }
     // Fail closed on ambiguity. Metro's CDP targets expose no device UDID (only a
     // name/title), so two same-named simulators cannot be told apart here.
-    // Silently taking the first match could attach to the wrong runtime. A loud
-    // error beats that; use a unique name or an explicit pageIndex. When file I/O
-    // is pinned, the divergence is worse (evaluate vs. device.files sandbox), so
-    // call that out — but only then, since the guard fires regardless of pinning.
+    // Silently taking the first match could attach to the wrong runtime — a loud
+    // error beats that; use a unique name or an explicit pageIndex.
     if (matches.length > 1) {
       const available = matches.map((t) => t.title ?? t.deviceName ?? 'unknown').join(', ')
-      const filesNote = filePinned
-        ? ' device.files pins by UDID, so evaluate() and file I/O could hit different devices.'
-        : ''
       throw new Error(
         `Ambiguous device target: ${matches.length} runtimes match "${options.deviceName}" (${available}). ` +
-          `Metro exposes no UDID to disambiguate — use a unique device name or pass pageIndex.${filesNote}`,
+          `Metro exposes no UDID to disambiguate — use a unique device name or pass pageIndex.`,
       )
     }
     return matches[0] as DebugTarget
-  }
-
-  // Fail closed on the programmatic confused-deputy: file I/O is pinned to a
-  // specific device but no explicit CDP selector was given, and more than one
-  // runtime is present. Defaulting to the first target here would attach CDP to a
-  // different app than device.files targets. Only guards the implicit default —
-  // an explicit pageIndex is the caller's deliberate choice.
-  if (filePinned && options.pageIndex === undefined && targets.length > 1) {
-    const available = targets.map((t) => t.deviceName ?? t.title ?? 'unknown').join(', ')
-    throw new Error(
-      `Ambiguous CDP target: device.files is pinned to a specific device but ${targets.length} ` +
-        `runtimes are connected (${available}) and no CDP selector was given. Metro exposes no UDID ` +
-        `to match them — pass deviceName or pageIndex so evaluate() and device.files use the same runtime.`,
-    )
   }
 
   // Default: select by page index. The presence check also covers out-of-range
@@ -126,4 +100,40 @@ export function selectTarget(
     throw new Error(`Invalid pageIndex ${index}. Found ${targets.length} target(s).`)
   }
   return target
+}
+
+/** Minimal shape of `DeviceOptions` this selector needs (a concrete device pin). */
+export type ConnectSelectionOptions = TargetSelectionOptions & {
+  target?: { udid?: string; serial?: string }
+}
+
+/**
+ * Target selection for `RNDevice.connect`, adding the `device.files` confused-deputy
+ * guard on top of {@link selectTarget}. `filePinned` (a concrete device pin —
+ * `target.udid`/`target.serial`) is INTERNAL, derived state: Metro's CDP targets
+ * expose no UDID, so CDP cannot be pinned to the same device. When file I/O is
+ * pinned but no explicit CDP selector is given and more than one runtime is
+ * connected, defaulting to the first target would evaluate against a different app
+ * than file I/O reads/writes — fail closed instead of guessing. An explicit
+ * pageIndex is the caller's deliberate choice and is honored.
+ */
+export function selectTargetForConnect(
+  targets: DebugTarget[],
+  options: ConnectSelectionOptions = {},
+): DebugTarget {
+  const t = options.target
+  const filePinned = t?.udid !== undefined || t?.serial !== undefined
+  const hasCdpSelector =
+    options.deviceId !== undefined ||
+    options.deviceName !== undefined ||
+    options.pageIndex !== undefined
+  if (filePinned && !hasCdpSelector && targets.length > 1) {
+    const available = targets.map((x) => x.deviceName ?? x.title ?? 'unknown').join(', ')
+    throw new Error(
+      `Ambiguous CDP target: device.files is pinned to a specific device but ${targets.length} ` +
+        `runtimes are connected (${available}) and no CDP selector was given. Metro exposes no UDID ` +
+        `to match them — pass deviceName or pageIndex so evaluate() and device.files use the same runtime.`,
+    )
+  }
+  return selectTarget(targets, options)
 }

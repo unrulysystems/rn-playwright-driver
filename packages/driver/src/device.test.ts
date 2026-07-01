@@ -4,6 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as discovery from './cdp/discovery'
 import { RNDevice, TimeoutError, UncaughtExceptionError } from './device'
 import type { ConsoleMessage, PageError } from './types'
 
@@ -73,6 +74,7 @@ function fireCdpEvent(method: string, params: Record<string, unknown>): void {
 vi.mock('./cdp/discovery', () => ({
   discoverTargets: vi.fn().mockImplementation(() => Promise.resolve([mockSelectedTarget])),
   selectTarget: vi.fn().mockImplementation(() => mockSelectedTarget),
+  selectTargetForConnect: vi.fn().mockImplementation(() => mockSelectedTarget),
 }))
 
 // Mock touch backend
@@ -115,6 +117,24 @@ describe('RNDevice Core Primitives', () => {
     mockDefaultPlatform('ios')
 
     await device.connect()
+  })
+
+  describe('connect() target selection wiring', () => {
+    it('routes target selection through selectTargetForConnect, forwarding the pinned target', async () => {
+      // The confused-deputy guard lives in selectTargetForConnect; connect() must
+      // hand it DeviceOptions.target so filePinned is derived from udid/serial.
+      // (Guard behavior itself is unit-tested in cdp/discovery.test.ts.)
+      vi.clearAllMocks()
+      // Construct FIRST so mockEvaluateFn points at this device's CDP client,
+      // THEN set the platform probe impl (mirrors connectWithPlatformProbe).
+      const pinned = new RNDevice({ timeout: 1000, target: { udid: 'UDID-42' } })
+      mockDefaultPlatform('ios')
+      await pinned.connect()
+
+      expect(discovery.selectTargetForConnect).toHaveBeenCalledTimes(1)
+      const options = vi.mocked(discovery.selectTargetForConnect).mock.calls[0]?.[1]
+      expect(options?.target).toEqual({ udid: 'UDID-42' })
+    })
   })
 
   describe('platform detection', () => {
