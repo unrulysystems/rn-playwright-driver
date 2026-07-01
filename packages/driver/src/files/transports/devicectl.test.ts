@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { HostExecResult, HostFileExec } from '../host-file-exec'
-import type { HostFs } from '../host-fs'
+import { type HostFs, HostFileTooLargeError } from '../host-fs'
 import { createDevicectlTransport } from './devicectl'
+
+/** Shared bounded-read shim for the standalone HostFs fakes below. */
+const boundedFrom = (fs: Pick<HostFs, 'readFile'>) => async (path: string, maxBytes: number) => {
+  const bytes = await fs.readFile(path)
+  if (bytes.length > maxBytes) throw new HostFileTooLargeError(maxBytes)
+  return bytes
+}
 
 const CONFIG = { udid: 'UDID-1', bundleId: 'com.acme.app', xcrunPath: 'xcrun' }
 
@@ -25,6 +32,11 @@ function fakeFs(files: Record<string, string> = {}) {
       if (path in files) return Buffer.from(files[path] as string)
       if (path.endsWith('payload')) return Buffer.from('DATA')
       throw Object.assign(new Error('enoent'), { code: 'ENOENT' })
+    },
+    readFileBounded: async (path, maxBytes) => {
+      const bytes = await fs.readFile(path)
+      if (bytes.length > maxBytes) throw new HostFileTooLargeError(maxBytes)
+      return bytes
     },
     writeFile: async (path, data) => {
       written.push([path, data])
@@ -161,6 +173,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
       readFile: async () => {
         throw Object.assign(new Error('enoent'), { code: 'ENOENT' })
       },
+      readFileBounded: (p, m) => boundedFrom(fs)(p, m),
       writeFile: async () => {},
       mkdtempDir: async () => '/tmp/dc',
       remove: async () => {},
@@ -181,6 +194,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     const { exec } = fakeExec(ok)
     const fs: HostFs = {
       readFile: async () => Buffer.from('x'),
+      readFileBounded: (p, m) => boundedFrom(fs)(p, m),
       writeFile: async () => {
         throw Object.assign(new Error('enoent'), { code: 'ENOENT' })
       },
@@ -201,6 +215,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     const { exec } = fakeExec(ok)
     const fs: HostFs = {
       readFile: async () => Buffer.from('x'),
+      readFileBounded: (p, m) => boundedFrom(fs)(p, m),
       writeFile: async () => {},
       mkdtempDir: async () => {
         throw new Error('no temp available')

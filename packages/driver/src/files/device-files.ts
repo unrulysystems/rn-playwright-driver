@@ -1,9 +1,9 @@
 /**
  * The `device.files` orchestration: resolve + validate the target, resolve the
  * remote path against its root, enforce root/transport support, then delegate the
- * byte movement to a platform {@link FileTransport} (simctl / devicectl / adb —
- * M4). Transport-agnostic and free of host-process concerns so it unit-tests
- * against a fake transport. See `packages/driver/SPEC.md` REQ-FILES-*.
+ * byte movement to a platform {@link FileTransport} (simctl / devicectl / adb).
+ * Transport-agnostic and free of host-process concerns so it unit-tests against a
+ * fake transport. See `packages/driver/SPEC.md` REQ-FILES-*.
  */
 import { readFile, stat } from 'node:fs/promises'
 import type { DeviceFiles, FileRoot, TargetContext } from '../types'
@@ -37,7 +37,7 @@ function resolveMaxBuffer(maxBuffer: number | undefined): number {
 /**
  * Moves bytes to/from the app sandbox for one resolved target. Receives an
  * already root-resolved path, so transports carry no root logic. Implemented by
- * the simctl / devicectl / adb transports (M4).
+ * the simctl / devicectl / adb transports.
  */
 export interface FileTransport {
   pull(path: ResolvedRemotePath, options: { maxBuffer: number }): Promise<Buffer>

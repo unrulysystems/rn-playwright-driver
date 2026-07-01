@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { HostExecResult, HostFileExec } from '../host-file-exec'
-import type { HostFs } from '../host-fs'
+import { type HostFs, HostFileTooLargeError } from '../host-fs'
 import { createSimctlTransport } from './simctl'
 
 const CONFIG = { udid: 'UDID-1', bundleId: 'com.acme.app', xcrunPath: 'xcrun' }
@@ -32,6 +32,13 @@ function fakeFs(overrides: Partial<HostFs>): {
     readFile: async (path) => {
       reads.push(path)
       return Buffer.from(`@${path}`)
+    },
+    // Delegate to (possibly-overridden) readFile so tests control bytes/errors in
+    // one place; enforce the cap like the real bounded reader.
+    readFileBounded: async (path, maxBytes) => {
+      const bytes = await fs.readFile(path)
+      if (bytes.length > maxBytes) throw new HostFileTooLargeError(maxBytes)
+      return bytes
     },
     writeFile: async (path, data) => {
       writes.push([path, data])
@@ -79,6 +86,24 @@ describe('simctl transport', () => {
       ),
     ).rejects.toMatchObject({ code: 'TOO_LARGE' })
     expect(reads).toEqual([]) // bounded before the read
+  })
+
+  it('rejects TOO_LARGE when the file grows past the size probe (bounded read, REQ-FILES-008)', async () => {
+    // The size probe passes (0), but the file "grew" — readFile now returns more
+    // than maxBuffer. The bounded read must reject instead of buffering it, so a
+    // grow-after-probe race can't exhaust the worker.
+    const { exec } = fakeExec(() => ok('/sim/ABC'))
+    const { fs } = fakeFs({
+      size: async () => 0,
+      readFile: async () => Buffer.alloc(5_000),
+    })
+
+    await expect(
+      createSimctlTransport(CONFIG, exec, fs).pull(
+        { absolute: false, subpath: 'Documents/grows.bin' },
+        { maxBuffer: 1_000 },
+      ),
+    ).rejects.toMatchObject({ code: 'TOO_LARGE' })
   })
 
   it('maps a vanished app container to TRANSPORT_FAILED, not NOT_FOUND', async () => {

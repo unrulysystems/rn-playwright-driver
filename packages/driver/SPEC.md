@@ -164,11 +164,14 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
 - **REQ-FILES-008** `pull` is bounded by `options.maxBuffer` (default 64 MiB) on
   **every** transport, never a truncated `Buffer`: Android caps the stdout
   stream; the iOS transports `stat` the file (simctl) or the staged payload
-  (devicectl) and reject `TOO_LARGE` **before** reading it into a `Buffer`, so a
-  large sandbox file cannot exhaust the worker. `push` is bounded symmetrically:
-  a host-file source larger than `options.maxBuffer` rejects `TOO_LARGE` before
-  it is read in, and the resulting `Buffer` length is re-checked (guarding a file
-  that grows after the probe, and any `Buffer` source).
+  (devicectl) as a cheap fast-fail, then perform a **bounded read**
+  (`HostFs.readFileBounded`) that allocates at most `maxBuffer + 1` bytes and
+  rejects `TOO_LARGE` without buffering the excess — so a file that **grows or is
+  swapped between the probe and the read** (a racing/compromised or merely
+  concurrently-written app) still cannot exhaust the worker. `push` is bounded
+  symmetrically: a host-file source larger than `options.maxBuffer` rejects
+  `TOO_LARGE` before it is read in, and the resulting `Buffer` length is
+  re-checked (guarding growth after the probe, and any `Buffer` source).
 
 ### Transports — `REQ-XPORT-*`
 

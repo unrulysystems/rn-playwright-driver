@@ -18,6 +18,7 @@ function harness() {
   }
   const fs: HostFs = {
     readFile: async () => Buffer.from('x'),
+    readFileBounded: async () => Buffer.from('x'),
     writeFile: async () => {},
     mkdtempDir: async () => '/tmp/x',
     remove: async () => {},

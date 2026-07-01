@@ -32,8 +32,11 @@ test.describe('device.files', () => {
     device,
   }) => {
     // `absolute` is Android-only (unsupported on iOS); exercise the documented
-    // public path on a real emulator, not just fake-adb unit coverage. The path
-    // must stay inside the app sandbox that `run-as` can reach.
+    // public path on a real emulator, not just fake-adb unit coverage. Uses the
+    // app-private data dir rather than external storage (e.g. /sdcard): reaching
+    // /sdcard needs an external-storage permission this example app does not
+    // declare, and `run-as` bounds `absolute` to the app UID either way, so the
+    // private-dir path keeps this test deterministic and permission-free.
     test.skip(device.platform !== 'android', "'absolute' root is unsupported on iOS")
     const pkg = process.env.RN_APP_PACKAGE
     test.skip(!pkg, 'RN_APP_PACKAGE not set')
@@ -58,6 +61,21 @@ test.describe('device.files', () => {
 
     await device.files.push(payload, nested)
     const pulled = await device.files.pull(nested)
+
+    expect(Buffer.compare(pulled, payload)).toBe(0)
+  })
+
+  test('push honors an explicit named root (cache), not just the default document root (REQ-FILES-003)', async ({
+    device,
+  }) => {
+    // A push-with-root regression that ignored FilePushOptions.root would land the
+    // bytes in the document root and this cache-root pull would 404 (or read stale
+    // bytes). Round-trip through root:'cache' explicitly to catch that.
+    const name = `rn-driver-push-cache-${randomBytes(6).toString('hex')}.bin`
+    const payload = randomBytes(512)
+
+    await device.files.push(payload, name, { root: 'cache' })
+    const pulled = await device.files.pull(name, { root: 'cache' })
 
     expect(Buffer.compare(pulled, payload)).toBe(0)
   })

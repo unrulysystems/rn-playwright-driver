@@ -7,7 +7,7 @@ import { basename, dirname, join, sep } from 'node:path'
 import type { FileTransport } from '../device-files'
 import { FileIoError } from '../errors'
 import type { HostFileExec } from '../host-file-exec'
-import type { HostFs } from '../host-fs'
+import { type HostFs, HostFileTooLargeError } from '../host-fs'
 import type { ResolvedRemotePath } from '../roots'
 import { errorMessage, mapNodeFsError } from './shared'
 
@@ -143,8 +143,10 @@ export function createSimctlTransport(
       const container = await resolveContainer()
       const safe = await resolveInsideContainer(fs, container, hostPath(container, path))
       try {
-        // Bound worker memory: fail closed BEFORE reading a large sandbox file
-        // into one Buffer, symmetric with the Android transport (REQ-FILES-008).
+        // Fast-fail on a known-large file, then a BOUNDED read: even if the app
+        // grows/swaps the container file between the probe and the read, peak
+        // worker memory stays at maxBuffer+1 — the size probe alone can't promise
+        // that (readFile would buffer the grown file first) (REQ-FILES-008).
         const size = await fs.size(safe)
         if (size > maxBuffer) {
           throw new FileIoError(
@@ -152,18 +154,15 @@ export function createSimctlTransport(
             `device.files: ${safe} is ${size} bytes, exceeds maxBuffer ${maxBuffer}`,
           )
         }
-        const bytes = await fs.readFile(safe)
-        // Re-check the actual bytes read: the file can grow between the size
-        // probe and the read, so enforce the cap on what we would return too.
-        if (bytes.length > maxBuffer) {
-          throw new FileIoError(
-            'TOO_LARGE',
-            `device.files: ${safe} grew to ${bytes.length} bytes, exceeds maxBuffer ${maxBuffer}`,
-          )
-        }
-        return bytes
+        return await fs.readFileBounded(safe, maxBuffer)
       } catch (error) {
         if (error instanceof FileIoError) throw error
+        if (error instanceof HostFileTooLargeError) {
+          throw new FileIoError(
+            'TOO_LARGE',
+            `device.files: ${safe} exceeds maxBuffer ${maxBuffer} (grew past the size probe)`,
+          )
+        }
         throw mapNodeFsError(error, safe)
       }
     },

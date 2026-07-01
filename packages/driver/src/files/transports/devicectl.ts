@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import type { FileTransport } from '../device-files'
 import { FileIoError } from '../errors'
 import type { HostFileExec } from '../host-file-exec'
-import type { HostFs } from '../host-fs'
+import { type HostFs, HostFileTooLargeError } from '../host-fs'
 import type { ResolvedRemotePath } from '../roots'
 import { classifyCliFailure, errorMessage } from './shared'
 
@@ -105,8 +105,9 @@ export function createDevicectlTransport(
         )
         await assertOk(result, remote, jsonOut)
         try {
-          // Bound worker memory: the staged payload size is controlled by
-          // app/test data; fail closed before buffering it (REQ-FILES-008).
+          // Fast-fail on a known-large staged payload, then a BOUNDED read so peak
+          // worker memory stays at maxBuffer+1 even if the file changed size after
+          // the probe (REQ-FILES-008).
           const size = await fs.size(dest)
           if (size > maxBuffer) {
             throw new FileIoError(
@@ -114,16 +115,15 @@ export function createDevicectlTransport(
               `device.files: ${remote} is ${size} bytes, exceeds maxBuffer ${maxBuffer}`,
             )
           }
-          const bytes = await fs.readFile(dest)
-          if (bytes.length > maxBuffer) {
-            throw new FileIoError(
-              'TOO_LARGE',
-              `device.files: ${remote} grew to ${bytes.length} bytes, exceeds maxBuffer ${maxBuffer}`,
-            )
-          }
-          return bytes
+          return await fs.readFileBounded(dest, maxBuffer)
         } catch (error) {
           if (error instanceof FileIoError) throw error
+          if (error instanceof HostFileTooLargeError) {
+            throw new FileIoError(
+              'TOO_LARGE',
+              `device.files: ${remote} exceeds maxBuffer ${maxBuffer} (grew past the size probe)`,
+            )
+          }
           // The `copy from` already succeeded, so a missing/failed STAGED payload
           // is a host-staging failure, never a missing remote file — do not run
           // it through mapNodeFsError (which would mislabel ENOENT as NOT_FOUND).
