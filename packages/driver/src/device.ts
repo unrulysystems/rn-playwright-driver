@@ -104,7 +104,12 @@ export class RNDevice implements Device {
   async connect(): Promise<void> {
     const metroUrl = this.options.metroUrl ?? DEFAULT_METRO_URL
     const targets = await discoverTargets(metroUrl)
-    const target = selectTarget(targets, this.options)
+    // filePinned: when device.files targets an explicit device, CDP must not
+    // silently default to the first runtime among several (confused deputy).
+    const target = selectTarget(targets, {
+      ...this.options,
+      filePinned: this.options.target !== undefined,
+    })
 
     // Register the console + exception forwarders BEFORE connecting. cdp.connect()
     // sends Runtime.enable internally, after which the runtime starts emitting

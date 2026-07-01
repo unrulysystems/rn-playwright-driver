@@ -257,6 +257,19 @@ describe('adb transport — push', () => {
     ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
+  it('rejects an unsafe remote path before spawning (push embeds it in `cat >`)', async () => {
+    // push interpolates the resolved path into a device shell redirection, so the
+    // same metacharacter guard as pull must reject before any adb spawn.
+    const { exec, calls } = fakeExec(() => noSentinel('__RN_PW_PUSH_OK__\n'))
+    await expect(
+      createAdbTransport(CONFIG, exec).push(
+        { absolute: false, subpath: 'files/$(rm -rf ~).json' },
+        Buffer.from('x'),
+      ),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
+    expect(calls).toHaveLength(0)
+  })
+
   it('fails closed when the sentinel appears mid-output but not at the end (spoof guard)', async () => {
     // A failure diagnostic echoing a path that contains the token must not be
     // read as success: the real echo is the LAST thing on stdout.

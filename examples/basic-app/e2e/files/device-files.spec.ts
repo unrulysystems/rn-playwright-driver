@@ -19,15 +19,12 @@ test.describe('device.files', () => {
   // present the instant CDP attaches. Gate every test on its readiness so an
   // app-affordance call can't fail for a mount race instead of a device.files bug.
   test.beforeEach(async ({ device }) => {
-    const deadline = Date.now() + 15_000
-    for (;;) {
-      const kind = await device.evaluate<string>('typeof globalThis.__RN_DRIVER_EXAMPLE__')
-      if (kind === 'object') return
-      if (Date.now() > deadline) {
-        throw new Error('__RN_DRIVER_EXAMPLE__ was not installed within 15s (app not mounted?)')
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
+    // Use the driver's own polling helper rather than reimplementing timeout/poll
+    // mechanics; it throws a TimeoutError if the affordance never mounts.
+    await device.waitForFunction<boolean>('typeof globalThis.__RN_DRIVER_EXAMPLE__ === "object"', {
+      timeout: 15_000,
+      polling: 100,
+    })
   })
 
   test('push then pull round-trips exact bytes (REQ-FILES-002)', async ({ device }) => {

@@ -175,12 +175,14 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
-  it('maps a staging write failure into the taxonomy on push (REQ-FILES-007)', async () => {
+  it('maps a staging write failure to TRANSPORT_FAILED, not NOT_FOUND, on push (REQ-FILES-007)', async () => {
+    // ENOENT on the HOST staging write must not be mislabeled a remote NOT_FOUND
+    // (mapNodeFsError would have done that) — it is a staging/transport failure.
     const { exec } = fakeExec(ok)
     const fs: HostFs = {
       readFile: async () => Buffer.from('x'),
       writeFile: async () => {
-        throw Object.assign(new Error('eacces'), { code: 'EACCES' })
+        throw Object.assign(new Error('enoent'), { code: 'ENOENT' })
       },
       mkdtempDir: async () => '/tmp/dc',
       remove: async () => {},

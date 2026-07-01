@@ -323,7 +323,11 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   sim's container). `selectTarget` now **fails closed on that ambiguity**: more
   than one runtime matching the name throws rather than silently taking the first
   (`cdp/discovery.ts`). Use a **unique simulator name** to disambiguate. In the
-  runner flow this is moot — it boots one sim on its own Metro.
+  runner flow this is moot — it boots one sim on its own Metro. The **programmatic**
+  path has a parallel guard: a direct `createDevice({ target })` pins `device.files`
+  but supplies no CDP selector, so when more than one runtime is connected
+  `selectTarget` fails closed (`filePinned`) rather than defaulting CDP to the first
+  target while file I/O targets another — pass `deviceName`/`pageIndex` to resolve.
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 

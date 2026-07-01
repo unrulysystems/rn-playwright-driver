@@ -43,4 +43,27 @@ describe('selectTarget', () => {
     const first = target({ id: 'first' })
     expect(selectTarget([first, target({ id: 'second' })])).toBe(first)
   })
+
+  it('fails closed when file I/O is pinned, no CDP selector is given, and multiple runtimes exist', () => {
+    // The PROGRAMMATIC confused-deputy: createDevice({ target }) pins file I/O but
+    // gives no deviceId/deviceName/pageIndex, so CDP would default to the first of
+    // several runtimes — a different app than device.files targets.
+    const targets = [
+      target({ id: 'a', deviceName: 'iPhone 17' }),
+      target({ id: 'b', deviceName: 'Pixel 8' }),
+    ]
+    expect(() => selectTarget(targets, { filePinned: true })).toThrow(/Ambiguous CDP target/)
+  })
+
+  it('allows a pinned single runtime (no ambiguity to guard)', () => {
+    const only = target({ id: 'only', deviceName: 'iPhone 17' })
+    expect(selectTarget([only], { filePinned: true })).toBe(only)
+  })
+
+  it('honors an explicit pageIndex even when file I/O is pinned (deliberate caller choice)', () => {
+    const second = target({ id: 'second' })
+    expect(
+      selectTarget([target({ id: 'first' }), second], { filePinned: true, pageIndex: 1 }),
+    ).toBe(second)
+  })
 })

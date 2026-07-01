@@ -110,9 +110,13 @@ export function createDefaultHostFileExec(): HostFileExec {
       child.on('error', (error) => finish(() => reject(error)))
       // A child that exits before consuming the push payload makes the stdin
       // write emit EPIPE. That is benign — the real signal is the exit code from
-      // 'close' (or an error from 'error'); swallow it so it isn't an unhandled
-      // stream error, and let the settled result carry the transport's outcome.
-      child.stdin.on('error', () => {})
+      // 'close'; swallow ONLY EPIPE so it isn't an unhandled stream error. Any
+      // other stdin write failure is real and must surface, not hide behind the
+      // later close result.
+      child.stdin.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EPIPE') return
+        finish(() => reject(error))
+      })
       child.on('close', (code) =>
         finish(() =>
           resolve({

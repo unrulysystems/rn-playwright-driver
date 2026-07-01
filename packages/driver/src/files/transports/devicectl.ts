@@ -11,7 +11,7 @@ import { FileIoError } from '../errors'
 import type { HostFileExec } from '../host-file-exec'
 import type { HostFs } from '../host-fs'
 import type { ResolvedRemotePath } from '../roots'
-import { classifyCliFailure, errorMessage, mapNodeFsError } from './shared'
+import { classifyCliFailure, errorMessage } from './shared'
 
 export interface DevicectlTransportConfig {
   readonly udid: string
@@ -148,7 +148,14 @@ export function createDevicectlTransport(
         try {
           await fs.writeFile(src, data)
         } catch (error) {
-          throw mapNodeFsError(error, src)
+          // A HOST staging-write failure is a transport failure, never a remote
+          // NOT_FOUND — mirror the staged-read path (mapNodeFsError would mislabel
+          // an ENOENT staging dir as a missing remote file).
+          throw new FileIoError(
+            'TRANSPORT_FAILED',
+            `device.files: could not stage the payload for ${remote}: ${errorMessage(error)}`,
+            { cause: error },
+          )
         }
         const result = await exec(config.xcrunPath, copy('to', src, remote, jsonOut)).catch(
           (error: unknown) => {

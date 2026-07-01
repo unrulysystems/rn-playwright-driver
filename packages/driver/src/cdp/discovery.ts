@@ -15,6 +15,15 @@ export type TargetSelectionOptions = {
   deviceName?: string
   /** Select target by page index (default: 0 = first Hermes target) */
   pageIndex?: number
+  /**
+   * True when `device.files` is pinned to an explicit device (`DeviceOptions.target`).
+   * Metro's CDP targets expose no UDID (see selectTarget), so CDP cannot be pinned
+   * to the same device — with more than one runtime and no explicit CDP selector,
+   * silently defaulting to the first target would evaluate against a different app
+   * than file I/O reads/writes (a confused deputy). Set, this makes that case fail
+   * closed instead of guessing.
+   */
+  filePinned?: boolean
 }
 
 /**
@@ -89,6 +98,20 @@ export function selectTarget(
       )
     }
     return matches[0] as DebugTarget
+  }
+
+  // Fail closed on the programmatic confused-deputy: file I/O is pinned to a
+  // specific device but no explicit CDP selector was given, and more than one
+  // runtime is present. Defaulting to the first target here would attach CDP to a
+  // different app than device.files targets. Only guards the implicit default —
+  // an explicit pageIndex is the caller's deliberate choice.
+  if (options.filePinned && options.pageIndex === undefined && targets.length > 1) {
+    const available = targets.map((t) => t.deviceName ?? t.title ?? 'unknown').join(', ')
+    throw new Error(
+      `Ambiguous CDP target: device.files is pinned to a specific device but ${targets.length} ` +
+        `runtimes are connected (${available}) and no CDP selector was given. Metro exposes no UDID ` +
+        `to match them — pass deviceName or pageIndex so evaluate() and device.files use the same runtime.`,
+    )
   }
 
   // Default: select by page index. The presence check also covers out-of-range
