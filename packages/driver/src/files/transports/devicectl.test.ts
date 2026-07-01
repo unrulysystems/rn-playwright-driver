@@ -153,8 +153,10 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     expect(reads).toEqual([]) // bounded before the read
   })
 
-  it('maps a staging read failure into the FileIoError taxonomy, not a raw error (REQ-FILES-007)', async () => {
-    const { exec } = fakeExec(ok) // devicectl copy succeeds; the host read then fails
+  it('maps a staged-payload read failure to TRANSPORT_FAILED, not NOT_FOUND (REQ-FILES-007)', async () => {
+    // `copy from` succeeded, so the remote file existed; a missing/unreadable
+    // HOST-staged payload is a staging failure, not a missing remote file.
+    const { exec } = fakeExec(ok)
     const fs: HostFs = {
       readFile: async () => {
         throw Object.assign(new Error('enoent'), { code: 'ENOENT' })
@@ -170,7 +172,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
         { absolute: false, subpath: 'Documents/x' },
         { maxBuffer: 1 },
       ),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
   it('maps a staging write failure into the taxonomy on push (REQ-FILES-007)', async () => {

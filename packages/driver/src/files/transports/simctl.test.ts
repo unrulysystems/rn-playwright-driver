@@ -82,7 +82,10 @@ describe('simctl transport', () => {
     expect(reads).toEqual([]) // bounded before the read
   })
 
-  it('maps a container that vanished after resolution into the taxonomy (not a raw error)', async () => {
+  it('maps a vanished app container to TRANSPORT_FAILED, not NOT_FOUND', async () => {
+    // The container realpath (not the requested file) fails, so this is a
+    // transport/environment failure — mislabeling it NOT_FOUND would tell the
+    // caller the remote file is missing.
     const { exec } = fakeExec(() => ok('/sim/ABC'))
     const { fs } = fakeFs({
       realpath: async () => {
@@ -95,7 +98,7 @@ describe('simctl transport', () => {
         { absolute: false, subpath: 'Documents/x' },
         { maxBuffer: 10 },
       ),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
   it('writes to the joined host path on push', async () => {
@@ -183,8 +186,8 @@ describe('simctl transport', () => {
     const { fs } = fakeFs({})
     const transport = createSimctlTransport(CONFIG, exec, fs)
 
-    await transport.pull({ absolute: false, subpath: 'Documents/a' }, { maxBuffer: 1 })
-    await transport.pull({ absolute: false, subpath: 'Documents/b' }, { maxBuffer: 1 })
+    await transport.pull({ absolute: false, subpath: 'Documents/a' }, { maxBuffer: 4096 })
+    await transport.pull({ absolute: false, subpath: 'Documents/b' }, { maxBuffer: 4096 })
     await transport.push({ absolute: false, subpath: 'Documents/c' }, Buffer.from('x'))
 
     const containerCalls = calls.filter((c) => c.args.includes('get_app_container'))

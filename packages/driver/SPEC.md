@@ -55,7 +55,7 @@ mapping are unit-tested without spawning real tools.
 
 ## Domain model
 
-### API surface (illustrative; exact identifiers ratified during TDD)
+### API surface (ratified; identifiers exported from `src/types.ts`)
 
 ```ts
 type FileRoot = 'document' | 'cache' | 'data' | 'absolute' // default: 'document'

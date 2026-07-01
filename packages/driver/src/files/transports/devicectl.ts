@@ -114,10 +114,24 @@ export function createDevicectlTransport(
               `device.files: ${remote} is ${size} bytes, exceeds maxBuffer ${maxBuffer}`,
             )
           }
-          return await fs.readFile(dest)
+          const bytes = await fs.readFile(dest)
+          if (bytes.length > maxBuffer) {
+            throw new FileIoError(
+              'TOO_LARGE',
+              `device.files: ${remote} grew to ${bytes.length} bytes, exceeds maxBuffer ${maxBuffer}`,
+            )
+          }
+          return bytes
         } catch (error) {
           if (error instanceof FileIoError) throw error
-          throw mapNodeFsError(error, remote)
+          // The `copy from` already succeeded, so a missing/failed STAGED payload
+          // is a host-staging failure, never a missing remote file — do not run
+          // it through mapNodeFsError (which would mislabel ENOENT as NOT_FOUND).
+          throw new FileIoError(
+            'TRANSPORT_FAILED',
+            `device.files: staged payload unreadable for ${remote}: ${errorMessage(error)}`,
+            { cause: error },
+          )
         }
       } finally {
         // Best-effort temp cleanup; a cleanup failure must not mask the result.

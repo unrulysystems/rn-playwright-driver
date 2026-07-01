@@ -97,7 +97,11 @@ export function createAdbTransport(config: AdbTransportConfig, exec: HostFileExe
       // stdout, so the sentinel is the only way to know whether the bytes are
       // the file or cat's error text (see file header).
       const result = await execOut(
-        `run-as ${config.packageName} sh -c 'cat "${remote}"; printf "${READ_SENTINEL}%d" $?'`,
+        // `2>&1` folds cat's stderr into stdout IN ORDER, before the sentinel, so
+        // a "No such file" diagnostic always lands in `body` (ahead of the last
+        // sentinel) and classifies as NOT_FOUND — never dropped by stream
+        // interleaving (REQ-FILES-005).
+        `run-as ${config.packageName} sh -c 'cat "${remote}" 2>&1; printf "${READ_SENTINEL}%d" $?'`,
         // Headroom so the sentinel + any folded diagnostic always fit and parse;
         // the file body is enforced against maxBuffer exactly below.
         { maxBuffer: maxBuffer + READ_DIAGNOSTIC_HEADROOM },

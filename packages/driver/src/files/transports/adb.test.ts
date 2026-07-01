@@ -60,7 +60,7 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
       '-s',
       'emulator-5554',
       'exec-out',
-      `run-as com.acme.app sh -c 'cat "${ABS}"; printf "__RN_PW_READ__%d" $?'`,
+      `run-as com.acme.app sh -c 'cat "${ABS}" 2>&1; printf "__RN_PW_READ__%d" $?'`,
     ])
     // The exec cap gets diagnostic headroom so the sentinel/errors always parse;
     // the file body is then enforced against maxBuffer exactly (REQ-FILES-005/008).
@@ -113,7 +113,7 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
       { maxBuffer: 1 },
     )
     expect(deviceCommand(calls[0])).toBe(
-      `run-as com.acme.app sh -c 'cat "/sdcard/x"; printf "__RN_PW_READ__%d" $?'`,
+      `run-as com.acme.app sh -c 'cat "/sdcard/x" 2>&1; printf "__RN_PW_READ__%d" $?'`,
     )
   })
 

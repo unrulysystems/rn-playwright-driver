@@ -38,9 +38,14 @@ async function resolveInsideContainer(
   try {
     containerReal = await fs.realpath(container)
   } catch (error) {
-    // A container that vanished after get_app_container succeeded is a transport
-    // failure, not a raw Node error escaping the taxonomy (REQ-FILES-007).
-    throw mapNodeFsError(error, container)
+    // A container that vanished after get_app_container succeeded is a TRANSPORT
+    // failure — not a missing remote file. Mapping ENOENT via mapNodeFsError
+    // would mislabel it NOT_FOUND (REQ-FILES-007).
+    throw new FileIoError(
+      'TRANSPORT_FAILED',
+      `device.files: the app container is no longer resolvable (${container}): ${errorMessage(error)}`,
+      { cause: error },
+    )
   }
   let ancestor = full
   const tail: string[] = []
@@ -147,7 +152,16 @@ export function createSimctlTransport(
             `device.files: ${safe} is ${size} bytes, exceeds maxBuffer ${maxBuffer}`,
           )
         }
-        return await fs.readFile(safe)
+        const bytes = await fs.readFile(safe)
+        // Re-check the actual bytes read: the file can grow between the size
+        // probe and the read, so enforce the cap on what we would return too.
+        if (bytes.length > maxBuffer) {
+          throw new FileIoError(
+            'TOO_LARGE',
+            `device.files: ${safe} grew to ${bytes.length} bytes, exceeds maxBuffer ${maxBuffer}`,
+          )
+        }
+        return bytes
       } catch (error) {
         if (error instanceof FileIoError) throw error
         throw mapNodeFsError(error, safe)
