@@ -50,6 +50,25 @@ describe('classifyCliFailure', () => {
     ).toBe('NOT_FOUND')
   })
 
+  it('does NOT map a NON-missing failure to NOT_FOUND when the path contains "no such file"', () => {
+    // The real error is EISDIR/EACCES, not ENOENT — the caller-controlled path
+    // must not steer classification into the NOT_FOUND bucket (path is masked).
+    const path = '/data/data/com.acme.app/files/no such file.txt'
+    expect(classifyCliFailure('adb run-as cat', path, `cat: ${path}: Is a directory`, 1).code).toBe(
+      'TRANSPORT_FAILED',
+    )
+    expect(
+      classifyCliFailure('adb run-as cat', path, `cat: ${path}: Permission denied`, 1).code,
+    ).toBe('TRANSPORT_FAILED')
+  })
+
+  it('still maps a genuinely missing file to NOT_FOUND even when the path also contains "no such file"', () => {
+    const path = '/data/data/com.acme.app/files/no such file.txt'
+    expect(
+      classifyCliFailure('adb run-as cat', path, `cat: ${path}: No such file or directory`, 1).code,
+    ).toBe('NOT_FOUND')
+  })
+
   it('keeps run-as debuggable failures as UNSUPPORTED (precedence over the bare not-found)', () => {
     expect(
       classifyCliFailure('adb', '/sdcard/x', 'run-as: package not found: com.acme.app', 1).code,

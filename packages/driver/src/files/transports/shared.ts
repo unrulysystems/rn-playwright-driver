@@ -46,9 +46,17 @@ const DEVICE_UNAVAILABLE_MARKERS = [
 /**
  * Classify a non-zero CLI result into the FileIoError taxonomy. `diagnostic` is
  * the tool's folded failure text — for adb that is `cat`'s stdout+stderr (which
- * includes the remote path), for devicectl it is stderr plus the JSON-output
- * body; the device markers are anchored precisely because this text is not pure,
- * caller-free stderr.
+ * echoes the remote path, e.g. `cat: <path>: <errno>`), for devicectl it is
+ * stderr plus the JSON-output body.
+ *
+ * Because the caller-controlled remote path is folded in, it is MASKED out before
+ * any marker matching: a filename that contains a marker phrase ("no such file",
+ * "device offline", …) must not steer classification — only the tool's OWN error
+ * text may. Without this, a missing file named "device offline.log" misreads as
+ * TRANSPORT_FAILED, and a non-missing failure on a file named "no such file.txt"
+ * (`Is a directory`/`Permission denied`) misreads as NOT_FOUND. The device markers
+ * are additionally anchored to the tool's `adb:`/`error:` prefix as defense in
+ * depth in case the path is echoed in a form that doesn't match `remote` verbatim.
  */
 export function classifyCliFailure(
   tool: string,
@@ -56,12 +64,14 @@ export function classifyCliFailure(
   diagnostic: string,
   code: number,
 ): FileIoError {
-  const stderr = diagnostic
-  const detail = stderr.trim() || `exit ${code}`
+  const detail = diagnostic.trim() || `exit ${code}`
+  // Mask every verbatim occurrence of the remote path so it never participates in
+  // marker matching (plain-string split/join — no regex-escaping needed).
+  const scannable = remote.length > 0 ? diagnostic.split(remote).join('<path>') : diagnostic
   // Check container-access (run-as) markers FIRST: `run-as: package not found`
   // matches the broad `/not found/i` too, but it is a debuggable/access failure,
   // not a missing remote file.
-  if (UNSUPPORTED_MARKERS.some((re) => re.test(stderr))) {
+  if (UNSUPPORTED_MARKERS.some((re) => re.test(scannable))) {
     return new FileIoError(
       'UNSUPPORTED',
       `device.files: ${remote} is not reachable — the app build must be debuggable/development-signed (${detail})`,
@@ -69,13 +79,13 @@ export function classifyCliFailure(
   }
   // Device/tool unavailability before NOT_FOUND: `device 'X' not found` is a
   // transport failure, not a missing remote file.
-  if (DEVICE_UNAVAILABLE_MARKERS.some((re) => re.test(stderr))) {
+  if (DEVICE_UNAVAILABLE_MARKERS.some((re) => re.test(scannable))) {
     return new FileIoError(
       'TRANSPORT_FAILED',
       `device.files: ${tool} could not reach the device for ${remote}: ${detail}`,
     )
   }
-  if (NOT_FOUND_MARKERS.some((re) => re.test(stderr))) {
+  if (NOT_FOUND_MARKERS.some((re) => re.test(scannable))) {
     return new FileIoError('NOT_FOUND', `device.files: no such file: ${remote} (${detail})`)
   }
   return new FileIoError(
