@@ -175,6 +175,21 @@ describe('createDeviceFiles — push', () => {
     expect(select).not.toHaveBeenCalled() // fail closed before touching the transport
   })
 
+  it('builds the transport once and reuses it across operations', async () => {
+    const { select } = fakeTransport()
+    const files = createDeviceFiles({
+      platform: 'android',
+      target: ANDROID_TARGET,
+      selectTransport: select,
+    })
+
+    await files.pull('a')
+    await files.pull('b')
+    await files.push(Buffer.from('x'), 'c')
+
+    expect(select).toHaveBeenCalledTimes(1) // cached per-target, not rebuilt per op
+  })
+
   it('maps other local-source read failures (EACCES) to TRANSPORT_FAILED', async () => {
     const { select } = fakeTransport()
     const readLocalFile = vi.fn(async () => {

@@ -44,6 +44,15 @@ export interface DeviceFilesDeps {
 export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
   const readLocalFile = deps.readLocalFile ?? ((path: string) => readFile(path))
 
+  // The target is fixed for the device, so build the transport once and reuse it
+  // across operations — lets stateful transports (e.g. simctl's resolved
+  // container) cache per-target work instead of re-spawning a CLI per file.
+  let cachedTransport: FileTransport | undefined
+  const transportFor = (target: ResolvedFileTarget): FileTransport => {
+    cachedTransport ??= deps.selectTransport(target)
+    return cachedTransport
+  }
+
   const prepare = (remotePath: string, root: FileRoot) => {
     // Order matters: validate the target (UNAVAILABLE) before touching the path,
     // so a device with no file targeting fails with the clearer error.
@@ -57,7 +66,7 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
     async pull(remotePath, options) {
       const maxBuffer = options?.maxBuffer ?? DEFAULT_MAX_BUFFER
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
-      return deps.selectTransport(target).pull(path, { maxBuffer })
+      return transportFor(target).pull(path, { maxBuffer })
     },
     async push(source, remotePath, options) {
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
@@ -74,7 +83,7 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
       } else {
         data = source
       }
-      await deps.selectTransport(target).push(path, data)
+      await transportFor(target).push(path, data)
     },
   }
 }

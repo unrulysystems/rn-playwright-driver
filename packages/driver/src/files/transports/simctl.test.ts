@@ -73,6 +73,31 @@ describe('simctl transport', () => {
     expect(writes[0]?.[0]).toBe('/sim/ABC/Documents/seed.json')
   })
 
+  it('writes a nested push path verbatim (HostFs creates the parents) (REQ-FILES-006)', async () => {
+    const { exec } = fakeExec(() => ok('/sim/ABC'))
+    const { fs, writes } = fakeFs({})
+
+    await createSimctlTransport(CONFIG, exec, fs).push(
+      { absolute: false, subpath: 'Documents/exports/2026/obs.csv' },
+      Buffer.from('x'),
+    )
+
+    expect(writes[0]?.[0]).toBe('/sim/ABC/Documents/exports/2026/obs.csv')
+  })
+
+  it('resolves the app container once and reuses it across operations', async () => {
+    const { exec, calls } = fakeExec(() => ok('/sim/ABC'))
+    const { fs } = fakeFs({})
+    const transport = createSimctlTransport(CONFIG, exec, fs)
+
+    await transport.pull({ absolute: false, subpath: 'Documents/a' }, { maxBuffer: 1 })
+    await transport.pull({ absolute: false, subpath: 'Documents/b' }, { maxBuffer: 1 })
+    await transport.push({ absolute: false, subpath: 'Documents/c' }, Buffer.from('x'))
+
+    const containerCalls = calls.filter((c) => c.args.includes('get_app_container'))
+    expect(containerCalls).toHaveLength(1) // cached after the first resolve
+  })
+
   it('maps an ENOENT read to NOT_FOUND', async () => {
     const { exec } = fakeExec(() => ok('/sim/ABC'))
     const enoent = Object.assign(new Error('missing'), { code: 'ENOENT' })

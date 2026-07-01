@@ -139,8 +139,10 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
 - **REQ-FILES-005** `pull` of a missing path rejects with `FileIoError` code
   `NOT_FOUND`. It never resolves with an empty or partial `Buffer` (fail-closed).
 - **REQ-FILES-006** `push` rejects on write failure (unwritable/absent root) with
-  a typed error. Parent-directory creation behavior is defined and unit-tested
-  (see Open items for the default).
+  a typed error. `push` **creates intermediate parent directories** as needed
+  (adb `mkdir -p`; the host `fs` seam creates them for simctl; devicectl's
+  `copy to` creates the container path). This is unit-tested per transport with a
+  nested remote path.
 - **REQ-FILES-007** All failures surface as `FileIoError` with a `code`:
   `NOT_FOUND` (missing path), `UNAVAILABLE` (missing targeting context),
   `UNSUPPORTED` (root/transport combination unsupported), `TRANSPORT_FAILED`

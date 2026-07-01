@@ -39,6 +39,10 @@ export interface AdbTransportConfig {
 // appended one — so file content that happens to contain the token is preserved.
 const READ_SENTINEL = '__RN_PW_READ__'
 const PUSH_OK = '__RN_PW_PUSH_OK__'
+// Bytes the read appends after the file on success: the sentinel + a single
+// exit-code digit ("0"). The stdout cap is padded by this so a file of exactly
+// `maxBuffer` bytes is not mis-reported as TOO_LARGE (REQ-FILES-008).
+const READ_SENTINEL_OVERHEAD = READ_SENTINEL.length + 1
 
 // Characters that would break out of the double-quoted path embedded in the
 // device-side `sh -c '…'` script (or the single-quoted script wrapper). Reject
@@ -92,7 +96,9 @@ export function createAdbTransport(config: AdbTransportConfig, exec: HostFileExe
       // the file or cat's error text (see file header).
       const result = await execOut(
         `run-as ${config.packageName} sh -c 'cat "${remote}"; printf "${READ_SENTINEL}%d" $?'`,
-        { maxBuffer },
+        // Pad the cap so the appended sentinel does not count the file itself
+        // over the caller's limit; the file body is still bounded by maxBuffer.
+        { maxBuffer: maxBuffer + READ_SENTINEL_OVERHEAD },
         'adb run-as cat',
         remote,
       )

@@ -22,7 +22,11 @@ export function createSimctlTransport(
   exec: HostFileExec,
   fs: HostFs,
 ): FileTransport {
+  // The app data container is stable for the app install, so resolve it once per
+  // transport and reuse it across pull/push (only a successful lookup is cached).
+  let cachedContainer: string | undefined
   const resolveContainer = async (): Promise<string> => {
+    if (cachedContainer !== undefined) return cachedContainer
     // Spawn-level failures (xcrun missing, timeout) reject; map them into the
     // taxonomy so they never escape as raw Node errors (REQ-FILES-007).
     let result: Awaited<ReturnType<HostFileExec>>
@@ -53,6 +57,7 @@ export function createSimctlTransport(
         'device.files: simctl get_app_container returned no path',
       )
     }
+    cachedContainer = container
     return container
   }
 

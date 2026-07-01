@@ -11,7 +11,7 @@ import { FileIoError } from '../errors'
 import type { HostFileExec } from '../host-file-exec'
 import type { HostFs } from '../host-fs'
 import type { ResolvedRemotePath } from '../roots'
-import { classifyCliFailure, errorMessage } from './shared'
+import { classifyCliFailure, errorMessage, mapNodeFsError } from './shared'
 
 export interface DevicectlTransportConfig {
   readonly udid: string
@@ -59,6 +59,19 @@ export function createDevicectlTransport(
     jsonOut,
   ]
 
+  // Stage in a host temp dir; a staging failure maps into the taxonomy so it
+  // never escapes as a raw Node error (REQ-FILES-007).
+  const stageDir = async (): Promise<string> => {
+    try {
+      return await fs.mkdtempDir('rn-driver-devicectl-')
+    } catch (error) {
+      throw new FileIoError(
+        'TRANSPORT_FAILED',
+        `device.files: devicectl could not create a staging dir: ${errorMessage(error)}`,
+      )
+    }
+  }
+
   const assertOk = async (
     result: Awaited<ReturnType<HostFileExec>>,
     remote: string,
@@ -78,7 +91,7 @@ export function createDevicectlTransport(
   return {
     async pull(path) {
       const remote = containerRelative(path)
-      const dir = await fs.mkdtempDir('rn-driver-devicectl-')
+      const dir = await stageDir()
       const dest = join(dir, 'payload')
       const jsonOut = join(dir, 'result.json')
       try {
@@ -91,19 +104,28 @@ export function createDevicectlTransport(
           },
         )
         await assertOk(result, remote, jsonOut)
-        return await fs.readFile(dest)
+        try {
+          return await fs.readFile(dest)
+        } catch (error) {
+          throw mapNodeFsError(error, remote)
+        }
       } finally {
-        await fs.remove(dir)
+        // Best-effort temp cleanup; a cleanup failure must not mask the result.
+        await fs.remove(dir).catch(() => {})
       }
     },
 
     async push(path, data) {
       const remote = containerRelative(path)
-      const dir = await fs.mkdtempDir('rn-driver-devicectl-')
+      const dir = await stageDir()
       const src = join(dir, 'payload')
       const jsonOut = join(dir, 'result.json')
       try {
-        await fs.writeFile(src, data)
+        try {
+          await fs.writeFile(src, data)
+        } catch (error) {
+          throw mapNodeFsError(error, src)
+        }
         const result = await exec(config.xcrunPath, copy('to', src, remote, jsonOut)).catch(
           (error: unknown) => {
             throw new FileIoError(
@@ -114,7 +136,8 @@ export function createDevicectlTransport(
         )
         await assertOk(result, remote, jsonOut)
       } finally {
-        await fs.remove(dir)
+        // Best-effort temp cleanup; a cleanup failure must not mask the result.
+        await fs.remove(dir).catch(() => {})
       }
     },
   }

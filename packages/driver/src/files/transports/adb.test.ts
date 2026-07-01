@@ -62,7 +62,9 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
       'exec-out',
       `run-as com.acme.app sh -c 'cat "${ABS}"; printf "__RN_PW_READ__%d" $?'`,
     ])
-    expect(calls[0]?.options?.maxBuffer).toBe(4096)
+    // The exec cap is padded by the appended sentinel bytes ("__RN_PW_READ__0" =
+    // 15) so a file of exactly maxBuffer is not mis-reported TOO_LARGE (REQ-FILES-008).
+    expect(calls[0]?.options?.maxBuffer).toBe(4096 + 15)
     expect(bytes.toString()).toBe('csv-bytes') // sentinel + exit code stripped
   })
 
@@ -94,11 +96,13 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
   it('maps a missing file (cat exit 1, error folded into stdout) to NOT_FOUND', async () => {
     // The real failure: exec-out exits 0 with cat's error on stdout. The sentinel
     // carries cat's own exit code (1), so the error text is never returned as bytes.
+    // A realistic maxBuffer (not 1) — with a tiny cap the diagnostic itself would
+    // overflow to TOO_LARGE before the sentinel is parsed, which is fail-closed too.
     const { exec } = fakeExec(() => readFail('cat: /data/.../x: No such file or directory\n'))
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: 'files/x' },
-        { maxBuffer: 1 },
+        { maxBuffer: 64 * 1024 },
       ),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
@@ -173,6 +177,17 @@ describe('adb transport — push', () => {
       `run-as com.acme.app sh -c 'mkdir -p "/data/data/com.acme.app/files" && cat > "/data/data/com.acme.app/files/seed.json" && echo __RN_PW_PUSH_OK__'`,
     )
     expect(calls[0]?.options?.stdin).toBe(data)
+  })
+
+  it('creates intermediate parent directories for a nested push path (REQ-FILES-006)', async () => {
+    const { exec, calls } = fakeExec(() => noSentinel('__RN_PW_PUSH_OK__\n'))
+
+    await createAdbTransport(CONFIG, exec).push(
+      { absolute: false, subpath: 'files/exports/2026/obs.csv' },
+      Buffer.from('x'),
+    )
+
+    expect(calls[0]?.args[3]).toContain('mkdir -p "/data/data/com.acme.app/files/exports/2026"')
   })
 
   it('fails closed when the success sentinel is absent (no exit code to trust)', async () => {
