@@ -25,6 +25,21 @@ test.describe('device.files', () => {
     expect(Buffer.compare(pulled, payload)).toBe(0)
   })
 
+  test('push creates intermediate parent directories for a nested path (REQ-FILES-006)', async ({
+    device,
+  }) => {
+    // Exercise the parent-dir contract on the real container: a fresh nested
+    // path forces the transport to create the intermediate directories
+    // (adb `mkdir -p` / host fs recursive) before the write lands.
+    const nested = `rn-driver-e2e/${randomBytes(6).toString('hex')}/nested-roundtrip.bin`
+    const payload = randomBytes(2048)
+
+    await device.files.push(payload, nested)
+    const pulled = await device.files.pull(nested)
+
+    expect(Buffer.compare(pulled, payload)).toBe(0)
+  })
+
   test('pull reads a file the app wrote via expo-file-system at the document root (REQ-FILES-003)', async ({
     device,
   }) => {
@@ -45,7 +60,10 @@ test.describe('device.files', () => {
   })
 
   test('pull of a missing path fails closed with NOT_FOUND (REQ-FILES-005)', async ({ device }) => {
-    await expect(device.files.pull('definitely-missing-file.xyz')).rejects.toMatchObject({
+    // Random per-run name so stale sandbox state can't make this pass/fail for
+    // the wrong reason (no remove API to clean a fixed name across runs).
+    const missing = `definitely-missing-${randomBytes(8).toString('hex')}.xyz`
+    await expect(device.files.pull(missing)).rejects.toMatchObject({
       code: 'NOT_FOUND',
     })
   })

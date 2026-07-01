@@ -32,14 +32,17 @@ export function classifyCliFailure(
   code: number,
 ): FileIoError {
   const detail = stderr.trim() || `exit ${code}`
-  if (NOT_FOUND_MARKERS.some((re) => re.test(stderr))) {
-    return new FileIoError('NOT_FOUND', `device.files: no such file: ${remote} (${detail})`)
-  }
+  // Check container-access (run-as) markers FIRST: `run-as: package not found`
+  // matches the broad `/not found/i` too, but it is a debuggable/access failure,
+  // not a missing remote file.
   if (UNSUPPORTED_MARKERS.some((re) => re.test(stderr))) {
     return new FileIoError(
       'UNSUPPORTED',
       `device.files: ${remote} is not reachable — the app build must be debuggable/development-signed (${detail})`,
     )
+  }
+  if (NOT_FOUND_MARKERS.some((re) => re.test(stderr))) {
+    return new FileIoError('NOT_FOUND', `device.files: no such file: ${remote} (${detail})`)
   }
   return new FileIoError(
     'TRANSPORT_FAILED',

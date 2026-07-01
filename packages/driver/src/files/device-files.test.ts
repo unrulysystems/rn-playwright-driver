@@ -80,17 +80,24 @@ describe('createDeviceFiles — pull', () => {
     expect(select).not.toHaveBeenCalled()
   })
 
-  it('rejects UNSUPPORTED for the absolute root on a physical iOS device (REQ-XPORT-007)', async () => {
-    const { select } = fakeTransport()
-    const files = createDeviceFiles({
-      platform: 'ios',
-      target: { ...IOS_TARGET, iosKind: 'device' },
-      selectTransport: select,
-    })
+  it('rejects UNSUPPORTED for the absolute root on iOS — sim and device (REQ-XPORT-007)', async () => {
+    // device.files is app-sandbox-scoped; an absolute path on the simulator would
+    // be a raw HOST path, so it is rejected on both iOS kinds, never a host escape.
+    await Promise.all(
+      (['simulator', 'device'] as const).map(async (iosKind) => {
+        const { select } = fakeTransport()
+        const files = createDeviceFiles({
+          platform: 'ios',
+          target: { ...IOS_TARGET, iosKind },
+          selectTransport: select,
+        })
 
-    await expect(files.pull('/var/x', { root: 'absolute' })).rejects.toMatchObject({
-      code: 'UNSUPPORTED',
-    })
+        await expect(files.pull('/etc/passwd', { root: 'absolute' })).rejects.toMatchObject({
+          code: 'UNSUPPORTED',
+        })
+        expect(select).not.toHaveBeenCalled() // fail closed before any transport
+      }),
+    )
   })
 
   it('propagates a transport NOT_FOUND', async () => {

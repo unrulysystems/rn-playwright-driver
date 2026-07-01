@@ -17,6 +17,21 @@ export interface SimctlTransportConfig {
   readonly xcrunPath: string
 }
 
+/**
+ * Resolve a container-relative path to its host location. `absolute` is rejected:
+ * device.files is app-sandbox-scoped, and a raw host path would escape it (this
+ * is also blocked upstream — belt and suspenders).
+ */
+function hostPath(container: string, path: ResolvedRemotePath): string {
+  if (path.absolute) {
+    throw new FileIoError(
+      'UNSUPPORTED',
+      "device.files: the 'absolute' root is not supported on iOS (app-sandbox-scoped)",
+    )
+  }
+  return join(container, path.subpath)
+}
+
 export function createSimctlTransport(
   config: SimctlTransportConfig,
   exec: HostFileExec,
@@ -60,9 +75,6 @@ export function createSimctlTransport(
     cachedContainer = container
     return container
   }
-
-  const hostPath = (container: string, path: ResolvedRemotePath): string =>
-    path.absolute ? path.path : join(container, path.subpath)
 
   return {
     async pull(path) {

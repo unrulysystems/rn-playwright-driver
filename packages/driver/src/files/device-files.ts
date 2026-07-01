@@ -88,12 +88,17 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
   }
 }
 
-/** The `absolute` root cannot be reached on a physical iOS device (REQ-XPORT-007). */
+/**
+ * The `absolute` root is unsupported on iOS (REQ-XPORT-007). `device.files` is
+ * app-sandbox-scoped: on the simulator an absolute path would resolve to a raw
+ * HOST path (a sandbox escape with the runner's privileges), and on a device
+ * devicectl is container-scoped. Only Android (uid-scoped by `run-as`) supports it.
+ */
 function assertPathSupported(target: ResolvedFileTarget, path: ResolvedRemotePath): void {
-  if (path.absolute && target.platform === 'ios' && target.kind === 'device') {
+  if (path.absolute && target.platform === 'ios') {
     throw new FileIoError(
       'UNSUPPORTED',
-      "device.files: the 'absolute' root is not supported on a physical iOS device (devicectl is container-scoped)",
+      "device.files: the 'absolute' root is not supported on iOS — device.files is app-sandbox-scoped. Use a named root (document/cache/data).",
     )
   }
 }

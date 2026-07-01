@@ -94,7 +94,7 @@ the app-written file on both platforms:
 | `document` | `Documents/`        | `files/`                     |
 | `cache`    | `Library/Caches/`   | `cache/`                     |
 | `data`     | container root      | app-home root                |
-| `absolute` | verbatim path\*     | verbatim device path         |
+| `absolute` | unsupported\*       | verbatim device path         |
 
 **Platform support:**
 
@@ -104,8 +104,10 @@ the app-written file on both platforms:
 | iOS device         | `xcrun devicectl device copy`    | **provisional** (see below)  |
 | Android emu/device | `adb … run-as <pkg>`             | supported (debuggable build) |
 
-- \*`absolute` is **not supported on a physical iOS device** (devicectl is
-  container-scoped) and rejects `UNSUPPORTED`.
+- \*`absolute` is **not supported on iOS** (simulator or device) and rejects
+  `UNSUPPORTED`: `device.files` is app-sandbox-scoped, and on the simulator an
+  absolute path would resolve to a raw host path. Use it only on Android, where
+  `run-as` keeps it scoped to the app's uid.
 - Android requires a **debuggable** build (`run-as`); iOS requires a
   **development-signed** app — both hold for E2E builds.
 - The **iOS-device** transport is unit-verified but **provisional** pending a

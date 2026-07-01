@@ -141,6 +141,18 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
   })
 
+  it('maps `run-as: package not found` to UNSUPPORTED, not NOT_FOUND', async () => {
+    // "package not found" also matches the broad /not found/ marker; the
+    // container-access branch must win (it is a debuggable/package issue).
+    const { exec } = fakeExec(() => noSentinel('run-as: package not found: com.acme.app\n'))
+    await expect(
+      createAdbTransport(CONFIG, exec).pull(
+        { absolute: false, subpath: 'files/x' },
+        { maxBuffer: 1 },
+      ),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
+  })
+
   it('maps a present-but-unreadable file (cat exit 1, permission denied) to TRANSPORT_FAILED', async () => {
     const { exec } = fakeExec(() => readFail('cat: /data/.../x: Permission denied\n'))
     await expect(

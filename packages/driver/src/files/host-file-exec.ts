@@ -105,6 +105,11 @@ export function createDefaultHostFileExec(): HostFileExec {
         stderr.push(chunk)
       })
       child.on('error', (error) => finish(() => reject(error)))
+      // A child that exits before consuming the push payload makes the stdin
+      // write emit EPIPE. That is benign — the real signal is the exit code from
+      // 'close' (or an error from 'error'); swallow it so it isn't an unhandled
+      // stream error, and let the settled result carry the transport's outcome.
+      child.stdin.on('error', () => {})
       child.on('close', (code) =>
         finish(() =>
           resolve({

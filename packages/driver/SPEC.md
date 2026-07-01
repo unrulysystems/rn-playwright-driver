@@ -82,17 +82,20 @@ interface DeviceFiles {
 
 ### Root resolution
 
-| Root       | iOS (container `<data>`)   | Android (`/data/data/<pkg>`) |
-| ---------- | -------------------------- | ---------------------------- |
-| `document` | `<data>/Documents`         | `/data/data/<pkg>/files`     |
-| `cache`    | `<data>/Library/Caches`    | `/data/data/<pkg>/cache`     |
-| `data`     | `<data>`                   | `/data/data/<pkg>`           |
-| `absolute` | path verbatim (host/sim)\* | path verbatim (device path)  |
+| Root       | iOS (container `<data>`) | Android (`/data/data/<pkg>`) |
+| ---------- | ------------------------ | ---------------------------- |
+| `document` | `<data>/Documents`       | `/data/data/<pkg>/files`     |
+| `cache`    | `<data>/Library/Caches`  | `/data/data/<pkg>/cache`     |
+| `data`     | `<data>`                 | `/data/data/<pkg>`           |
+| `absolute` | unsupported\*            | path verbatim (device path)  |
 
 `document`/`cache` mirror `expo-file-system`'s `documentDirectory`/
 `cacheDirectory`, so a file written by the app via that API is reachable by the
 same `device.files` call on both platforms. \*`absolute` is **unsupported on
-iOS-device** (devicectl is domain-scoped) and rejects `UNSUPPORTED`.
+iOS** (both kinds) and rejects `UNSUPPORTED`: `device.files` is app-sandbox-scoped,
+and on the simulator an absolute path would resolve to a raw HOST path — a
+sandbox escape with the runner's privileges. On Android an absolute
+`/data/data/<pkg>/…` path stays uid-scoped by `run-as`.
 
 ### Transport selection
 
@@ -186,8 +189,11 @@ $?'`: the bytes are recovered by splitting on the LAST sentinel occurrence, and
   argv and error mapping are asserted in unit tests without spawning real
   `simctl`/`devicectl`/`adb` (mirrors `AdbExec` in `src/touch/cli-backend.ts` and
   its recorder test).
-- **REQ-XPORT-007** `absolute` root is unsupported on iOS-device (devicectl is
-  domain-scoped) and rejects `UNSUPPORTED`.
+- **REQ-XPORT-007** `absolute` root is unsupported on iOS — **both** simulator
+  and device — and rejects `UNSUPPORTED`. `device.files` is app-sandbox-scoped;
+  on the simulator an absolute path would be a raw host path (sandbox escape),
+  and on a device devicectl is domain-scoped. It is supported only on Android,
+  where `run-as` keeps it uid-scoped to the app.
 
 ### Targeting context contract — `REQ-TGT-*`
 
@@ -313,7 +319,7 @@ attended run (see Open items). Paths are relative to `packages/`.
 | REQ-XPORT-004         | `driver/src/files/transports/adb.test.ts`                                                        |
 | REQ-XPORT-005         | `adb.test.ts` / `simctl.test.ts` (error classification)                                          |
 | REQ-XPORT-006         | all `driver/src/files/transports/*.test.ts` (injected exec, no spawn)                            |
-| REQ-XPORT-007         | `device-files.test.ts` + `devicectl.test.ts` (absolute on iOS-device)                            |
+| REQ-XPORT-007         | `device-files.test.ts` (absolute on iOS sim + device) + `simctl.ts` guard + `devicectl.test.ts`  |
 | REQ-TGT-001/004/005   | `driver/src/files/target.test.ts`                                                                |
 | REQ-TGT-002           | `runner/src/plan/env.test.ts`                                                                    |
 | REQ-TGT-003           | `driver/src/test-env.test.ts` (`targetFromEnv`)                                                  |

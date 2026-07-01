@@ -37,6 +37,16 @@ describe('createDefaultHostFileExec', () => {
     expect(result.stderr.length).toBeLessThan(600_000)
   })
 
+  it('resolves cleanly when the child exits before consuming a large stdin payload', async () => {
+    const exec = createDefaultHostFileExec()
+    // Child exits immediately; writing a big stdin payload would EPIPE. The
+    // wrapper must not surface that as an unhandled stream error (REQ-FILES-007).
+    const result = await exec(node, ['-e', 'process.exit(3)'], {
+      stdin: Buffer.alloc(1_000_000, 0x61),
+    })
+    expect(result.code).toBe(3)
+  })
+
   it('kills the child and rejects when it exceeds timeoutMs', async () => {
     const exec = createDefaultHostFileExec()
     await expect(
