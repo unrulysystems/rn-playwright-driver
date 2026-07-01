@@ -17,15 +17,28 @@ describe('selectTarget', () => {
   })
 
   it('fails closed when more than one runtime matches the deviceName (confused-deputy guard)', () => {
-    // Two same-named simulators; Metro exposes no UDID to disambiguate, and
-    // device.files pins by UDID — a silent first-pick could diverge. Throw.
+    // Two same-named simulators; Metro exposes no UDID to disambiguate. A silent
+    // first-pick could attach to the wrong runtime. Throw. When file I/O is NOT
+    // pinned the message must NOT claim a device.files divergence.
     const targets = [
       target({ id: 'a', deviceName: 'iPhone 17', title: 'com.acme.app (iPhone 17)' }),
       target({ id: 'b', deviceName: 'iPhone 17', title: 'com.acme.app (iPhone 17)' }),
     ]
-    expect(() => selectTarget(targets, { deviceName: 'iPhone 17' })).toThrow(
-      /Ambiguous device target/,
-    )
+    try {
+      selectTarget(targets, { deviceName: 'iPhone 17' })
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect((error as Error).message).toMatch(/Ambiguous device target/)
+      expect((error as Error).message).not.toMatch(/device\.files/)
+    }
+  })
+
+  it('adds the device.files divergence note to the ambiguity error only when file I/O is pinned', () => {
+    const targets = [
+      target({ id: 'a', deviceName: 'iPhone 17' }),
+      target({ id: 'b', deviceName: 'iPhone 17' }),
+    ]
+    expect(() => selectTarget(targets, { deviceName: 'iPhone 17' }, true)).toThrow(/device\.files/)
   })
 
   it('throws a clear error when no target matches the deviceName', () => {

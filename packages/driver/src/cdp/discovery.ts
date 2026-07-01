@@ -45,9 +45,8 @@ export async function discoverTargets(metroUrl: string): Promise<DebugTarget[]> 
  * 2. deviceName (substring match)
  * 3. pageIndex (default: 0)
  *
- * Throws if no matching target found.
- */
-/**
+ * Throws if no matching target is found, or if the selection is ambiguous.
+ *
  * @param filePinned True when `device.files` is pinned to a concrete device
  *   (`DeviceOptions.target` with a udid/serial). Metro's CDP targets expose no
  *   UDID (see below), so CDP cannot be pinned to the same device — with more than
@@ -87,15 +86,19 @@ export function selectTarget(
       throw new Error(`No target matching "${options.deviceName}". Available: ${available}`)
     }
     // Fail closed on ambiguity. Metro's CDP targets expose no device UDID (only a
-    // name/title), so two same-named simulators cannot be told apart here — and
-    // `device.files` pins the container by UDID. Silently taking the first match
-    // could evaluate against one simulator while file I/O hits another's sandbox
-    // (a confused deputy). A loud error beats that; use a unique simulator name.
+    // name/title), so two same-named simulators cannot be told apart here.
+    // Silently taking the first match could attach to the wrong runtime. A loud
+    // error beats that; use a unique name or an explicit pageIndex. When file I/O
+    // is pinned, the divergence is worse (evaluate vs. device.files sandbox), so
+    // call that out — but only then, since the guard fires regardless of pinning.
     if (matches.length > 1) {
       const available = matches.map((t) => t.title ?? t.deviceName ?? 'unknown').join(', ')
+      const filesNote = filePinned
+        ? ' device.files pins by UDID, so evaluate() and file I/O could hit different devices.'
+        : ''
       throw new Error(
         `Ambiguous device target: ${matches.length} runtimes match "${options.deviceName}" (${available}). ` +
-          `Metro exposes no UDID to disambiguate, and device.files targets by UDID — use a unique simulator name.`,
+          `Metro exposes no UDID to disambiguate — use a unique device name or pass pageIndex.${filesNote}`,
       )
     }
     return matches[0] as DebugTarget
