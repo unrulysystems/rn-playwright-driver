@@ -133,12 +133,15 @@ the app-written file on both platforms:
 Targeting (bundle id, udid, package, adb serial) is supplied automatically by
 the `rn-driver` runner via `RN_APP_BUNDLE_ID` / `RN_SIM_UDID` /
 `RN_IOS_TARGET_KIND` / `RN_APP_PACKAGE` (`ANDROID_SERIAL`); set
-`DeviceOptions.target` explicitly for a direct `createDevice()`. When you pin
-`target` (udid/serial) **and more than one runtime is connected to the same
+`DeviceOptions.target` explicitly for a direct `createDevice()`. When your `target`
+carries a **complete file-I/O identity** (iOS `udid` + `bundleId`, or Android
+`serial` + `packageName`) **and more than one runtime is connected to the same
 Metro**, also pass a CDP selector (`deviceName` or `pageIndex`) — Metro exposes no
 UDID, so `createDevice` fails closed (`Ambiguous CDP target`) rather than risk
-attaching `evaluate()` to a different app than `device.files` reads. With a single
-runtime (the usual runner flow) no selector is needed.
+attaching `evaluate()` to a different app than `device.files` reads. A lone
+`udid`/`serial` (e.g. `ANDROID_SERIAL` set only for touch/adb, no app id) is **not**
+a file pin — `device.files` would be `UNAVAILABLE` anyway — so it never forces a
+selector. With a single runtime (the usual runner flow) no selector is needed.
 
 ## Example E2E Gates
 

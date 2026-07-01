@@ -132,6 +132,14 @@ export class RNDevice implements Device {
       },
       this.options.touch,
     )
+    // A reconnect without an intervening disconnect() must not orphan the prior touch
+    // backend — a companion process/port would stay alive and only the newest backend
+    // would be disposed later. Dispose it before replacing (symmetric with the
+    // file-I/O lifecycle-token invalidation below; the event forwarders are already
+    // idempotent, so the touch backend is the last reconnect-leaked resource).
+    if (this._touchBackend) {
+      await this._touchBackend.dispose()
+    }
     this._touchBackend = backend
     const backendInfo: TouchBackendInfo = {
       selected: selection.backend,

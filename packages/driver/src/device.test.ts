@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as discovery from './cdp/discovery'
 import { RNDevice, TimeoutError, UncaughtExceptionError } from './device'
+import { createTouchBackend } from './touch'
 import type { ConsoleMessage, PageError } from './types'
 
 type MockTarget = {
@@ -85,19 +86,23 @@ vi.mock('./cdp/discovery', async (importOriginal) => {
 
 // Mock touch backend
 vi.mock('./touch', () => ({
-  createTouchBackend: vi.fn().mockResolvedValue({
-    backend: {
-      tap: vi.fn(),
-      down: vi.fn(),
-      move: vi.fn(),
-      up: vi.fn(),
-      dispose: vi.fn(),
-    },
-    selection: {
-      backend: 'native-module',
-      available: ['native-module'],
-    },
-  }),
+  // A FRESH backend per call so a reconnect's dispose can be attributed to the
+  // specific (old) backend it should tear down, not a shared singleton spy.
+  createTouchBackend: vi.fn().mockImplementation(() =>
+    Promise.resolve({
+      backend: {
+        tap: vi.fn(),
+        down: vi.fn(),
+        move: vi.fn(),
+        up: vi.fn(),
+        dispose: vi.fn(),
+      },
+      selection: {
+        backend: 'native-module',
+        available: ['native-module'],
+      },
+    }),
+  ),
 }))
 
 /** Route the mocked CDP evaluate so getWindowMetrics() resolves to `metrics`. */
@@ -669,10 +674,12 @@ describe('RNDevice failOnUncaughtException', () => {
     )
     await device.connect()
     const stale = device.files // captured against the FIRST connection's token
+    const firstTouch = await vi.mocked(createTouchBackend).mock.results[0]?.value
 
     // Reconnect WITHOUT an intervening disconnect(). The new connection mints a
     // fresh token; the old one must be invalidated now, not left live to survive
-    // the next disconnect (which only flips the newest token).
+    // the next disconnect (which only flips the newest token). The old touch backend
+    // must be disposed too, not orphaned (a companion process/port would leak).
     await device.connect()
 
     await expect(stale.pull('obs.csv')).rejects.toMatchObject({
@@ -681,6 +688,8 @@ describe('RNDevice failOnUncaughtException', () => {
     })
     // The current reference from the new connection still works.
     expect(device.files).not.toBe(stale)
+    // The prior touch backend was disposed by the reconnect, not leaked.
+    expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
   })
 
   it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {
