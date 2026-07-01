@@ -155,7 +155,10 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
 - **REQ-FILES-008** Android `pull` streams the file to stdout bounded by
   `options.maxBuffer` (default 64 MiB). Overflow rejects `TOO_LARGE`,
   fail-closed, never a truncated `Buffer`. iOS transports copy to a file and are
-  not subject to this cap.
+  not subject to this cap. `push` is bounded symmetrically: a host-file source
+  larger than `options.maxBuffer` (default 64 MiB) rejects `TOO_LARGE` **before**
+  it is read into memory (a `Buffer` source is checked by length), so an
+  oversized fixture cannot exhaust the worker.
 
 ### Transports — `REQ-XPORT-*`
 
@@ -163,7 +166,13 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
   → simctl; iOS+device → devicectl; Android (any kind) → adb run-as.
 - **REQ-XPORT-002** iOS-simulator resolves the container via `xcrun simctl
 get_app_container <udid> <bundleId> data`, then reads/writes the host path at
-  `<container>/<root-subpath>/<remotePath>`.
+  `<container>/<root-subpath>/<remotePath>`. Before dereferencing with host
+  privileges it resolves the target through symlinks (the longest existing
+  ancestor, since a nested `push` has a not-yet-created tail) and rejects
+  `UNSUPPORTED` if it escapes the container. The textual no-escape rule
+  (`REQ-FILES-004`) is string-only; this closes an app-planted in-container
+  symlink (e.g. `Documents/x -> /etc/passwd`) that would otherwise read/write
+  arbitrary host files.
 - **REQ-XPORT-003** iOS-device uses `xcrun devicectl device copy from|to --device
 <udid> --domain-type appDataContainer --domain-identifier <bundleId> --source
 <container-relative> --destination <path> --json-output <file>`. `pull` stages
@@ -287,11 +296,6 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 
 ## Open items
 
-- Final `FileIoError` code names and `DeviceOptions.target` field identifiers are
-  ratified during TDD; this SPEC fixes behavior, not final identifiers.
-- `push` default for parent-directory creation (auto-create vs require existing) —
-  decide in TDD; bias toward auto-create under a known root, fail-closed
-  otherwise.
 - The iOS-device transport stays **provisional** pending hardware verification;
   promote to verified once a real-device E2E passes.
 - `../runner/SPEC.md`'s env-contract table should absorb the `REQ-TGT-002` vars on

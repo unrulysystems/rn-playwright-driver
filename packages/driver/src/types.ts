@@ -362,7 +362,8 @@ export type TouchBackendConfig = {
  * Named root a remote path resolves against. `document`/`cache` mirror
  * `expo-file-system`'s `documentDirectory`/`cacheDirectory`, so one call points
  * at the app-written file on both platforms; `data` is the app container root;
- * `absolute` takes the path verbatim (unsupported on a physical iOS device).
+ * `absolute` takes the path verbatim (Android only — unsupported on iOS, both
+ * simulator and device, since device.files is app-sandbox-scoped).
  * See SPEC.md "Root resolution".
  */
 export type FileRoot = 'document' | 'cache' | 'data' | 'absolute'
@@ -384,6 +385,12 @@ export type FilePullOptions = {
 export type FilePushOptions = {
   /** Root the remote path resolves against (default: `document`). */
   root?: FileRoot
+  /**
+   * Max bytes to move in one push. A host-file source larger than this rejects
+   * with {@link FileIoError} `TOO_LARGE` **before** it is read into memory (a
+   * Buffer source is checked by length), bounding worker memory. Default: 64 MiB.
+   */
+  maxBuffer?: number
 }
 
 /**

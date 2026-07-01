@@ -171,6 +171,17 @@ export function createAdbTransport(config: AdbTransportConfig, exec: HostFileExe
           `device.files: adb push failed for ${remote}: ${errorMessage(error)}`,
         )
       }
+      // Fail closed on an adb-level failure (device gone, adb broke) before
+      // trusting stdout: unlike the remote shell's exit code (which does not
+      // survive adb), the local adb process code IS meaningful (REQ-FILES-007).
+      if (result.code !== 0) {
+        throw classifyCliFailure(
+          'adb run-as push',
+          remote,
+          `${result.stdout.toString('utf8')}${result.stderr}`,
+          result.code,
+        )
+      }
       // The sentinel is echoed LAST and only after `cat >` succeeds, so require
       // stdout to END with it. Matching `combined.includes(...)` would let a
       // failure diagnostic that echoes a caller-controlled path containing the

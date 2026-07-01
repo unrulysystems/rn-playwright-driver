@@ -5,7 +5,7 @@
  * M4). Transport-agnostic and free of host-process concerns so it unit-tests
  * against a fake transport. See `packages/driver/SPEC.md` REQ-FILES-*.
  */
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import type { DeviceFiles, FileRoot, TargetContext } from '../types'
 import { FileIoError } from './errors'
 import type { ResolvedRemotePath } from './roots'
@@ -39,10 +39,13 @@ export interface DeviceFilesDeps {
   readonly selectTransport: FileTransportFactory
   /** Reads a host file into a Buffer (push from a local path). Defaults to fs. */
   readonly readLocalFile?: (path: string) => Promise<Buffer>
+  /** Size (bytes) of a host file, checked before reading it (push guard). Defaults to fs.stat. */
+  readonly localFileSize?: (path: string) => Promise<number>
 }
 
 export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
   const readLocalFile = deps.readLocalFile ?? ((path: string) => readFile(path))
+  const localFileSize = deps.localFileSize ?? (async (path: string) => (await stat(path)).size)
 
   // The target is fixed for the device, so build the transport once and reuse it
   // across operations — lets stateful transports (e.g. simctl's resolved
@@ -69,6 +72,7 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
       return transportFor(target).pull(path, { maxBuffer })
     },
     async push(source, remotePath, options) {
+      const maxBuffer = options?.maxBuffer ?? DEFAULT_MAX_BUFFER
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
       // A local-path source is read on the host; map its fs errors into the
       // FileIoError taxonomy so `device.files` never leaks a raw Node error
@@ -76,12 +80,29 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
       let data: Buffer
       if (typeof source === 'string') {
         try {
+          // Bound worker memory: reject an oversized source BEFORE reading it in,
+          // symmetric with pull's maxBuffer (REQ-FILES-008). Never load a file
+          // large enough to fail the process.
+          const size = await localFileSize(source)
+          if (size > maxBuffer) {
+            throw new FileIoError(
+              'TOO_LARGE',
+              `device.files: local source ${source} is ${size} bytes, exceeds maxBuffer ${maxBuffer}`,
+            )
+          }
           data = await readLocalFile(source)
         } catch (error) {
+          if (error instanceof FileIoError) throw error
           throw mapNodeFsError(error, source)
         }
       } else {
         data = source
+        if (data.length > maxBuffer) {
+          throw new FileIoError(
+            'TOO_LARGE',
+            `device.files: push payload is ${data.length} bytes, exceeds maxBuffer ${maxBuffer}`,
+          )
+        }
       }
       await transportFor(target).push(path, data)
     },

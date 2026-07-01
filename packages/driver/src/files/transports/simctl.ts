@@ -3,13 +3,53 @@
  * `xcrun simctl get_app_container`, then read/write it with plain host fs. See
  * `packages/driver/SPEC.md` REQ-XPORT-002.
  */
-import { join } from 'node:path'
+import { dirname, join, sep } from 'node:path'
 import type { FileTransport } from '../device-files'
 import { FileIoError } from '../errors'
 import type { HostFileExec } from '../host-file-exec'
 import type { HostFs } from '../host-fs'
 import type { ResolvedRemotePath } from '../roots'
 import { errorMessage, mapNodeFsError } from './shared'
+
+function isEnoent(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && (error as { code?: string }).code === 'ENOENT'
+  )
+}
+
+/**
+ * Confirm `full` resolves — through symlinks — to a location inside the app
+ * container before reading/writing it with host privileges. The textual `..`
+ * check in `resolveRemotePath` and the `absolute`-root rejection are string-only;
+ * an app under test can still plant an in-container symlink (e.g.
+ * `Documents/x -> /etc/passwd`) whose target escapes the sandbox. Resolve the
+ * longest existing ancestor (a nested push targets a not-yet-created tail) and
+ * assert containment; a symlink at any existing component is caught.
+ */
+async function assertInsideContainer(fs: HostFs, container: string, full: string): Promise<void> {
+  const containerReal = await fs.realpath(container)
+  let ancestor = full
+  for (;;) {
+    let real: string
+    try {
+      real = await fs.realpath(ancestor)
+    } catch (error) {
+      // Walk up past the not-yet-created tail; any other error is real.
+      if (!isEnoent(error)) throw mapNodeFsError(error, full)
+      const parent = dirname(ancestor)
+      if (parent === ancestor) throw mapNodeFsError(error, full) // hit fs root
+      ancestor = parent
+      continue
+    }
+    if (real !== containerReal && !real.startsWith(containerReal + sep)) {
+      throw new FileIoError(
+        'UNSUPPORTED',
+        `device.files: path resolves outside the app container (symlink escape): ${full}`,
+      )
+    }
+    return
+  }
+}
 
 export interface SimctlTransportConfig {
   readonly udid: string
@@ -78,7 +118,9 @@ export function createSimctlTransport(
 
   return {
     async pull(path) {
-      const full = hostPath(await resolveContainer(), path)
+      const container = await resolveContainer()
+      const full = hostPath(container, path)
+      await assertInsideContainer(fs, container, full)
       try {
         return await fs.readFile(full)
       } catch (error) {
@@ -86,7 +128,9 @@ export function createSimctlTransport(
       }
     },
     async push(path, data) {
-      const full = hostPath(await resolveContainer(), path)
+      const container = await resolveContainer()
+      const full = hostPath(container, path)
+      await assertInsideContainer(fs, container, full)
       try {
         await fs.writeFile(full, data)
       } catch (error) {

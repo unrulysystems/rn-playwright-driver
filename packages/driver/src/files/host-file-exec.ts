@@ -54,7 +54,7 @@ export class HostExecMaxBufferError extends Error {
  * hostile CLI floods stderr; further chunks are dropped, not stored. Independent
  * of `maxBuffer`, which bounds the pulled-file stdout stream.
  */
-const STDERR_CAP = 256 * 1024
+export const STDERR_CAP = 256 * 1024
 
 /**
  * Default {@link HostFileExec} backed by `child_process.spawn` — captures stdout
@@ -100,9 +100,12 @@ export function createDefaultHostFileExec(): HostFileExec {
       child.stderr.on('data', (chunk: Buffer) => {
         // Bound stderr memory: keep the first STDERR_CAP bytes (enough to
         // classify a failure), drop the rest so a flood can't OOM the worker.
+        // Truncate the chunk that crosses the cap so the bound is exact.
         if (stderrLen >= STDERR_CAP) return
-        stderrLen += chunk.length
-        stderr.push(chunk)
+        const room = STDERR_CAP - stderrLen
+        const slice = chunk.length > room ? chunk.subarray(0, room) : chunk
+        stderrLen += slice.length
+        stderr.push(slice)
       })
       child.on('error', (error) => finish(() => reject(error)))
       // A child that exits before consuming the push payload makes the stdin

@@ -134,11 +134,11 @@ export function targetFromEnv(env: TestEnvironment): TargetContext | undefined {
   if (env.RN_APP_BUNDLE_ID) target.bundleId = env.RN_APP_BUNDLE_ID
   if (env.RN_APP_PACKAGE) target.packageName = env.RN_APP_PACKAGE
   if (env.RN_SIM_UDID) target.udid = env.RN_SIM_UDID
-  // Resolve the adb serial from the same env the touch backend reads
-  // (RN_TOUCH_ADB_SERIAL preferred, else ANDROID_SERIAL) so file I/O and touch
-  // pin the same device. The touch CLI path adds a runtime deviceId fallback that
-  // is not available here — env-only resolution is sufficient for targeting.
-  const serial = env.RN_TOUCH_ADB_SERIAL ?? env.ANDROID_SERIAL
+  // Pin the adb serial to ANDROID_SERIAL — the canonical device the runner
+  // launched and the driver env contract emits (SPEC.md REQ-TGT / driver env).
+  // RN_TOUCH_ADB_SERIAL is only a touch-specific override; preferring it would
+  // let a stale value point file I/O at a different device than the app runs on.
+  const serial = env.ANDROID_SERIAL ?? env.RN_TOUCH_ADB_SERIAL
   if (serial) target.serial = serial
   const iosKind = parseIosTargetKind(env.RN_IOS_TARGET_KIND)
   if (iosKind) target.iosKind = iosKind

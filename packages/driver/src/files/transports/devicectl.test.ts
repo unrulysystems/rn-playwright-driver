@@ -33,6 +33,7 @@ function fakeFs(files: Record<string, string> = {}) {
     remove: async (path) => {
       removed.push(path)
     },
+    realpath: async (path) => path,
   }
   return { fs, removed, written }
 }
@@ -139,6 +140,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
       writeFile: async () => {},
       mkdtempDir: async () => '/tmp/dc',
       remove: async () => {},
+      realpath: async (path) => path,
     }
     await expect(
       createDevicectlTransport(CONFIG, exec, fs).pull(
@@ -157,6 +159,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
       },
       mkdtempDir: async () => '/tmp/dc',
       remove: async () => {},
+      realpath: async (path) => path,
     }
     await expect(
       createDevicectlTransport(CONFIG, exec, fs).push(
@@ -175,6 +178,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
         throw new Error('no temp available')
       },
       remove: async () => {},
+      realpath: async (path) => path,
     }
     await expect(
       createDevicectlTransport(CONFIG, exec, fs).pull(

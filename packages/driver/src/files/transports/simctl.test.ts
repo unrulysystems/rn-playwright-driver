@@ -39,6 +39,9 @@ function fakeFs(overrides: Partial<HostFs>): {
     },
     mkdtempDir: async () => '/tmp/x',
     remove: async () => {},
+    // Identity realpath by default: no symlinks, so every joined path resolves
+    // to itself and the container-containment check passes.
+    realpath: async (path) => path,
     ...overrides,
   }
   return { fs, reads, writes }
@@ -71,6 +74,64 @@ describe('simctl transport', () => {
     await transport.push({ absolute: false, subpath: 'Documents/seed.json' }, Buffer.from('x'))
 
     expect(writes[0]?.[0]).toBe('/sim/ABC/Documents/seed.json')
+  })
+
+  it('rejects UNSUPPORTED when an in-container symlink resolves outside on pull (host escape)', async () => {
+    const { exec } = fakeExec(() => ok('/sim/ABC'))
+    // Documents/evil is a symlink whose target escapes the container.
+    const { fs, reads } = fakeFs({
+      realpath: async (path) => (path === '/sim/ABC/Documents/evil' ? '/etc/passwd' : path),
+    })
+
+    await expect(
+      createSimctlTransport(CONFIG, exec, fs).pull(
+        { absolute: false, subpath: 'Documents/evil' },
+        { maxBuffer: 1 },
+      ),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
+    expect(reads).toEqual([]) // never dereferenced — fail closed before the read
+  })
+
+  it('rejects UNSUPPORTED when a parent symlink escapes the container on push', async () => {
+    const { exec } = fakeExec(() => ok('/sim/ABC'))
+    // Documents/link -> /outside; the not-yet-created tail ENOENTs, so the check
+    // walks up to the escaping parent and rejects before writing.
+    const { fs, writes } = fakeFs({
+      realpath: async (path) => {
+        if (path === '/sim/ABC/Documents/link/file.bin') {
+          throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+        }
+        return path === '/sim/ABC/Documents/link' ? '/outside' : path
+      },
+    })
+
+    await expect(
+      createSimctlTransport(CONFIG, exec, fs).push(
+        { absolute: false, subpath: 'Documents/link/file.bin' },
+        Buffer.from('x'),
+      ),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
+    expect(writes).toEqual([]) // fail closed before the write
+  })
+
+  it('allows a nested push whose tail does not exist yet (walks up to an in-container ancestor)', async () => {
+    const { exec } = fakeExec(() => ok('/sim/ABC'))
+    // The tail ENOENTs; the existing ancestor (Documents) is inside the container.
+    const { fs, writes } = fakeFs({
+      realpath: async (path) => {
+        if (path === '/sim/ABC/Documents/new/file.bin') {
+          throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+        }
+        return path
+      },
+    })
+
+    await createSimctlTransport(CONFIG, exec, fs).push(
+      { absolute: false, subpath: 'Documents/new/file.bin' },
+      Buffer.from('x'),
+    )
+
+    expect(writes[0]?.[0]).toBe('/sim/ABC/Documents/new/file.bin')
   })
 
   it('writes a nested push path verbatim (HostFs creates the parents) (REQ-FILES-006)', async () => {

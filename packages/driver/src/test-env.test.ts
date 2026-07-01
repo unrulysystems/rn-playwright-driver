@@ -172,15 +172,23 @@ describe('targetFromEnv', () => {
     ).toEqual({ packageName: 'com.acme.app', serial: 'emulator-5554' })
   })
 
-  it('prefers RN_TOUCH_ADB_SERIAL over ANDROID_SERIAL and reuses the adb path', () => {
+  it('pins the serial to ANDROID_SERIAL over a stale RN_TOUCH_ADB_SERIAL, reusing the adb path', () => {
+    // ANDROID_SERIAL is the runner-launched device; a stale touch override must
+    // not point file I/O at a different device (REQ-TGT).
     expect(
       targetFromEnv({
         RN_APP_PACKAGE: 'com.acme.app',
-        RN_TOUCH_ADB_SERIAL: 'pin-1',
-        ANDROID_SERIAL: 'other',
+        RN_TOUCH_ADB_SERIAL: 'stale',
+        ANDROID_SERIAL: 'emulator-5554',
         RN_TOUCH_CLI_ADB_PATH: '/opt/adb',
       }),
-    ).toMatchObject({ serial: 'pin-1', adbPath: '/opt/adb' })
+    ).toMatchObject({ serial: 'emulator-5554', adbPath: '/opt/adb' })
+  })
+
+  it('falls back to RN_TOUCH_ADB_SERIAL when ANDROID_SERIAL is absent', () => {
+    expect(
+      targetFromEnv({ RN_APP_PACKAGE: 'com.acme.app', RN_TOUCH_ADB_SERIAL: 'pin-1' }),
+    ).toMatchObject({ serial: 'pin-1' })
   })
 
   it('throws on an invalid RN_IOS_TARGET_KIND (fail closed, not a silent simulator default)', () => {

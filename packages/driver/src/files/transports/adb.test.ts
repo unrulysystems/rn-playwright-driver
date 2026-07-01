@@ -241,6 +241,22 @@ describe('adb transport — push', () => {
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
   })
 
+  it('fails closed on a nonzero adb process code even if stdout ends with the sentinel', async () => {
+    // The remote shell exit code does not survive adb, but the LOCAL adb code
+    // does (device gone / adb broke). A trailing sentinel must not override it.
+    const { exec } = fakeExec(() => ({
+      stdout: Buffer.from('__RN_PW_PUSH_OK__\n'),
+      stderr: 'adb: device offline',
+      code: 1,
+    }))
+    await expect(
+      createAdbTransport(CONFIG, exec).push(
+        { absolute: false, subpath: 'files/x' },
+        Buffer.from('x'),
+      ),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+  })
+
   it('fails closed when the sentinel appears mid-output but not at the end (spoof guard)', async () => {
     // A failure diagnostic echoing a path that contains the token must not be
     // read as success: the real echo is the LAST thing on stdout.

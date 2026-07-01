@@ -21,6 +21,7 @@ function harness() {
     writeFile: async () => {},
     mkdtempDir: async () => '/tmp/x',
     remove: async () => {},
+    realpath: async (path) => path,
   }
   return { commands, deps: { exec, fs } }
 }

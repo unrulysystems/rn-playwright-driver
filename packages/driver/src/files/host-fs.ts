@@ -3,7 +3,7 @@
  * simulator container directly; devicectl stages through a host temp dir). Kept
  * behind an interface so transport tests never touch the real disk.
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -15,6 +15,8 @@ export interface HostFs {
   mkdtempDir(prefix: string): Promise<string>
   /** Remove a file or directory recursively; missing paths are ignored. */
   remove(path: string): Promise<void>
+  /** Resolve a path through symlinks to its canonical location (for containment checks). */
+  realpath(path: string): Promise<string>
 }
 
 export function createDefaultHostFs(): HostFs {
@@ -26,5 +28,6 @@ export function createDefaultHostFs(): HostFs {
     },
     mkdtempDir: (prefix) => mkdtemp(join(tmpdir(), prefix)),
     remove: (path) => rm(path, { recursive: true, force: true }),
+    realpath: (path) => realpath(path),
   }
 }

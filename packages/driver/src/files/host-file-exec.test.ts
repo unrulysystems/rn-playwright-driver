@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDefaultHostFileExec, HostExecMaxBufferError } from './host-file-exec'
+import { createDefaultHostFileExec, HostExecMaxBufferError, STDERR_CAP } from './host-file-exec'
 
 // Integration-level: spawns the Node binary so the real spawn/stream/limit code
 // runs (the transports depend on exactly these bounds). No app or device needed.
@@ -30,11 +30,11 @@ describe('createDefaultHostFileExec', () => {
 
   it('bounds buffered stderr so a flood cannot exhaust worker memory', async () => {
     const exec = createDefaultHostFileExec()
-    // Emit ~2 MiB to stderr; the cap keeps only the first ~256 KiB, not all of it.
+    // Emit ~2 MiB to stderr; the cap keeps EXACTLY the first STDERR_CAP bytes
+    // (the crossing chunk is truncated), not all of it.
     const result = await exec(node, ['-e', 'process.stderr.write("x".repeat(2_000_000))'])
     expect(result.code).toBe(0)
-    expect(result.stderr.length).toBeGreaterThan(0)
-    expect(result.stderr.length).toBeLessThan(600_000)
+    expect(result.stderr.length).toBe(STDERR_CAP)
   })
 
   it('resolves cleanly when the child exits before consuming a large stdin payload', async () => {

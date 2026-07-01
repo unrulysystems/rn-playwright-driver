@@ -149,11 +149,13 @@ describe('createDeviceFiles — push', () => {
   it('reads a local file path and pushes its bytes', async () => {
     const { pushes, select } = fakeTransport()
     const readLocalFile = vi.fn(async () => Buffer.from('from-disk'))
+    const localFileSize = vi.fn(async () => 9)
     const files = createDeviceFiles({
       platform: 'ios',
       target: IOS_TARGET,
       selectTransport: select,
       readLocalFile,
+      localFileSize,
     })
 
     await files.push('./fixtures/seed.json', 'seed.json')
@@ -163,17 +165,51 @@ describe('createDeviceFiles — push', () => {
     expect(pushes[0]?.path).toEqual({ absolute: false, subpath: 'Documents/seed.json' })
   })
 
+  it('rejects TOO_LARGE for a local source over maxBuffer, before reading it', async () => {
+    const { pushes, select } = fakeTransport()
+    const readLocalFile = vi.fn(async () => Buffer.from('should-not-be-read'))
+    const localFileSize = vi.fn(async () => 5_000)
+    const files = createDeviceFiles({
+      platform: 'android',
+      target: ANDROID_TARGET,
+      selectTransport: select,
+      readLocalFile,
+      localFileSize,
+    })
+
+    await expect(files.push('./big.bin', 'seed.bin', { maxBuffer: 1_000 })).rejects.toMatchObject({
+      code: 'TOO_LARGE',
+    })
+    expect(readLocalFile).not.toHaveBeenCalled() // bounded before the read
+    expect(pushes).toEqual([])
+  })
+
+  it('rejects TOO_LARGE for a Buffer payload over maxBuffer', async () => {
+    const { pushes, select } = fakeTransport()
+    const files = createDeviceFiles({
+      platform: 'android',
+      target: ANDROID_TARGET,
+      selectTransport: select,
+    })
+
+    await expect(
+      files.push(Buffer.alloc(2048), 'seed.bin', { maxBuffer: 1024 }),
+    ).rejects.toMatchObject({ code: 'TOO_LARGE' })
+    expect(pushes).toEqual([])
+  })
+
   it('maps a missing local source (ENOENT) to NOT_FOUND, not a raw Node error', async () => {
     // The public DeviceFiles contract promises every failure is a FileIoError.
     const { select } = fakeTransport()
-    const readLocalFile = vi.fn(async () => {
+    // The size probe is what discovers the missing source (it runs first).
+    const localFileSize = vi.fn(async () => {
       throw Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' })
     })
     const files = createDeviceFiles({
       platform: 'ios',
       target: IOS_TARGET,
       selectTransport: select,
-      readLocalFile,
+      localFileSize,
     })
 
     await expect(files.push('./missing.json', 'seed.json')).rejects.toMatchObject({
@@ -199,6 +235,8 @@ describe('createDeviceFiles — push', () => {
 
   it('maps other local-source read failures (EACCES) to TRANSPORT_FAILED', async () => {
     const { select } = fakeTransport()
+    // Size probe succeeds; the read then fails with EACCES → TRANSPORT_FAILED.
+    const localFileSize = vi.fn(async () => 10)
     const readLocalFile = vi.fn(async () => {
       throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' })
     })
@@ -207,6 +245,7 @@ describe('createDeviceFiles — push', () => {
       target: ANDROID_TARGET,
       selectTransport: select,
       readLocalFile,
+      localFileSize,
     })
 
     await expect(files.push('./locked.json', 'seed.json')).rejects.toMatchObject({
