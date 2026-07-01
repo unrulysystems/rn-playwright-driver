@@ -110,10 +110,15 @@ the app-written file on both platforms:
   absolute path would resolve to a raw host path. Use it only on Android.
 - On Android, `absolute` is an intentional escape hatch **bounded by the app
   UID**, not confined to `/data/data/<pkg>`. The path runs under `run-as <pkg>`,
-  so it can reach anything that UID can — the private data dir **and**
-  app-accessible external storage (e.g. `/sdcard/…`) — but nothing another app or
-  the system owns (the kernel enforces this; unreachable paths fail closed as
-  `TRANSPORT_FAILED`). `..` is rejected so the touched path stays legible, and a
+  so it can reach anything that UID can — the private data dir **and** the
+  app-scoped external dir (`/sdcard/Android/data/<pkg>/…`). Reaching broader
+  external storage (`/sdcard/…`) depends on the app itself holding the relevant
+  Android storage permission — it is the app UID's reach, not a driver grant — and
+  nothing another app or the system owns is reachable (the kernel enforces this;
+  unreachable paths fail closed as `TRANSPORT_FAILED`). The E2E round-trips the
+  `absolute` mechanism through an app-private path (`/data/data/<pkg>/files/…`);
+  an external-storage path uses the identical `run-as` transport, differing only in
+  the path string (argv covered by unit tests). `..` is rejected so the touched path stays legible, and a
   path containing shell metacharacters (quotes, backtick, `$`, backslash, or a
   newline) is rejected `UNSUPPORTED` before adb runs — the path is interpolated
   into a device-side `run-as … sh -c` command, so it must stay a plain path. Pass a

@@ -61,6 +61,25 @@ describe('resolveRemotePath — named roots (REQ-FILES-003)', () => {
       expect((error as FileIoError).message).toMatch(/unknown root/)
     }
   })
+
+  it.each(['__proto__', 'constructor', 'toString', 'hasOwnProperty'])(
+    'fails closed with UNSUPPORTED for the inherited object key %p (no prototype-key bypass)',
+    (key) => {
+      // Bracket-indexing an inherited key returns a prototype value (object/function),
+      // not undefined; an own-property guard is what rejects it, so push/pull never
+      // synthesize a subpath like `[object Object]/x` from a `__proto__` root.
+      for (const platform of ['ios', 'android'] as const) {
+        try {
+          resolveRemotePath(platform, key as unknown as FileRoot, 'x')
+          expect.unreachable(`should have thrown for ${platform}/${key}`)
+        } catch (error) {
+          expect(error).toBeInstanceOf(FileIoError)
+          expect((error as FileIoError).code).toBe('UNSUPPORTED')
+          expect((error as FileIoError).message).toMatch(/unknown root/)
+        }
+      }
+    },
+  )
 })
 
 describe('resolveRemotePath — no-escape rule (REQ-FILES-004)', () => {

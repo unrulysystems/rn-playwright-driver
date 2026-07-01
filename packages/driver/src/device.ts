@@ -484,7 +484,7 @@ export class RNDevice implements Device {
     return this.evaluate<{ events: DriverEvent[] }>(buildHarnessCall('stopTracing'))
   }
 
-  // --- Platform Info ---
+  // --- Device file I/O ---
 
   get files(): DeviceFiles {
     if (!this._files) {
@@ -492,6 +492,8 @@ export class RNDevice implements Device {
     }
     return this._files
   }
+
+  // --- Platform Info ---
 
   get platform(): 'ios' | 'android' {
     return this._platform

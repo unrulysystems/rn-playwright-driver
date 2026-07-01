@@ -34,9 +34,13 @@ test.describe('device.files', () => {
     // `absolute` is Android-only (unsupported on iOS); exercise the documented
     // public path on a real emulator, not just fake-adb unit coverage. Uses the
     // app-private data dir rather than external storage (e.g. /sdcard): reaching
-    // /sdcard needs an external-storage permission this example app does not
-    // declare, and `run-as` bounds `absolute` to the app UID either way, so the
-    // private-dir path keeps this test deterministic and permission-free.
+    // broader /sdcard needs an Android storage permission this example app does not
+    // declare. Crucially this still verifies the `absolute` MECHANISM end to end —
+    // an external-storage path uses the identical `run-as` transport and differs
+    // only in the path string (argv covered by the transport unit tests), and
+    // `run-as` bounds `absolute` to the app UID either way — so the private-dir
+    // path keeps this test deterministic and permission-free. Matches the scoped
+    // claim in README/SPEC (REQ-XPORT-004).
     test.skip(device.platform !== 'android', "'absolute' root is unsupported on iOS")
     const pkg = process.env.RN_APP_PACKAGE
     test.skip(!pkg, 'RN_APP_PACKAGE not set')

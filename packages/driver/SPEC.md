@@ -97,11 +97,16 @@ iOS** (both kinds) and rejects `UNSUPPORTED`: `device.files` is app-sandbox-scop
 and on the simulator an absolute path would resolve to a raw HOST path — a
 sandbox escape with the runner's privileges. On Android `absolute` is an
 intentional escape hatch **bounded by the app UID via `run-as`** — not confined
-to `/data/data/<pkg>`. It reaches anything that UID owns (private data dir **and**
-app-accessible external storage such as `/sdcard/…`) and nothing else (the kernel
-enforces the boundary; unreachable paths fail closed as `TRANSPORT_FAILED`). `..`
-is rejected (REQ-XPORT-004) so the touched path stays legible. Input is
-test-author-controlled, so this is a capability, not an injection surface.
+to `/data/data/<pkg>`. It reaches anything that UID owns — the private data dir
+**and** the app-scoped external dir (`/sdcard/Android/data/<pkg>/…`); reaching
+broader external storage (`/sdcard/…`) depends on the app holding the relevant
+Android storage permission (the app UID's reach, not a driver grant), and nothing
+another app or the system owns is reachable (the kernel enforces the boundary;
+unreachable paths fail closed as `TRANSPORT_FAILED`). `..` is rejected
+(REQ-XPORT-004) so the touched path stays legible. Input is test-author-controlled,
+so this is a capability, not an injection surface. E2E coverage exercises the
+`absolute` mechanism via an app-private path; an external-storage path shares the
+identical `run-as` transport (path string only), covered by transport argv units.
 
 ### Transport selection
 
