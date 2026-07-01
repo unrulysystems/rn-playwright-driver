@@ -62,10 +62,34 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
       'exec-out',
       `run-as com.acme.app sh -c 'cat "${ABS}"; printf "__RN_PW_READ__%d" $?'`,
     ])
-    // The exec cap is padded by the appended sentinel bytes ("__RN_PW_READ__0" =
-    // 15) so a file of exactly maxBuffer is not mis-reported TOO_LARGE (REQ-FILES-008).
-    expect(calls[0]?.options?.maxBuffer).toBe(4096 + 15)
+    // The exec cap gets diagnostic headroom so the sentinel/errors always parse;
+    // the file body is then enforced against maxBuffer exactly (REQ-FILES-005/008).
+    expect(calls[0]?.options?.maxBuffer).toBe(4096 + 64 * 1024)
     expect(bytes.toString()).toBe('csv-bytes') // sentinel + exit code stripped
+  })
+
+  it('enforces maxBuffer exactly on the file body (not the padded exec cap)', async () => {
+    // Body of 5 bytes with maxBuffer 4 → TOO_LARGE, even though the read had
+    // headroom and the exec did not overflow.
+    const { exec } = fakeExec(() => readOk('12345'))
+    await expect(
+      createAdbTransport(CONFIG, exec).pull(
+        { absolute: false, subpath: 'files/x' },
+        { maxBuffer: 4 },
+      ),
+    ).rejects.toMatchObject({ code: 'TOO_LARGE' })
+  })
+
+  it('classifies a missing file as NOT_FOUND regardless of a small maxBuffer', async () => {
+    // Headroom means the folded diagnostic is parsed instead of overflowing to
+    // TOO_LARGE, so a tiny cap still yields the correct taxonomy.
+    const { exec } = fakeExec(() => readFail('cat: /data/.../x: No such file or directory\n'))
+    await expect(
+      createAdbTransport(CONFIG, exec).pull(
+        { absolute: false, subpath: 'files/x' },
+        { maxBuffer: 4 },
+      ),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 
   it('recovers file bytes that themselves contain the sentinel token', async () => {
@@ -203,5 +227,21 @@ describe('adb transport — push', () => {
         Buffer.from('x'),
       ),
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
+  })
+
+  it('fails closed when the sentinel appears mid-output but not at the end (spoof guard)', async () => {
+    // A failure diagnostic echoing a path that contains the token must not be
+    // read as success: the real echo is the LAST thing on stdout.
+    const { exec } = fakeExec(() => ({
+      stdout: Buffer.from('cat: /data/data/com.acme.app/files/__RN_PW_PUSH_OK__x: No such file\n'),
+      stderr: '',
+      code: 0,
+    }))
+    await expect(
+      createAdbTransport(CONFIG, exec).push(
+        { absolute: false, subpath: 'files/x' },
+        Buffer.from('x'),
+      ),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 })

@@ -39,10 +39,12 @@ export interface AdbTransportConfig {
 // appended one — so file content that happens to contain the token is preserved.
 const READ_SENTINEL = '__RN_PW_READ__'
 const PUSH_OK = '__RN_PW_PUSH_OK__'
-// Bytes the read appends after the file on success: the sentinel + a single
-// exit-code digit ("0"). The stdout cap is padded by this so a file of exactly
-// `maxBuffer` bytes is not mis-reported as TOO_LARGE (REQ-FILES-008).
-const READ_SENTINEL_OVERHEAD = READ_SENTINEL.length + 1
+// Headroom added to the stdout cap so the sentinel — and a missing/denied file's
+// folded `cat:` diagnostic — always fit and get parsed. This keeps NOT_FOUND vs
+// TOO_LARGE classification independent of the caller's maxBuffer; the file body
+// is then enforced against maxBuffer exactly (REQ-FILES-005/008). A file larger
+// than maxBuffer + this headroom still overflows the exec and maps to TOO_LARGE.
+const READ_DIAGNOSTIC_HEADROOM = 64 * 1024
 
 // Characters that would break out of the double-quoted path embedded in the
 // device-side `sh -c '…'` script (or the single-quoted script wrapper). Reject
@@ -96,9 +98,9 @@ export function createAdbTransport(config: AdbTransportConfig, exec: HostFileExe
       // the file or cat's error text (see file header).
       const result = await execOut(
         `run-as ${config.packageName} sh -c 'cat "${remote}"; printf "${READ_SENTINEL}%d" $?'`,
-        // Pad the cap so the appended sentinel does not count the file itself
-        // over the caller's limit; the file body is still bounded by maxBuffer.
-        { maxBuffer: maxBuffer + READ_SENTINEL_OVERHEAD },
+        // Headroom so the sentinel + any folded diagnostic always fit and parse;
+        // the file body is enforced against maxBuffer exactly below.
+        { maxBuffer: maxBuffer + READ_DIAGNOSTIC_HEADROOM },
         'adb run-as cat',
         remote,
       )
@@ -139,6 +141,14 @@ export function createAdbTransport(config: AdbTransportConfig, exec: HostFileExe
           exit,
         )
       }
+      // Enforce the caller's cap exactly on the file bytes (the read had extra
+      // headroom for the sentinel/diagnostic, so classification wasn't skewed).
+      if (body.length > maxBuffer) {
+        throw new FileIoError(
+          'TOO_LARGE',
+          `device.files: ${remote} is ${body.length} bytes, exceeding maxBuffer (${maxBuffer}); raise options.maxBuffer to pull it`,
+        )
+      }
       return body
     },
 
@@ -161,11 +171,20 @@ export function createAdbTransport(config: AdbTransportConfig, exec: HostFileExe
           `device.files: adb push failed for ${remote}: ${errorMessage(error)}`,
         )
       }
-      const combined = `${result.stdout.toString('utf8')}${result.stderr}`
-      if (!combined.includes(PUSH_OK)) {
+      // The sentinel is echoed LAST and only after `cat >` succeeds, so require
+      // stdout to END with it. Matching `combined.includes(...)` would let a
+      // failure diagnostic that echoes a caller-controlled path containing the
+      // token spoof success; end-anchoring on stdout alone closes that.
+      const stdout = result.stdout.toString('utf8').trimEnd()
+      if (!stdout.endsWith(PUSH_OK)) {
         // No success sentinel → the write did not complete (non-debuggable
         // build, unknown package, unwritable path). Fail closed.
-        throw classifyCliFailure('adb run-as push', remote, combined, result.code)
+        throw classifyCliFailure(
+          'adb run-as push',
+          remote,
+          `${result.stdout.toString('utf8')}${result.stderr}`,
+          result.code,
+        )
       }
     },
   }

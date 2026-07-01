@@ -183,8 +183,14 @@ describe('targetFromEnv', () => {
     ).toMatchObject({ serial: 'pin-1', adbPath: '/opt/adb' })
   })
 
-  it('ignores an invalid RN_IOS_TARGET_KIND (leaves iosKind unset → simulator default)', () => {
-    expect(targetFromEnv({ RN_SIM_UDID: 'UDID-1', RN_IOS_TARGET_KIND: 'nonsense' })).toEqual({
+  it('throws on an invalid RN_IOS_TARGET_KIND (fail closed, not a silent simulator default)', () => {
+    expect(() => targetFromEnv({ RN_SIM_UDID: 'UDID-1', RN_IOS_TARGET_KIND: 'nonsense' })).toThrow(
+      /RN_IOS_TARGET_KIND must be one of/,
+    )
+  })
+
+  it('treats an empty RN_IOS_TARGET_KIND as unset (no throw)', () => {
+    expect(targetFromEnv({ RN_SIM_UDID: 'UDID-1', RN_IOS_TARGET_KIND: '' })).toEqual({
       udid: 'UDID-1',
     })
   })

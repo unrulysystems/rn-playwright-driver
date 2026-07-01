@@ -111,9 +111,15 @@ function xctestOptionsFromEnv(
 }
 
 function parseIosTargetKind(value: string | undefined): IosTargetKind | undefined {
-  return value !== undefined && (IOS_TARGET_KINDS as readonly string[]).includes(value)
-    ? (value as IosTargetKind)
-    : undefined
+  if (value === undefined || value === '') return undefined
+  // A set-but-invalid value is a config typo. Fail closed rather than silently
+  // defaulting to 'simulator', which would misroute file I/O (simctl vs devicectl).
+  if (!(IOS_TARGET_KINDS as readonly string[]).includes(value)) {
+    throw new Error(
+      `RN_IOS_TARGET_KIND must be one of ${IOS_TARGET_KINDS.join(', ')} (got ${JSON.stringify(value)})`,
+    )
+  }
+  return value as IosTargetKind
 }
 
 /**
@@ -128,8 +134,10 @@ export function targetFromEnv(env: TestEnvironment): TargetContext | undefined {
   if (env.RN_APP_BUNDLE_ID) target.bundleId = env.RN_APP_BUNDLE_ID
   if (env.RN_APP_PACKAGE) target.packageName = env.RN_APP_PACKAGE
   if (env.RN_SIM_UDID) target.udid = env.RN_SIM_UDID
-  // Reuse the adb serial/path the touch backend already resolves, so file I/O and
-  // touch pin the same device.
+  // Resolve the adb serial from the same env the touch backend reads
+  // (RN_TOUCH_ADB_SERIAL preferred, else ANDROID_SERIAL) so file I/O and touch
+  // pin the same device. The touch CLI path adds a runtime deviceId fallback that
+  // is not available here — env-only resolution is sufficient for targeting.
   const serial = env.RN_TOUCH_ADB_SERIAL ?? env.ANDROID_SERIAL
   if (serial) target.serial = serial
   const iosKind = parseIosTargetKind(env.RN_IOS_TARGET_KIND)

@@ -105,6 +105,8 @@ describe('planAndroid', () => {
       RN_TOUCH_BACKEND: 'instrumentation',
       RN_TOUCH_INSTRUMENTATION_TOKEN_FILE: '<token-file>',
       ANDROID_SERIAL: '<android-serial>',
+      // device.files targeting (REQ-TGT-*): Android run-as needs the package name.
+      RN_APP_PACKAGE: 'com.unrulyfall.example',
     })
     expect(plan.driverEnv).not.toHaveProperty('RN_TOUCH_INSTRUMENTATION_TOKEN')
   })

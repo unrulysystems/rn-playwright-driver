@@ -177,6 +177,10 @@ describe('planIos', () => {
     expect(plan.driverEnv).toMatchObject({
       RN_TOUCH_BACKEND: 'xctest',
       RN_TOUCH_XCTEST_TOKEN_FILE: '<token-file>',
+      // device.files targeting (REQ-TGT-*): iOS needs bundle id, sim udid, kind.
+      RN_APP_BUNDLE_ID: 'com.unrulyfall.example',
+      RN_SIM_UDID: '<sim-udid>',
+      RN_IOS_TARGET_KIND: 'simulator',
     })
     expect(plan.driverEnv).not.toHaveProperty('RN_TOUCH_XCTEST_TOKEN')
   })
