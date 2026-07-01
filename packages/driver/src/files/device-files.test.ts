@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { TargetContext } from '../types'
 import { createDeviceFiles, type FileTransport } from './device-files'
 import { FileIoError } from './errors'
+import { HostFileTooLargeError } from './host-fs'
 import type { ResolvedRemotePath } from './roots'
 
 const IOS_TARGET: TargetContext = { udid: 'UDID-1', bundleId: 'com.acme.app' }
@@ -171,19 +172,20 @@ describe('createDeviceFiles — push', () => {
 
   it('reads a local file path and pushes its bytes', async () => {
     const { pushes, select } = fakeTransport()
-    const readLocalFile = vi.fn(async () => Buffer.from('from-disk'))
+    const readLocalFileBounded = vi.fn(async () => Buffer.from('from-disk'))
     const localFileSize = vi.fn(async () => 9)
     const files = createDeviceFiles({
       platform: 'ios',
       target: IOS_TARGET,
       selectTransport: select,
-      readLocalFile,
+      readLocalFileBounded,
       localFileSize,
     })
 
     await files.push('./fixtures/seed.json', 'seed.json')
 
-    expect(readLocalFile).toHaveBeenCalledWith('./fixtures/seed.json')
+    // Read is bounded by maxBuffer, not an unbounded readFile.
+    expect(readLocalFileBounded).toHaveBeenCalledWith('./fixtures/seed.json', expect.any(Number))
     expect(pushes[0]?.data.toString()).toBe('from-disk')
     expect(pushes[0]?.path).toEqual({ absolute: false, subpath: 'Documents/seed.json' })
   })
@@ -213,20 +215,45 @@ describe('createDeviceFiles — push', () => {
 
   it('rejects TOO_LARGE for a local source over maxBuffer, before reading it', async () => {
     const { pushes, select } = fakeTransport()
-    const readLocalFile = vi.fn(async () => Buffer.from('should-not-be-read'))
+    const readLocalFileBounded = vi.fn(async () => Buffer.from('should-not-be-read'))
     const localFileSize = vi.fn(async () => 5_000)
     const files = createDeviceFiles({
       platform: 'android',
       target: ANDROID_TARGET,
       selectTransport: select,
-      readLocalFile,
+      readLocalFileBounded,
       localFileSize,
     })
 
     await expect(files.push('./big.bin', 'seed.bin', { maxBuffer: 1_000 })).rejects.toMatchObject({
       code: 'TOO_LARGE',
     })
-    expect(readLocalFile).not.toHaveBeenCalled() // bounded before the read
+    expect(readLocalFileBounded).not.toHaveBeenCalled() // bounded before the read
+    expect(pushes).toEqual([])
+  })
+
+  it('rejects TOO_LARGE when a local source grows past the size probe (bounded read)', async () => {
+    // The probe passes, but the bounded read detects the file grew over the cap
+    // and throws HostFileTooLargeError — push must map that to TOO_LARGE, not leak
+    // it or buffer the grown file (REQ-FILES-008), symmetric with pull.
+    const { pushes, select } = fakeTransport()
+    const localFileSize = vi.fn(async () => 10) // passes the fast-fail
+    const readLocalFileBounded = vi.fn(async (_path: string, maxBytes: number) => {
+      throw new HostFileTooLargeError(maxBytes)
+    })
+    const files = createDeviceFiles({
+      platform: 'android',
+      target: ANDROID_TARGET,
+      selectTransport: select,
+      readLocalFileBounded,
+      localFileSize,
+    })
+
+    await expect(files.push('./grows.bin', 'seed.bin', { maxBuffer: 1_000 })).rejects.toMatchObject(
+      {
+        code: 'TOO_LARGE',
+      },
+    )
     expect(pushes).toEqual([])
   })
 
@@ -283,14 +310,14 @@ describe('createDeviceFiles — push', () => {
     const { select } = fakeTransport()
     // Size probe succeeds; the read then fails with EACCES → TRANSPORT_FAILED.
     const localFileSize = vi.fn(async () => 10)
-    const readLocalFile = vi.fn(async () => {
+    const readLocalFileBounded = vi.fn(async () => {
       throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' })
     })
     const files = createDeviceFiles({
       platform: 'android',
       target: ANDROID_TARGET,
       selectTransport: select,
-      readLocalFile,
+      readLocalFileBounded,
       localFileSize,
     })
 

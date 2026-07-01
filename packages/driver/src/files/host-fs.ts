@@ -19,6 +19,39 @@ export class HostFileTooLargeError extends Error {
   }
 }
 
+/** Chunk size for the streaming bounded read; small enough that a tiny file costs a tiny buffer. */
+const BOUNDED_READ_CHUNK = 64 * 1024
+
+/**
+ * Read at most `maxBytes` from `path`, throwing {@link HostFileTooLargeError} if
+ * the file is larger — WITHOUT ever buffering the excess. Reads one byte past the
+ * cap purely to detect overflow, and allocates in {@link BOUNDED_READ_CHUNK}
+ * chunks so a tiny file costs a tiny buffer (not the full cap). Shared by the iOS
+ * pull transports and `device.files` push, so both enforce the same memory bound
+ * even when the file grows between a size probe and the read (REQ-FILES-008).
+ */
+export async function readFileBoundedFromDisk(path: string, maxBytes: number): Promise<Buffer> {
+  const overflowCap = maxBytes + 1 // one byte past the cap is enough to know it's too large
+  const handle = await open(path, 'r')
+  try {
+    const chunks: Buffer[] = []
+    let total = 0
+    while (total < overflowCap) {
+      const want = Math.min(BOUNDED_READ_CHUNK, overflowCap - total)
+      const chunk = Buffer.allocUnsafe(want)
+      const { bytesRead } = await handle.read(chunk, 0, want, total)
+      if (bytesRead === 0) break // EOF
+      // Only ever expose the bytes actually read — allocUnsafe leaves the tail uninitialized.
+      chunks.push(bytesRead === want ? chunk : chunk.subarray(0, bytesRead))
+      total += bytesRead
+    }
+    if (total > maxBytes) throw new HostFileTooLargeError(maxBytes)
+    return Buffer.concat(chunks, total)
+  } finally {
+    await handle.close()
+  }
+}
+
 export interface HostFs {
   readFile(path: string): Promise<Buffer>
   /**
@@ -43,26 +76,7 @@ export interface HostFs {
 export function createDefaultHostFs(): HostFs {
   return {
     readFile: (path) => readFile(path),
-    readFileBounded: async (path, maxBytes) => {
-      // Allocate at most maxBytes+1 and stop reading once full: peak memory is
-      // bounded regardless of the on-disk size, so a file that grew after a probe
-      // (or is being concurrently written) can never exhaust the worker.
-      const cap = maxBytes + 1
-      const buf = Buffer.alloc(cap)
-      const handle = await open(path, 'r')
-      try {
-        let total = 0
-        while (total < cap) {
-          const { bytesRead } = await handle.read(buf, total, cap - total, total)
-          if (bytesRead === 0) break // EOF
-          total += bytesRead
-        }
-        if (total > maxBytes) throw new HostFileTooLargeError(maxBytes)
-        return buf.subarray(0, total)
-      } finally {
-        await handle.close()
-      }
-    },
+    readFileBounded: (path, maxBytes) => readFileBoundedFromDisk(path, maxBytes),
     writeFile: async (path, data) => {
       await mkdir(dirname(path), { recursive: true })
       await writeFile(path, data)

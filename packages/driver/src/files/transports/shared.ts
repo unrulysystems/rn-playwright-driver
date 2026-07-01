@@ -29,20 +29,34 @@ const UNSUPPORTED_MARKERS = [
 // The tool ran but the target device/tool is unreachable — a transport failure,
 // never a remote-file NOT_FOUND. `adb: device 'X' not found` matches the bare
 // "not found" that NOT_FOUND deliberately dropped, so classify it here first.
+//
+// The device markers are ANCHORED to the tool's own diagnostic prefix (`adb:` /
+// `error:`, or a line/string start), because the classified text folds in the
+// caller-controlled remote path (adb.ts folds `cat`'s "No such file: <path>").
+// An unanchored /device offline/ would misclassify a MISSING file whose name
+// contains "device offline" as TRANSPORT_FAILED instead of NOT_FOUND.
+const DEVICE_ERROR_PREFIX = String.raw`(?:^|\n)\s*(?:adb|error):\s*`
 const DEVICE_UNAVAILABLE_MARKERS = [
-  /device (?:'[^']*'|"[^"]*"|\S+)? ?(?:not found|offline|unauthorized)/i,
-  /no devices?\/emulators? found/i,
+  new RegExp(`${DEVICE_ERROR_PREFIX}device\\b[^\\n]*\\b(?:not found|offline|unauthorized)\\b`, 'i'),
+  new RegExp(`${DEVICE_ERROR_PREFIX}no devices?/emulators? found`, 'i'),
   /unable to (?:find|locate) (?:device|utility)/i,
-  /command not found/i,
+  /: command not found/i,
 ]
 
-/** Classify a non-zero CLI result (stderr text) into the FileIoError taxonomy. */
+/**
+ * Classify a non-zero CLI result into the FileIoError taxonomy. `diagnostic` is
+ * the tool's folded failure text — for adb that is `cat`'s stdout+stderr (which
+ * includes the remote path), for devicectl it is stderr plus the JSON-output
+ * body; the device markers are anchored precisely because this text is not pure,
+ * caller-free stderr.
+ */
 export function classifyCliFailure(
   tool: string,
   remote: string,
-  stderr: string,
+  diagnostic: string,
   code: number,
 ): FileIoError {
+  const stderr = diagnostic
   const detail = stderr.trim() || `exit ${code}`
   // Check container-access (run-as) markers FIRST: `run-as: package not found`
   // matches the broad `/not found/i` too, but it is a debuggable/access failure,

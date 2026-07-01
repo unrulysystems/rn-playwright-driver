@@ -5,9 +5,10 @@
  * Transport-agnostic and free of host-process concerns so it unit-tests against a
  * fake transport. See `packages/driver/SPEC.md` REQ-FILES-*.
  */
-import { readFile, stat } from 'node:fs/promises'
+import { stat } from 'node:fs/promises'
 import type { DeviceFiles, FileRoot, TargetContext } from '../types'
 import { FileIoError } from './errors'
+import { HostFileTooLargeError, readFileBoundedFromDisk } from './host-fs'
 import type { ResolvedRemotePath } from './roots'
 import { resolveRemotePath } from './roots'
 import type { ResolvedFileTarget } from './target'
@@ -53,14 +54,18 @@ export interface DeviceFilesDeps {
   readonly target: TargetContext | undefined
   /** Builds the platform transport for a resolved target. */
   readonly selectTransport: FileTransportFactory
-  /** Reads a host file into a Buffer (push from a local path). Defaults to fs. */
-  readonly readLocalFile?: (path: string) => Promise<Buffer>
+  /**
+   * Read a host file into a Buffer for push, bounded to `maxBytes` (throws
+   * {@link HostFileTooLargeError} past it, without buffering the excess). Defaults
+   * to the shared streaming bounded read.
+   */
+  readonly readLocalFileBounded?: (path: string, maxBytes: number) => Promise<Buffer>
   /** Size (bytes) of a host file, checked before reading it (push guard). Defaults to fs.stat. */
   readonly localFileSize?: (path: string) => Promise<number>
 }
 
 export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
-  const readLocalFile = deps.readLocalFile ?? ((path: string) => readFile(path))
+  const readLocalFileBounded = deps.readLocalFileBounded ?? readFileBoundedFromDisk
   const localFileSize = deps.localFileSize ?? (async (path: string) => (await stat(path)).size)
 
   // The target is fixed for the device, so build the transport once and reuse it
@@ -96,9 +101,10 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
       let data: Buffer
       if (typeof source === 'string') {
         try {
-          // Bound worker memory: reject an oversized source BEFORE reading it in,
-          // symmetric with pull's maxBuffer (REQ-FILES-008). Never load a file
-          // large enough to fail the process.
+          // Fast-fail on a known-large source, then a BOUNDED read: symmetric with
+          // pull, peak memory stays at maxBuffer even if the file grows between the
+          // probe and the read (the probe alone can't promise that — a plain
+          // readFile would buffer the grown file first) (REQ-FILES-008).
           const size = await localFileSize(source)
           if (size > maxBuffer) {
             throw new FileIoError(
@@ -106,16 +112,22 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
               `device.files: local source ${source} is ${size} bytes, exceeds maxBuffer ${maxBuffer}`,
             )
           }
-          data = await readLocalFile(source)
+          data = await readLocalFileBounded(source, maxBuffer)
         } catch (error) {
           if (error instanceof FileIoError) throw error
+          if (error instanceof HostFileTooLargeError) {
+            throw new FileIoError(
+              'TOO_LARGE',
+              `device.files: local source ${source} exceeds maxBuffer ${maxBuffer} (grew past the size probe)`,
+            )
+          }
           throw mapNodeFsError(error, source)
         }
       } else {
         data = source
       }
-      // Re-check the actual byte length: a file can grow between the size probe
-      // and the read, and a Buffer source is never probed. Bound unconditionally.
+      // Re-check the actual byte length: covers a Buffer source (never probed);
+      // a string source is already bounded by the read above.
       if (data.length > maxBuffer) {
         throw new FileIoError(
           'TOO_LARGE',

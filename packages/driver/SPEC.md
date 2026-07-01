@@ -169,9 +169,10 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
   rejects `TOO_LARGE` without buffering the excess — so a file that **grows or is
   swapped between the probe and the read** (a racing/compromised or merely
   concurrently-written app) still cannot exhaust the worker. `push` is bounded
-  symmetrically: a host-file source larger than `options.maxBuffer` rejects
-  `TOO_LARGE` before it is read in, and the resulting `Buffer` length is
-  re-checked (guarding growth after the probe, and any `Buffer` source).
+  symmetrically by the **same** bounded read (`readFileBoundedFromDisk`): a
+  host-file source rejects `TOO_LARGE` on a cheap size fast-fail, then the bounded
+  read holds the cap even if the file grows past the probe; a `Buffer` source
+  (never probed) is caught by a final length re-check.
 
 ### Transports — `REQ-XPORT-*`
 
@@ -341,6 +342,15 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   but supplies no CDP selector, so when more than one runtime is connected
   `selectTarget` fails closed (`filePinned`) rather than defaulting CDP to the first
   target while file I/O targets another — pass `deviceName`/`pageIndex` to resolve.
+  **Single-runtime residual (accepted):** with exactly one connected runtime, a
+  file-pinned `createDevice({ target })` with no CDP selector connects CDP to that
+  sole runtime — it is the only runtime that exists, so there is nothing safer to
+  fail toward, and demanding a redundant selector would break the common
+  single-device pin-by-UDID setup. We still cannot **prove** the sole runtime is the
+  pinned device (same Metro-no-UDID limitation), so an operator targeting a specific
+  device among several booted ones must pass an explicit `deviceName` to bind both
+  identities. Revisit (fail closed even for one runtime, at that UX cost) only if
+  `device.files` is ever pointed at an untrusted multi-device host.
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 - **iOS-simulator containment TOCTOU (accepted residual).** `resolveInsideContainer`

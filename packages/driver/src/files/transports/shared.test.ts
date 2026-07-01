@@ -32,6 +32,24 @@ describe('classifyCliFailure', () => {
     )
   })
 
+  it('maps a MISSING file whose path contains "device offline" to NOT_FOUND, not TRANSPORT_FAILED', () => {
+    // adb folds the caller-controlled remote path into the diagnostic (cat's "No
+    // such file: <path>"). A file literally named "device offline.log" must not be
+    // misclassified as a device-unavailable transport failure — the device markers
+    // are anchored to adb's own `adb:`/`error:` prefix, which a path lacks.
+    const path = '/data/data/com.acme.app/files/device offline.log'
+    expect(
+      classifyCliFailure('adb run-as cat', path, `cat: ${path}: No such file or directory`, 1).code,
+    ).toBe('NOT_FOUND')
+  })
+
+  it('maps a MISSING file whose path contains "device not found" to NOT_FOUND', () => {
+    const path = '/sdcard/reports/device not found.txt'
+    expect(
+      classifyCliFailure('adb run-as cat', path, `cat: ${path}: No such file or directory`, 1).code,
+    ).toBe('NOT_FOUND')
+  })
+
   it('keeps run-as debuggable failures as UNSUPPORTED (precedence over the bare not-found)', () => {
     expect(
       classifyCliFailure('adb', '/sdcard/x', 'run-as: package not found: com.acme.app', 1).code,

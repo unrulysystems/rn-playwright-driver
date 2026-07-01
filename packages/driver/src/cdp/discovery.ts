@@ -116,6 +116,16 @@ export type ConnectSelectionOptions = TargetSelectionOptions & {
  * connected, defaulting to the first target would evaluate against a different app
  * than file I/O reads/writes — fail closed instead of guessing. An explicit
  * pageIndex is the caller's deliberate choice and is honored.
+ *
+ * SINGLE-RUNTIME RESIDUAL (accepted; see SPEC "Open items"): with exactly one
+ * connected runtime we connect CDP to it, even under a file pin, because it is the
+ * only runtime that exists — there is nothing safer to fail toward, and requiring
+ * a redundant CDP selector would break the common single-device pin-by-UDID setup.
+ * We still cannot PROVE that sole runtime is the pinned device (Metro exposes no
+ * UDID), so an operator targeting a specific device among several booted ones
+ * should pass an explicit `deviceName` to bind evaluate() and device.files to the
+ * same runtime. This is the single-runtime instance of the same Metro-no-UDID
+ * limitation the multi-runtime guard above mitigates.
  */
 export function selectTargetForConnect(
   targets: DebugTarget[],

@@ -15,7 +15,8 @@
  *   domain-scoped and cannot reach outside the app container).
  * - `TRANSPORT_FAILED` — the underlying tool (simctl/devicectl/adb) exited
  *   non-zero or produced output that could not be parsed.
- * - `TOO_LARGE` — a pulled file exceeded the configured `maxBuffer` cap.
+ * - `TOO_LARGE` — the transferred bytes exceeded the configured `maxBuffer` cap:
+ *   a pulled remote file, or a pushed local-file/Buffer source.
  */
 export const FILE_IO_ERROR_CODES = [
   'NOT_FOUND',
