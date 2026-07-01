@@ -36,12 +36,17 @@ export {
   TouchBackendUnavailableError,
   XCTestTouchBackend,
 } from './touch'
+// --- Device file I/O ---
+export type { FileIoErrorCode } from './files/errors'
+export { FILE_IO_ERROR_CODES, FileIoError } from './files/errors'
+export type { HostExecResult, HostFileExec, HostFileExecOptions } from './files/host-file-exec'
 // --- Types ---
 export type {
   Capabilities,
   ConsoleMessage,
   Device,
   DeviceEventMap,
+  DeviceFiles,
   DeviceOptions,
   DragOptions,
   DragPathOptions,
@@ -49,9 +54,13 @@ export type {
   DriverEventType,
   Easing,
   ElementBounds,
+  FilePullOptions,
+  FilePushOptions,
+  FileRoot,
   GestureBuilder,
   HarnessLoadMode,
   InterpolationOptions,
+  IosTargetKind,
   Locator,
   LongPressOptions,
   MoveOptions,
@@ -67,6 +76,7 @@ export type {
   ScrollOptions,
   SwipeOptions,
   TapOptions,
+  TargetContext,
   TimingOptions,
   TouchBackendConfig,
   TouchBackendInfo,

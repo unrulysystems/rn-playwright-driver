@@ -1,0 +1,289 @@
+# SPEC — `@unrulysystems/rn-playwright-driver`: Device File I/O
+
+Tracks GitHub issue
+[#33](https://github.com/unrulysystems/rn-playwright-driver/issues/33).
+
+## Scope
+
+This SPEC covers the **device file I/O** capability of the driver package
+(`device.files.pull` / `device.files.push`) and the runner-side **targeting
+context** it depends on. The broader driver behavior (CDP transport, locators,
+touch backends, lifecycle) is specced by its code/README; the runner lifecycle
+is specced in [`../runner/SPEC.md`](../runner/SPEC.md). New driver capabilities
+append `REQ-*` domains to this file.
+
+The targeting requirements (`REQ-TGT-*`) extend the runner's env-var contract
+(`../runner/SPEC.md` → "The environment-variable contract"). They are owned here
+for this feature; the runner SPEC's env table absorbs them on its next edit (see
+Open items — surfaced, not silently applied).
+
+## Problem
+
+The driver drives the RN view tree over CDP and synthesizes touch, but it has no
+way to read back files the app writes to its sandbox. Many features' real output
+is a file, not on-screen UI: a CSV/PDF/HTML data export ends in the native share
+sheet (out of the RN tree), so today the only e2e-reachable assertion is "the
+export button is visible" — the _bytes_ can only be unit-tested against a mocked
+filesystem. The same gap blocks asserting generated caches, downloaded assets,
+and persisted snapshots.
+
+Reading the produced file off a real device verifies the **artifact** — the thing
+actually worth testing — end to end, without driving any native chrome.
+
+## Solution
+
+A `device.files` namespace that reads/writes the running app's sandbox from the
+host via per-platform process transports, returning/accepting host `Buffer`s.
+
+- **iOS simulator** — `xcrun simctl get_app_container <udid> <bundleId> data`
+  resolves the container to a host path; the driver reads/writes it directly.
+- **iOS device** — `xcrun devicectl device copy from|to` (Xcode 15+) transfers
+  the app-data-container file to/from a host temp path. Works only for
+  development-signed apps (`get-task-allow`); E2E builds qualify. Shipped
+  **provisional** until verified on real hardware.
+- **Android (emulator or device)** — one transport: `adb … run-as <pkg> cat`
+  (pull) and `run-as <pkg> sh -c 'cat > …'` over stdin (push). This mirrors the
+  already-proven runner pattern that writes the auth token and seeds
+  `shared_prefs` (`../runner/src/plan/android.ts`). Gated on a debuggable build.
+
+Cross-platform remote paths resolve against **named roots** that mirror
+`expo-file-system`, so one call points at the right place on both platforms.
+
+The transports sit behind an injectable `HostFileExec` seam (the same DI pattern
+as the `AdbExec` in `src/touch/cli-backend.ts`), so argv construction and error
+mapping are unit-tested without spawning real tools.
+
+## Domain model
+
+### API surface (illustrative; exact identifiers ratified during TDD)
+
+```ts
+type FileRoot = 'document' | 'cache' | 'data' | 'absolute' // default: 'document'
+
+interface FilePullOptions {
+  root?: FileRoot
+  maxBuffer?: number // Android stdout cap; default 64 MiB
+}
+interface FilePushOptions {
+  root?: FileRoot
+}
+
+interface DeviceFiles {
+  pull(remotePath: string, options?: FilePullOptions): Promise<Buffer>
+  push(source: string | Buffer, remotePath: string, options?: FilePushOptions): Promise<void>
+  // reserved, not v1: exists(), list(), remove()
+}
+
+// device.files: DeviceFiles
+```
+
+`FileIoError extends Error` with `code`:
+`NOT_FOUND | UNAVAILABLE | UNSUPPORTED | TRANSPORT_FAILED | TOO_LARGE`.
+
+### Root resolution
+
+| Root       | iOS (container `<data>`)   | Android (`/data/data/<pkg>`) |
+| ---------- | -------------------------- | ---------------------------- |
+| `document` | `<data>/Documents`         | `/data/data/<pkg>/files`     |
+| `cache`    | `<data>/Library/Caches`    | `/data/data/<pkg>/cache`     |
+| `data`     | `<data>`                   | `/data/data/<pkg>`           |
+| `absolute` | path verbatim (host/sim)\* | path verbatim (device path)  |
+
+`document`/`cache` mirror `expo-file-system`'s `documentDirectory`/
+`cacheDirectory`, so a file written by the app via that API is reachable by the
+same `device.files` call on both platforms. \*`absolute` is **unsupported on
+iOS-device** (devicectl is domain-scoped) and rejects `UNSUPPORTED`.
+
+### Transport selection
+
+| Platform / kind   | Transport                                         |
+| ----------------- | ------------------------------------------------- |
+| iOS / `simulator` | `simctl get_app_container` + host `fs`            |
+| iOS / `device`    | `devicectl device copy from\|to` + host-tmp stage |
+| Android / either  | `adb … run-as <pkg> cat` / `cat >` over stdin     |
+
+### Targeting context (runner → driver)
+
+The driver learns its target from a `DeviceOptions.target` block, defaulted from
+env by the Playwright fixture (`src/test.ts` / `src/test-env.ts`). The runner
+emits the env; the value of any token/secret is never involved (paths only).
+
+| Variable             | Scope   | Meaning                              |
+| -------------------- | ------- | ------------------------------------ |
+| `RN_APP_BUNDLE_ID`   | iOS     | App bundle id (`simctl`/`devicectl`) |
+| `RN_SIM_UDID`        | iOS     | Simulator/device UDID                |
+| `RN_IOS_TARGET_KIND` | iOS     | `simulator` (default) \| `device`    |
+| `RN_APP_PACKAGE`     | Android | App package name (`run-as`)          |
+| `ANDROID_SERIAL`     | Android | adb device pin (already emitted)     |
+
+The `target` block is **capability-neutral** — native-OS-UI automation (#34) will
+reuse `bundleId`/`udid`, so it is not named `files`.
+
+## Requirements
+
+### Device file I/O API — `REQ-FILES-*`
+
+- **REQ-FILES-001** `device.files` exposes `pull(remotePath, options?) →
+Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
+  where `source` is a host file path **or** a `Buffer` (generated fixtures).
+  `exists`/`list`/`remove` are reserved names, not implemented in v1.
+- **REQ-FILES-002** `pull` returns the exact on-device bytes, binary-safe (no
+  encoding/normalization). `push` writes the source bytes verbatim.
+- **REQ-FILES-003** `options.root ∈ {document, cache, data, absolute}`, default
+  `document`. `document`/`cache` resolve per the Root-resolution table and mirror
+  `expo-file-system`.
+- **REQ-FILES-004** For non-`absolute` roots the remote path joins **under** the
+  resolved root; a leading `/` does not escape the root. `absolute` takes the
+  path verbatim. Path resolution is deterministic and unit-tested per
+  platform × root.
+- **REQ-FILES-005** `pull` of a missing path rejects with `FileIoError` code
+  `NOT_FOUND`. It never resolves with an empty or partial `Buffer` (fail-closed).
+- **REQ-FILES-006** `push` rejects on write failure (unwritable/absent root) with
+  a typed error. Parent-directory creation behavior is defined and unit-tested
+  (see Open items for the default).
+- **REQ-FILES-007** All failures surface as `FileIoError` with a `code`:
+  `NOT_FOUND` (missing path), `UNAVAILABLE` (missing targeting context),
+  `UNSUPPORTED` (root/transport combination unsupported), `TRANSPORT_FAILED`
+  (underlying tool nonzero exit / unparseable output), `TOO_LARGE` (cap
+  exceeded). Each carries the normalized underlying message; the three tools'
+  differing failure signatures are mapped to this taxonomy.
+- **REQ-FILES-008** Android `pull` streams the file to stdout bounded by
+  `options.maxBuffer` (default 64 MiB). Overflow rejects `TOO_LARGE`,
+  fail-closed, never a truncated `Buffer`. iOS transports copy to a file and are
+  not subject to this cap.
+
+### Transports — `REQ-XPORT-*`
+
+- **REQ-XPORT-001** Transport is selected by `(platform, iOS kind)`: iOS+simulator
+  → simctl; iOS+device → devicectl; Android (any kind) → adb run-as.
+- **REQ-XPORT-002** iOS-simulator resolves the container via `xcrun simctl
+get_app_container <udid> <bundleId> data`, then reads/writes the host path at
+  `<container>/<root-subpath>/<remotePath>`.
+- **REQ-XPORT-003** iOS-device uses `xcrun devicectl device copy from|to --device
+<udid> --domain-type appDataContainer --domain-identifier <bundleId> --source
+<container-relative> --destination <path> --json-output <file>`. `pull` stages
+  to a host temp then reads the `Buffer`; `push` writes the `Buffer` to a temp
+  then `copy to`. Marked **provisional** (see Risk tags / Open items).
+- **REQ-XPORT-004** Android uses `adb -s <serial> exec-out run-as <pkg> cat
+<abs-path>` (pull, stdout → `Buffer`) and `adb -s <serial> shell run-as <pkg>
+sh -c 'cat > <abs-path>'` fed over stdin (push). Binary-safe via buffer
+  encoding. Paths are absolute (`/data/data/<pkg>/…`) to avoid run-as cwd
+  ambiguity.
+- **REQ-XPORT-005** Container-access denial — Android non-debuggable build (no
+  `run-as`) or iOS production-signed app (no container access) — surfaces as
+  `UNSUPPORTED`/`TRANSPORT_FAILED` with an actionable message, never a silent
+  empty result.
+- **REQ-XPORT-006** Transports run through an injectable `HostFileExec` seam, so
+  argv and error mapping are asserted in unit tests without spawning real
+  `simctl`/`devicectl`/`adb` (mirrors `AdbExec` in `src/touch/cli-backend.ts` and
+  its recorder test).
+- **REQ-XPORT-007** `absolute` root is unsupported on iOS-device (devicectl is
+  domain-scoped) and rejects `UNSUPPORTED`.
+
+### Targeting context contract — `REQ-TGT-*`
+
+- **REQ-TGT-001** The driver resolves targeting (bundleId/packageName,
+  udid/serial, iOS kind) from a `DeviceOptions.target` block; direct
+  `createDevice({ target })` is the explicit lower-level path.
+- **REQ-TGT-002** The runner extends its env contract with `RN_APP_BUNDLE_ID`,
+  `RN_SIM_UDID`, `RN_IOS_TARGET_KIND` (iOS) and `RN_APP_PACKAGE` (Android);
+  serial continues via `ANDROID_SERIAL`. (Extends `../runner/SPEC.md` env table.)
+- **REQ-TGT-003** The Playwright fixture (`src/test.ts` / `src/test-env.ts`) maps
+  those env vars into `DeviceOptions.target`.
+- **REQ-TGT-004** A file op with missing required targeting context for the active
+  platform rejects with `FileIoError` code `UNAVAILABLE`, naming the missing
+  field. The driver does not guess udid/bundleId/package.
+- **REQ-TGT-005** iOS `kind` defaults to `simulator` when unset (back-compat with
+  the current simulator-only runs).
+- **REQ-TGT-006** The `target` block is capability-neutral and reusable by the
+  native-OS-UI feature (#34); it is not file-scoped.
+
+## Invariants
+
+- A `push` then `pull` of the same root+path on a writable root returns a `Buffer`
+  byte-identical to the pushed bytes.
+- No file op silently returns empty or partial data; every failure is a typed
+  `FileIoError` rejection.
+- Transports are pure-argv over an injected exec: identical inputs ⇒ identical
+  argv; no transport constructs a command from un-normalized user input that
+  could escape the resolved root.
+- The driver reaches the app/device only through documented channels: CDP for app
+  state, the companion for touch (and #34 native-UI), host-exec for files. File
+  I/O adds no new iOS host-exec beyond these transports.
+- No secret/token material flows through file-I/O argv, stdin, or logs (remote
+  paths may be logged; secrets are not a file-I/O input).
+
+## Non-goals (v1)
+
+- Physical **iOS run orchestration** (build/sign/install/launch, CDP-over-USB).
+  The runner stays simulator-only; the iOS-device _transport_ is provided and is
+  exercised against externally-wired devices. Full physical-iOS E2E in the runner
+  is a separate, tracked effort.
+- App-Store/production-signed app containers — inaccessible by design; correctly
+  fail-closed.
+- Recursive directory copy, globbing, sync, or file watching — single-file
+  `pull`/`push` only in v1 (the tools support dirs; deferred).
+- `exists`/`list`/`remove` — reserved on the namespace, not implemented.
+- Non-debuggable Android builds.
+- Helpers for Android shared/external storage beyond what `run-as`/`adb pull`
+  already allow.
+
+## Risk tags
+
+- **Public API / package surface (medium):** new `device.files` surface on the
+  published driver. Additive, but a contract — SPEC + plan approval (this gate).
+- **Provisional transport (medium):** the iOS-device `devicectl` path ships
+  unverified-on-hardware. It is labeled **provisional** in docs and stays so until
+  a real-device walkthrough passes (test-realism). Unit-verified before ship.
+- **Cross-package contract (low):** the runner env extension (`REQ-TGT-002`);
+  keep `../runner/SPEC.md` in sync (Open items).
+- **Outward-facing (boundary):** publishing, version bumps, PRs, issue
+  edits/closing — all human (repo policy).
+
+## Acceptance criteria
+
+Implementation-time gates (not satisfied by this SPEC; tracked for the build):
+
+- [ ] `device.files.pull`/`push` typed and exported; `FileIoError` taxonomy
+      implemented (`REQ-FILES-001/002/007`).
+- [ ] Root resolution unit-tested for every root × platform, incl. the no-escape
+      rule for non-`absolute` roots (`REQ-FILES-003/004`).
+- [ ] Transport argv **and** error mapping unit-tested via an injected
+      `HostFileExec` recorder for all four transports, including the `devicectl`
+      from/to argv (`REQ-XPORT-*`).
+- [ ] Fail-closed cases asserted: missing path → `NOT_FOUND`; `maxBuffer` overflow
+      → `TOO_LARGE`; missing targeting context → `UNAVAILABLE`; `absolute` on
+      iOS-device → `UNSUPPORTED` (`REQ-FILES-005/008`, `REQ-TGT-004`,
+      `REQ-XPORT-007`).
+- [ ] e2e in `examples/basic-app`: the app writes a file via `expo-file-system`,
+      a test `pull`s it and asserts the bytes, on an iOS **simulator** and an
+      Android **emulator** (the independent oracle) (`REQ-XPORT-002/004`).
+- [ ] `push` → `pull` byte round-trip e2e on simulator + emulator.
+- [ ] Runner env contract extended; `planIos`/`planAndroid` (or env-builder) tests
+      assert the new vars; the fixture maps them into `target`
+      (`REQ-TGT-002/003`).
+- [ ] Android **physical** verified on an attached debuggable device (manual
+      walkthrough) — or recorded as pending if no device is available.
+- [ ] iOS-device `devicectl` transport unit-verified and shipped **provisional**;
+      a real-device walkthrough is recorded as pending, not blocking ship.
+- [ ] `nub run check` green (typecheck + lint + format + unit tests).
+- [ ] README documents `device.files`, the roots table, per-platform support, and
+      the provisional iOS-device note.
+
+## Open items
+
+- Final `FileIoError` code names and `DeviceOptions.target` field identifiers are
+  ratified during TDD; this SPEC fixes behavior, not final identifiers.
+- `push` default for parent-directory creation (auto-create vs require existing) —
+  decide in TDD; bias toward auto-create under a known root, fail-closed
+  otherwise.
+- The iOS-device transport stays **provisional** pending hardware verification;
+  promote to verified once a real-device E2E passes.
+- `../runner/SPEC.md`'s env-contract table should absorb the `REQ-TGT-002` vars on
+  its next edit (drift surfaced here, not silently applied).
+- Wireless adb (`ip:port` serials) is assumed handled transparently by
+  `ANDROID_SERIAL`; confirm during TDD.
+
+## Traceability
+
+Added during/after TDD: `REQ-* → test file:line`. Empty at SPEC authoring time.
