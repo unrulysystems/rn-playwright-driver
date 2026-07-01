@@ -133,18 +133,20 @@ export function selectTarget(
 
 /** Minimal shape of `DeviceOptions` this selector needs (a concrete device pin). */
 export type ConnectSelectionOptions = TargetSelectionOptions & {
-  target?: { udid?: string; serial?: string }
+  target?: { udid?: string; serial?: string; bundleId?: string; packageName?: string }
 }
 
 /**
  * Target selection for `RNDevice.connect`, adding the `device.files` confused-deputy
- * guard on top of {@link selectTarget}. `filePinned` (a concrete device pin —
- * `target.udid`/`target.serial`) is INTERNAL, derived state: Metro's CDP targets
- * expose no UDID, so CDP cannot be pinned to the same device. When file I/O is
- * pinned but no explicit CDP selector is given and more than one runtime is
- * connected, defaulting to the first target would evaluate against a different app
- * than file I/O reads/writes — fail closed instead of guessing. An explicit
- * pageIndex is the caller's deliberate choice and is honored.
+ * guard on top of {@link selectTarget}. `filePinned` (a COMPLETE file-I/O identity —
+ * iOS `udid`+`bundleId` or Android `serial`+`packageName`) is INTERNAL, derived
+ * state: Metro's CDP targets expose no UDID, so CDP cannot be pinned to the same
+ * device. When file I/O is pinned but no explicit CDP selector is given and more than
+ * one runtime is connected, defaulting to the first target would evaluate against a
+ * different app than file I/O reads/writes — fail closed instead of guessing. A lone
+ * serial/udid is NOT a pin (device.files would be UNAVAILABLE without the app id), so
+ * it never blocks a plain touch/evaluate connect. An explicit pageIndex is the
+ * caller's deliberate choice and is honored.
  *
  * SINGLE-RUNTIME RESIDUAL (accepted; see SPEC "Open items"): with exactly one
  * connected runtime we connect CDP to it, even under a file pin, because it is the
@@ -161,7 +163,17 @@ export function selectTargetForConnect(
   options: ConnectSelectionOptions = {},
 ): DebugTarget {
   const t = options.target
-  const filePinned = t?.udid !== undefined || t?.serial !== undefined
+  // A file pin only exists when device.files can ACTUALLY run — i.e. the COMPLETE
+  // per-platform identity is present (iOS: udid + bundleId; Android: serial +
+  // packageName). A lone serial/udid does NOT count: `ANDROID_SERIAL` (and an iOS
+  // UDID) are device-neutral pins the runner also emits for touch/adb, so
+  // `targetFromEnv` records `{ serial }` even when no `RN_APP_PACKAGE` is set. If the
+  // app identity is missing, resolveFileTarget fails device.files closed as
+  // UNAVAILABLE anyway, so there is no evaluate()-vs-files confused deputy to guard —
+  // firing here would wrongly block a plain multi-runtime touch/evaluate connect.
+  const filePinned =
+    (t?.udid !== undefined && t?.bundleId !== undefined) ||
+    (t?.serial !== undefined && t?.packageName !== undefined)
   // Mirror selectTarget's OWN truthiness: it enters the deviceId/deviceName branches
   // only for non-empty strings, so an empty string is not a usable selector. Testing
   // `!== undefined` here would let `{ target: { udid }, deviceName: '' }` slip past the

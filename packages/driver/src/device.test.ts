@@ -70,15 +70,18 @@ function fireCdpEvent(method: string, params: Record<string, unknown>): void {
   ;(call[1] as (p: Record<string, unknown>) => void)(params)
 }
 
-// Mock CDP discovery
-vi.mock('./cdp/discovery', () => ({
-  discoverTargets: vi.fn().mockImplementation(() => Promise.resolve([mockSelectedTarget])),
-  selectTarget: vi.fn().mockImplementation(() => mockSelectedTarget),
-  selectTargetForConnect: vi.fn().mockImplementation(() => mockSelectedTarget),
-  // detectPlatform reads the device from a title's trailing `(…)`; keep the real
-  // pure helper so platform-detection tests exercise the actual extraction.
-  titleParenthetical: (title?: string) => title?.match(/\(([^)]+)\)\s*$/)?.[1],
-}))
+// Mock CDP discovery. Spread the REAL module so pure helpers detectPlatform relies
+// on (titleParenthetical) stay authentic — only the network/selection entry points
+// are stubbed. A hand-reimplemented helper would silently drift from the source.
+vi.mock('./cdp/discovery', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./cdp/discovery')>()
+  return {
+    ...actual,
+    discoverTargets: vi.fn().mockImplementation(() => Promise.resolve([mockSelectedTarget])),
+    selectTarget: vi.fn().mockImplementation(() => mockSelectedTarget),
+    selectTargetForConnect: vi.fn().mockImplementation(() => mockSelectedTarget),
+  }
+})
 
 // Mock touch backend
 vi.mock('./touch', () => ({
@@ -652,6 +655,32 @@ describe('RNDevice failOnUncaughtException', () => {
       code: 'UNAVAILABLE',
       message: expect.stringContaining('disconnected'),
     })
+  })
+
+  it('invalidates a device.files captured before a reconnect (no orphaned live token)', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+    const stale = device.files // captured against the FIRST connection's token
+
+    // Reconnect WITHOUT an intervening disconnect(). The new connection mints a
+    // fresh token; the old one must be invalidated now, not left live to survive
+    // the next disconnect (which only flips the newest token).
+    await device.connect()
+
+    await expect(stale.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    // The current reference from the new connection still works.
+    expect(device.files).not.toBe(stale)
   })
 
   it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {

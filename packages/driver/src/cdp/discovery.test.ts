@@ -82,29 +82,43 @@ describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
     target({ id: 'b', deviceName: 'Pixel 8' }),
   ]
 
-  it('derives filePinned from target.udid and fails closed on ambiguous multi-runtime selection', () => {
-    // A concrete iOS device pin (udid) with no CDP selector + >1 runtime → throw.
-    expect(() => selectTargetForConnect(two, { target: { udid: 'UDID-1' } })).toThrow(
-      /Ambiguous CDP target/,
-    )
+  it('derives filePinned from a COMPLETE iOS identity (udid+bundleId) and fails closed', () => {
+    // A usable iOS file pin (udid + bundleId) with no CDP selector + >1 runtime → throw.
+    expect(() =>
+      selectTargetForConnect(two, { target: { udid: 'UDID-1', bundleId: 'com.acme.app' } }),
+    ).toThrow(/Ambiguous CDP target/)
   })
 
-  it('derives filePinned from target.serial (Android) and fails closed the same way', () => {
-    expect(() => selectTargetForConnect(two, { target: { serial: 'emulator-5554' } })).toThrow(
-      /Ambiguous CDP target/,
-    )
+  it('derives filePinned from a COMPLETE Android identity (serial+packageName) too', () => {
+    expect(() =>
+      selectTargetForConnect(two, {
+        target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
+      }),
+    ).toThrow(/Ambiguous CDP target/)
   })
 
-  it('does NOT guard when the target carries no concrete device pin (bundleId only)', () => {
-    // Only an app/tool identity → not filePinned → a legitimate multi-runtime
-    // connect must default to the first target, not fail closed.
+  it('does NOT guard on a lone serial/udid without the app id (device.files would be UNAVAILABLE)', () => {
+    // ANDROID_SERIAL / a UDID are device-neutral pins the runner also emits for
+    // touch/adb; targetFromEnv records `{ serial }` even with no RN_APP_PACKAGE. Without
+    // the app id, device.files can't run, so there is no confused deputy to guard — a
+    // plain multi-runtime touch/evaluate connect must NOT fail closed.
+    expect(selectTargetForConnect(two, { target: { serial: 'emulator-5554' } })).toBe(two[0])
+    expect(selectTargetForConnect(two, { target: { udid: 'UDID-1' } })).toBe(two[0])
+  })
+
+  it('does NOT guard when the target carries no device pin (bundleId/packageName only)', () => {
+    // Only an app identity → not filePinned → a legitimate multi-runtime connect must
+    // default to the first target, not fail closed.
+    expect(selectTargetForConnect(two, { target: { bundleId: 'com.acme.app' } })).toBe(two[0])
     expect(selectTargetForConnect(two, { target: {} })).toBe(two[0])
     expect(selectTargetForConnect(two, {})).toBe(two[0])
   })
 
   it('allows a pinned single runtime (no ambiguity to guard)', () => {
     const only = target({ id: 'only', deviceName: 'iPhone 17' })
-    expect(selectTargetForConnect([only], { target: { udid: 'UDID-1' } })).toBe(only)
+    expect(
+      selectTargetForConnect([only], { target: { udid: 'UDID-1', bundleId: 'com.acme.app' } }),
+    ).toBe(only)
   })
 
   it('treats an EMPTY-string selector as no selector (must not bypass the guard)', () => {
@@ -112,18 +126,24 @@ describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
     // usable CDP selector; it must not let a file pin slip past the multi-runtime
     // guard and silently default to the first target (confused-deputy regression).
     expect(() =>
-      selectTargetForConnect(two, { target: { udid: 'UDID-1' }, deviceName: '' }),
+      selectTargetForConnect(two, {
+        target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+        deviceName: '',
+      }),
     ).toThrow(/Ambiguous CDP target/)
-    expect(() => selectTargetForConnect(two, { target: { udid: 'UDID-1' }, deviceId: '' })).toThrow(
-      /Ambiguous CDP target/,
-    )
+    expect(() =>
+      selectTargetForConnect(two, {
+        target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+        deviceId: '',
+      }),
+    ).toThrow(/Ambiguous CDP target/)
   })
 
   it('honors an explicit pageIndex even when file I/O is pinned (deliberate caller choice)', () => {
     const second = target({ id: 'second' })
     expect(
       selectTargetForConnect([target({ id: 'first' }), second], {
-        target: { udid: 'UDID-1' },
+        target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
         pageIndex: 1,
       }),
     ).toBe(second)
@@ -133,7 +153,7 @@ describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
     const t = target({ id: 'b', deviceName: 'Pixel 8' })
     expect(
       selectTargetForConnect([target({ id: 'a', deviceName: 'iPhone 17' }), t], {
-        target: { serial: 'emulator-5554' },
+        target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
         deviceName: 'Pixel 8',
       }),
     ).toBe(t)

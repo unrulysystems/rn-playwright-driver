@@ -147,7 +147,13 @@ export class RNDevice implements Device {
     // without file targeting only fails when device.files is actually used.
     // A per-connection lifecycle token ties file I/O to this connection: a
     // reference captured before disconnect() fails closed afterwards, and a later
-    // reconnect gets a fresh token so the stale object stays disposed.
+    // reconnect gets a fresh token so the stale object stays disposed. Invalidate any
+    // prior token FIRST: a second connect() without an intervening disconnect() would
+    // otherwise orphan the old token (still `connected`) and leave an older captured
+    // device.files live past the next disconnect (which only flips the newest token).
+    if (this._filesLifecycle) {
+      this._filesLifecycle.connected = false
+    }
     const filesLifecycle = { connected: true }
     this._filesLifecycle = filesLifecycle
     this._files = createDeviceFiles({

@@ -64,9 +64,16 @@ test.describe('device.files', () => {
     test.skip(!pkg, 'RN_APP_PACKAGE not set')
 
     const ext = `/sdcard/Android/data/${pkg}/files/rn-driver-ext-${randomBytes(4).toString('hex')}.bin`
+    // BOTH directions must fail closed: run-as denies the external mount for reads
+    // and writes alike, and the README documents the whole boundary. A pull that
+    // silently "succeeded" (or read the wrong location) is exactly the fail-open a
+    // push-only assertion would miss.
     await expect(
       device.files.push(randomBytes(16), ext, { root: 'absolute' }),
     ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+    await expect(device.files.pull(ext, { root: 'absolute' })).rejects.toMatchObject({
+      code: 'TRANSPORT_FAILED',
+    })
   })
 
   test('push creates intermediate parent directories for a nested path (REQ-FILES-006)', async ({
