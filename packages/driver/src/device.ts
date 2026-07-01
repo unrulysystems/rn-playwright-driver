@@ -1,5 +1,5 @@
 import { CDPClient, type CDPClientOptions } from './cdp/client'
-import { discoverTargets, selectTargetForConnect } from './cdp/discovery'
+import { discoverTargets, selectTargetForConnect, titleParenthetical } from './cdp/discovery'
 import { parseConsoleEvent, parseExceptionEvent } from './cdp/runtime-events'
 import { createDeviceFiles } from './files/device-files'
 import { FileIoError } from './files/errors'
@@ -503,8 +503,20 @@ export class RNDevice implements Device {
     deviceName?: string
     title?: string
   }): Promise<'ios' | 'android'> {
-    // Try to detect from target metadata first
-    const name = target.deviceName?.toLowerCase() ?? target.title?.toLowerCase() ?? ''
+    // Try to detect from target metadata first, reading the DEVICE identity, not
+    // an app id. A Metro title is often `appId (deviceName)`; matching the full
+    // string lets an app id containing `ios` (e.g. `com.acme.iosapp (Pixel_8)`)
+    // misclassify an Android runtime as iOS and route touch + device.files through
+    // the wrong platform. Prefer the deviceName field; else the title's trailing
+    // `(…)` (the device, NOT the app id ahead of it); else — a bare title with no
+    // parenthetical is itself the device name, so fall back to it. Anything
+    // unmatched drops to the authoritative Platform.OS probe below.
+    const name = (
+      target.deviceName ??
+      titleParenthetical(target.title) ??
+      target.title ??
+      ''
+    ).toLowerCase()
     if (name.includes('iphone') || name.includes('ipad') || name.includes('ios')) {
       return 'ios'
     }

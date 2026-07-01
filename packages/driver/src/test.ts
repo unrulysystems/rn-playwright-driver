@@ -33,7 +33,8 @@ export type RNWorkerFixtures = {
  * Configure via environment variables:
  * - RN_METRO_URL: Metro bundler URL (default: 'http://localhost:8081')
  * - RN_DEVICE_ID: Device ID to connect to
- * - RN_DEVICE_NAME: Device name to match (substring, case-insensitive)
+ * - RN_DEVICE_NAME: Device name to match, case-insensitive — an exact name (or exact
+ *   title parenthetical) is preferred, else a unique substring; multiple matches fail closed
  * - RN_TIMEOUT: Request timeout in ms (default: 30000)
  * - RN_TOUCH_BACKEND: Force touch backend ('cli', 'instrumentation', 'native-module', or 'xctest')
  * - RN_TOUCH_CLI_ADB_PATH: adb executable path for RN_TOUCH_BACKEND=cli

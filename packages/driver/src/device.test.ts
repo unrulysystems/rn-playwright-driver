@@ -75,6 +75,9 @@ vi.mock('./cdp/discovery', () => ({
   discoverTargets: vi.fn().mockImplementation(() => Promise.resolve([mockSelectedTarget])),
   selectTarget: vi.fn().mockImplementation(() => mockSelectedTarget),
   selectTargetForConnect: vi.fn().mockImplementation(() => mockSelectedTarget),
+  // detectPlatform reads the device from a title's trailing `(…)`; keep the real
+  // pure helper so platform-detection tests exercise the actual extraction.
+  titleParenthetical: (title?: string) => title?.match(/\(([^)]+)\)\s*$/)?.[1],
 }))
 
 // Mock touch backend
@@ -184,6 +187,18 @@ describe('RNDevice Core Primitives', () => {
       )
 
       expect(platformDevice.platform).toBe('ios')
+    })
+
+    it('does not let an app id containing "ios" misclassify an Android runtime', async () => {
+      // Metro titles are `appId (deviceName)`. Matching the whole title would let
+      // `com.acme.iosapp` win the iOS check before the Android device markers; the
+      // heuristic must read only the device identity (the trailing parenthetical).
+      const platformDevice = await connectWithPlatformProbe(
+        { ...defaultTarget(), title: 'com.acme.iosapp (Pixel_8_API_35)' },
+        () => Promise.reject(new Error('probe should not run — parenthetical resolves Android')),
+      )
+
+      expect(platformDevice.platform).toBe('android')
     })
 
     it('uses Platform.OS when target name metadata is unknown', async () => {

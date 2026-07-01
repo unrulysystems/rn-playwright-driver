@@ -43,7 +43,7 @@ export async function discoverTargets(metroUrl: string): Promise<DebugTarget[]> 
  * for targets that carry no separate `deviceName` field. Returns undefined when the
  * title has no trailing `(…)`.
  */
-function titleParenthetical(title: string | undefined): string | undefined {
+export function titleParenthetical(title: string | undefined): string | undefined {
   return title?.match(/\(([^)]+)\)\s*$/)?.[1]
 }
 

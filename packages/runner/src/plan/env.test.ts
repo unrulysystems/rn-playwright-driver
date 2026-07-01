@@ -58,4 +58,17 @@ describe('buildAndroidDriverEnv', () => {
       RN_APP_PACKAGE: 'com.acme.app',
     })
   })
+
+  it('uses the configured driver timeout (RN_TIMEOUT bounds device.files host commands too)', () => {
+    const metro = resolveMetro({ url: 'http://127.0.0.1:8081' })
+    const resolved = {
+      ...placeholderAndroid(androidConfigFixture(), metro),
+      tokenFile: '/run/tok',
+      serial: 'emulator-5554',
+      touchPort: 9999,
+    }
+    expect(
+      buildAndroidDriverEnv(resolved, metro, 'sdk_gphone64', 60_000, 'com.acme.app').RN_TIMEOUT,
+    ).toBe('60000')
+  })
 })
