@@ -164,11 +164,17 @@ get_app_container <udid> <bundleId> data`, then reads/writes the host path at
 <container-relative> --destination <path> --json-output <file>`. `pull` stages
   to a host temp then reads the `Buffer`; `push` writes the `Buffer` to a temp
   then `copy to`. Marked **provisional** (see Risk tags / Open items).
-- **REQ-XPORT-004** Android uses `adb -s <serial> exec-out run-as <pkg> cat
-<abs-path>` (pull, stdout → `Buffer`) and `adb -s <serial> shell run-as <pkg>
-sh -c 'cat > <abs-path>'` fed over stdin (push). Binary-safe via buffer
-  encoding. Paths are absolute (`/data/data/<pkg>/…`) to avoid run-as cwd
-  ambiguity.
+- **REQ-XPORT-004** Android reads/writes the app-private sandbox via `adb …
+run-as <pkg>`. `adb exec-out` neither propagates the remote exit code (always
+  0) nor keeps remote stderr separate (it folds into stdout), so the transport
+  trusts **neither** — it signals every outcome on stdout via an explicit
+  sentinel. `pull` first probes readability (`sh -c 'if [ -r "<abs>" ]; …'`,
+  emitting an OK/DENIED/MISSING token) and only then streams bytes with
+  `exec-out … cat` (binary-clean stdout → `Buffer`); a MISSING token maps to
+  `NOT_FOUND`, never a Buffer of `cat`'s error text. `push` runs `run-as <pkg>
+sh -c 'mkdir -p "<dir>" && cat > "<abs>" && echo <OK>'` over stdin and requires
+  the trailing OK token to confirm the write landed. Paths are absolute
+  (`/data/data/<pkg>/…`) and reject shell metacharacters (fail-closed).
 - **REQ-XPORT-005** Container-access denial — Android non-debuggable build (no
   `run-as`) or iOS production-signed app (no container access) — surfaces as
   `UNSUPPORTED`/`TRANSPORT_FAILED` with an actionable message, never a silent

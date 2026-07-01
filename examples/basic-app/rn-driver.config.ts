@@ -37,6 +37,7 @@ export default defineRnDriverConfig({
       'e2e/pointer',
       'e2e/scroll/scroll.spec.ts',
       'e2e/primitives/touch-backend.spec.ts',
+      'e2e/files/device-files.spec.ts',
     ],
   },
 })

@@ -21,16 +21,20 @@ function fakeExec(impl: (call: Call) => HostExecResult | Promise<HostExecResult>
   return { exec, calls }
 }
 
-const ok = (stdout = ''): HostExecResult => ({ stdout: Buffer.from(stdout), stderr: '', code: 0 })
-const fail = (stderr: string, code = 1): HostExecResult => ({
-  stdout: Buffer.alloc(0),
-  stderr,
-  code,
-})
+// `adb exec-out` always exits 0 and folds the remote stderr into stdout, so the
+// fakes model outcomes on stdout — never via a nonzero code or a clean stderr.
+const out = (stdout = ''): HostExecResult => ({ stdout: Buffer.from(stdout), stderr: '', code: 0 })
+// The device command adb forwards to the shell — args[3] after `-s <serial> exec-out`.
+const deviceCommand = (call: Call | undefined): string => call?.args[3] ?? ''
+const isProbe = (call: Call): boolean => deviceCommand(call).includes('if [ -r ')
+
+const ABS = '/data/data/com.acme.app/files/obs.csv'
 
 describe('adb transport — pull (REQ-XPORT-004)', () => {
-  it('runs exec-out run-as cat against the app-private absolute path', async () => {
-    const { exec, calls } = fakeExec(() => ok('csv-bytes'))
+  it('probes readability then reads bytes over exec-out, binary-clean', async () => {
+    const { exec, calls } = fakeExec((call) =>
+      isProbe(call) ? out('__RN_PW_FILE_OK__\n') : out('csv-bytes'),
+    )
     const transport = createAdbTransport(CONFIG, exec)
 
     const bytes = await transport.pull(
@@ -38,41 +42,50 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
       { maxBuffer: 4096 },
     )
 
+    // Probe: existence/readability signalled on stdout (the only reliable channel).
     expect(calls[0]?.command).toBe('adb')
     expect(calls[0]?.args).toEqual([
       '-s',
       'emulator-5554',
       'exec-out',
-      'run-as',
-      'com.acme.app',
-      'cat',
-      '/data/data/com.acme.app/files/obs.csv',
+      `run-as com.acme.app sh -c 'if [ -r "${ABS}" ]; then echo __RN_PW_FILE_OK__; elif [ -e "${ABS}" ]; then echo __RN_PW_FILE_DENIED__; else echo __RN_PW_FILE_MISSING__; fi'`,
     ])
-    expect(calls[0]?.options?.maxBuffer).toBe(4096)
+    // Read: only after the probe confirms readability; maxBuffer is threaded through.
+    expect(calls[1]?.args).toEqual([
+      '-s',
+      'emulator-5554',
+      'exec-out',
+      `run-as com.acme.app sh -c 'cat "${ABS}"'`,
+    ])
+    expect(calls[1]?.options?.maxBuffer).toBe(4096)
     expect(bytes.toString()).toBe('csv-bytes')
   })
 
   it('uses an absolute path verbatim', async () => {
-    const { exec, calls } = fakeExec(() => ok())
+    const { exec, calls } = fakeExec((call) => (isProbe(call) ? out('__RN_PW_FILE_OK__') : out()))
     await createAdbTransport(CONFIG, exec).pull(
       { absolute: true, path: '/sdcard/x' },
       { maxBuffer: 1 },
     )
-    expect(calls[0]?.args.at(-1)).toBe('/sdcard/x')
+    expect(deviceCommand(calls[0])).toContain('"/sdcard/x"')
+    expect(deviceCommand(calls[1])).toBe(`run-as com.acme.app sh -c 'cat "/sdcard/x"'`)
   })
 
-  it('maps a missing file (cat stderr) to NOT_FOUND', async () => {
-    const { exec } = fakeExec(() => fail('cat: /data/.../x: No such file or directory'))
+  it('maps a missing file (stdout sentinel, exit 0) to NOT_FOUND and never reads', async () => {
+    // The real failure: exec-out exits 0 with the error on stdout, so the old
+    // exit-code check returned the error text as bytes. The probe catches it.
+    const { exec, calls } = fakeExec(() => out('__RN_PW_FILE_MISSING__\n'))
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: 'files/x' },
         { maxBuffer: 1 },
       ),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    expect(calls).toHaveLength(1) // fail closed before the cat
   })
 
-  it('maps a non-debuggable build to UNSUPPORTED', async () => {
-    const { exec } = fakeExec(() => fail('run-as: package not debuggable: com.acme.app'))
+  it('maps a non-debuggable build (run-as text folded into stdout) to UNSUPPORTED', async () => {
+    const { exec } = fakeExec(() => out('run-as: package not debuggable: com.acme.app\n'))
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: 'files/x' },
@@ -81,8 +94,19 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
   })
 
-  it('maps a maxBuffer overflow to TOO_LARGE', async () => {
-    const { exec } = fakeExec(() => {
+  it('maps a present-but-unreadable file to TRANSPORT_FAILED', async () => {
+    const { exec } = fakeExec(() => out('__RN_PW_FILE_DENIED__\n'))
+    await expect(
+      createAdbTransport(CONFIG, exec).pull(
+        { absolute: false, subpath: 'files/x' },
+        { maxBuffer: 1 },
+      ),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+  })
+
+  it('maps a maxBuffer overflow on the read to TOO_LARGE', async () => {
+    const { exec } = fakeExec((call) => {
+      if (isProbe(call)) return out('__RN_PW_FILE_OK__')
       throw new HostExecMaxBufferError(64)
     })
     await expect(
@@ -94,7 +118,7 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
   })
 
   it('rejects a single-quote in the path (fail-closed) before spawning', async () => {
-    const { exec, calls } = fakeExec(() => ok())
+    const { exec, calls } = fakeExec(() => out())
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: "files/o'brien.csv" },
@@ -103,11 +127,22 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
     expect(calls).toHaveLength(0)
   })
+
+  it('rejects a shell metacharacter ($) in the path before spawning', async () => {
+    const { exec, calls } = fakeExec(() => out())
+    await expect(
+      createAdbTransport(CONFIG, exec).pull(
+        { absolute: false, subpath: 'files/$(rm -rf).csv' },
+        { maxBuffer: 1 },
+      ),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
+    expect(calls).toHaveLength(0)
+  })
 })
 
 describe('adb transport — push', () => {
-  it('pipes bytes via stdin into a run-as sh -c mkdir+cat script', async () => {
-    const { exec, calls } = fakeExec(() => ok())
+  it('pipes bytes via stdin into a run-as script that echoes a success sentinel', async () => {
+    const { exec, calls } = fakeExec(() => out('__RN_PW_PUSH_OK__\n'))
     const data = Buffer.from('seed')
 
     await createAdbTransport(CONFIG, exec).push(
@@ -117,13 +152,18 @@ describe('adb transport — push', () => {
 
     expect(calls[0]?.args.slice(0, 3)).toEqual(['-s', 'emulator-5554', 'shell'])
     expect(calls[0]?.args[3]).toBe(
-      "run-as com.acme.app sh -c 'mkdir -p /data/data/com.acme.app/files && cat > /data/data/com.acme.app/files/seed.json'",
+      `run-as com.acme.app sh -c 'mkdir -p "/data/data/com.acme.app/files" && cat > "/data/data/com.acme.app/files/seed.json" && echo __RN_PW_PUSH_OK__'`,
     )
     expect(calls[0]?.options?.stdin).toBe(data)
   })
 
-  it('maps a run-as push failure to the taxonomy', async () => {
-    const { exec } = fakeExec(() => fail('run-as: package not debuggable: com.acme.app', 1))
+  it('fails closed when the success sentinel is absent (no exit code to trust)', async () => {
+    // run-as failure text, exit 0, and no PUSH_OK — the write did not land.
+    const { exec } = fakeExec(() => ({
+      stdout: Buffer.alloc(0),
+      stderr: 'run-as: package not debuggable: com.acme.app',
+      code: 0,
+    }))
     await expect(
       createAdbTransport(CONFIG, exec).push(
         { absolute: false, subpath: 'files/x' },

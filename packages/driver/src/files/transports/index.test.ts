@@ -8,7 +8,13 @@ function harness() {
   const commands: string[] = []
   const exec: HostFileExec = async (command, args) => {
     commands.push(`${command} ${args[0] ?? ''}`)
-    return { stdout: Buffer.from('/container'), stderr: '', code: 0 }
+    // The adb transport probes readability before reading; answer the probe
+    // with its stdout sentinel so routing reaches the transport, not a
+    // fail-closed throw. Everything else gets a container-path stub.
+    const stdout = args.join(' ').includes('if [ -r ')
+      ? Buffer.from('__RN_PW_FILE_OK__')
+      : Buffer.from('/container')
+    return { stdout, stderr: '', code: 0 }
   }
   const fs: HostFs = {
     readFile: async () => Buffer.from('x'),
