@@ -338,6 +338,15 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   target while file I/O targets another — pass `deviceName`/`pageIndex` to resolve.
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
+- **iOS-simulator containment TOCTOU (accepted residual).** `resolveInsideContainer`
+  validates the canonical path, then `pull`/`push` operate on it by path — a
+  check→use window an app *racing its own test runner* could exploit (REQ-XPORT-002
+  threat model). Portable Node cannot close it: there is no atomic resolve-then-open
+  (`openat2`/`RESOLVE_BENEATH` is Linux-only and unexposed by Node). It is hardened
+  (canonical-path rebuild + post-read length re-check) and **accepted as a documented
+  residual** for a cooperative-app dev tool — not a hardened boundary against an app
+  deliberately racing the runner. Revisit only if `device.files` is ever pointed at
+  an untrusted app (would require a native `openat2`/FD-`O_NOFOLLOW` transport).
 
 ## Traceability
 
