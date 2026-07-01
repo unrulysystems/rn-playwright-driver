@@ -244,8 +244,11 @@ $?'`: the bytes are recovered by splitting on the LAST sentinel occurrence, and
 - The driver reaches the app/device only through documented channels: CDP for app
   state, the companion for touch (and #34 native-UI), host-exec for files. File
   I/O adds no new iOS host-exec beyond these transports.
-- No secret/token material flows through file-I/O argv, stdin, or logs (remote
-  paths may be logged; secrets are not a file-I/O input).
+- The driver/runner inject no secret/token material into file-I/O argv, stdin, or
+  logs (remote paths may be logged; the auth-token flow is separate). Note this
+  bounds only the harness: `push` intentionally moves caller-supplied bytes
+  (Buffer or host file) over stdin/staging, so a caller pushing secret fixture
+  data is responsible for that content — the transport does not inspect it.
 
 ## Non-goals (v1)
 

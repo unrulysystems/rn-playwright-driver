@@ -15,12 +15,46 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@unrulysystems/rn-playwright-driver/test'
 
 test.describe('device.files', () => {
+  // The app installs `__RN_DRIVER_EXAMPLE__` inside a `useEffect`, so it is not
+  // present the instant CDP attaches. Gate every test on its readiness so an
+  // app-affordance call can't fail for a mount race instead of a device.files bug.
+  test.beforeEach(async ({ device }) => {
+    const deadline = Date.now() + 15_000
+    for (;;) {
+      const kind = await device.evaluate<string>('typeof globalThis.__RN_DRIVER_EXAMPLE__')
+      if (kind === 'object') return
+      if (Date.now() > deadline) {
+        throw new Error('__RN_DRIVER_EXAMPLE__ was not installed within 15s (app not mounted?)')
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  })
+
   test('push then pull round-trips exact bytes (REQ-FILES-002)', async ({ device }) => {
     const name = 'rn-driver-e2e-roundtrip.bin'
     const payload = randomBytes(4096)
 
     await device.files.push(payload, name)
     const pulled = await device.files.pull(name)
+
+    expect(Buffer.compare(pulled, payload)).toBe(0)
+  })
+
+  test("Android 'absolute' root round-trips a full run-as path (REQ-XPORT-004)", async ({
+    device,
+  }) => {
+    // `absolute` is Android-only (unsupported on iOS); exercise the documented
+    // public path on a real emulator, not just fake-adb unit coverage. The path
+    // must stay inside the app sandbox that `run-as` can reach.
+    test.skip(device.platform !== 'android', "'absolute' root is unsupported on iOS")
+    const pkg = process.env.RN_APP_PACKAGE
+    test.skip(!pkg, 'RN_APP_PACKAGE not set')
+
+    const abs = `/data/data/${pkg}/files/rn-driver-abs-${randomBytes(4).toString('hex')}.bin`
+    const payload = randomBytes(256)
+
+    await device.files.push(payload, abs, { root: 'absolute' })
+    const pulled = await device.files.pull(abs, { root: 'absolute' })
 
     expect(Buffer.compare(pulled, payload)).toBe(0)
   })
