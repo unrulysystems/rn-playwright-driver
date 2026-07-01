@@ -26,6 +26,7 @@ export default function App() {
         scrollToTop: () => void
         writeDocumentFile: (name: string, content: string) => string
         writeCacheFile: (name: string, content: string) => string
+        readDocumentFile: (name: string) => string | Promise<string>
       }
     }
     // e2e affordance for device.files: the app writes a file via
@@ -43,6 +44,10 @@ export default function App() {
       scrollToTop: () => scrollRef.current?.scrollTo({ y: 0, animated: false }),
       writeDocumentFile: (fileName, content) => writeVia(Paths.document, fileName, content),
       writeCacheFile: (fileName, content) => writeVia(Paths.cache, fileName, content),
+      // Read back through Expo's document root so a host `push` can be verified
+      // independently (proves the pushed file lands where the app sees it, not
+      // just that host push/pull round-trips through the same transport).
+      readDocumentFile: (fileName) => new File(Paths.document, fileName).text(),
     }
     return () => {
       delete globals.__RN_DRIVER_EXAMPLE__

@@ -98,11 +98,12 @@ the app-written file on both platforms:
 
 **Platform support:**
 
-| Target             | Transport                        | Status                       |
-| ------------------ | -------------------------------- | ---------------------------- |
-| iOS simulator      | `xcrun simctl get_app_container` | supported                    |
-| iOS device         | `xcrun devicectl device copy`    | **provisional** (see below)  |
-| Android emu/device | `adb … run-as <pkg>`             | supported (debuggable build) |
+| Target           | Transport                        | Status                       |
+| ---------------- | -------------------------------- | ---------------------------- |
+| iOS simulator    | `xcrun simctl get_app_container` | supported                    |
+| iOS device       | `xcrun devicectl device copy`    | **provisional** (see below)  |
+| Android emulator | `adb … run-as <pkg>`             | supported (debuggable build) |
+| Android device   | `adb … run-as <pkg>`             | **pending** hardware verify  |
 
 - \*`absolute` is **not supported on iOS** (simulator or device) and rejects
   `UNSUPPORTED`: `device.files` is app-sandbox-scoped, and on the simulator an
@@ -111,7 +112,9 @@ the app-written file on both platforms:
 - Android requires a **debuggable** build (`run-as`); iOS requires a
   **development-signed** app — both hold for E2E builds.
 - The **iOS-device** transport is unit-verified but **provisional** pending a
-  real-hardware walkthrough; iOS-simulator and Android are the verified paths.
+  real-hardware walkthrough. The verified E2E paths are the **iOS simulator** and
+  the **Android emulator**; **physical Android** shares the emulator's `run-as`
+  transport but its hardware walkthrough is still pending.
 
 Targeting (bundle id, udid, package, adb serial) is supplied automatically by
 the `rn-driver` runner via `RN_APP_BUNDLE_ID` / `RN_SIM_UDID` /

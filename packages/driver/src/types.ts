@@ -375,9 +375,10 @@ export type FilePullOptions = {
   /** Root the remote path resolves against (default: `document`). */
   root?: FileRoot
   /**
-   * Max bytes to buffer when streaming a file off the device (Android
-   * transport). Overflow rejects with {@link FileIoError} `TOO_LARGE` — never a
-   * truncated Buffer. Default: 64 MiB.
+   * Max bytes to read, enforced on **every** transport: Android caps the stdout
+   * stream; the iOS transports `stat` the file/staged payload and reject before
+   * reading. Overflow rejects with {@link FileIoError} `TOO_LARGE` — never a
+   * truncated Buffer. Must be a positive finite number. Default: 64 MiB.
    */
   maxBuffer?: number
 }

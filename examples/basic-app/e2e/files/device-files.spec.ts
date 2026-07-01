@@ -40,6 +40,24 @@ test.describe('device.files', () => {
     expect(Buffer.compare(pulled, payload)).toBe(0)
   })
 
+  test('a host-pushed file is readable by the app through the document root (REQ-FILES-002/003)', async ({
+    device,
+  }) => {
+    // The round-trips above prove host transport symmetry (push then host-pull),
+    // but not that a host `push` lands where the APP's document root actually is.
+    // Push host-side, then have the app read it via expo-file-system — a
+    // mis-mapped push would 404 or return the wrong bytes app-side.
+    const name = 'rn-driver-host-pushed.txt'
+    const content = `host-pushed-${randomBytes(8).toString('hex')}`
+
+    await device.files.push(Buffer.from(content), name)
+
+    const appRead = await device.evaluate<string>(
+      `globalThis.__RN_DRIVER_EXAMPLE__.readDocumentFile(${JSON.stringify(name)})`,
+    )
+    expect(appRead).toBe(content)
+  })
+
   test('pull reads a file the app wrote via expo-file-system at the document root (REQ-FILES-003)', async ({
     device,
   }) => {

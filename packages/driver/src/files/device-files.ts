@@ -15,8 +15,24 @@ import { resolveFileTarget } from './target'
 import { mapNodeFsError } from './transports/shared'
 
 const DEFAULT_ROOT: FileRoot = 'document'
-/** 64 MiB — bounds the Android stdout stream; overflow fails closed (REQ-FILES-008). */
+/** 64 MiB — bounds the read/push size; overflow fails closed (REQ-FILES-008). */
 const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024
+
+/**
+ * Resolve and validate the byte cap. A non-finite value (`NaN`/`Infinity`) or a
+ * non-positive one would make every `size > maxBuffer` check false and silently
+ * disable the memory bound, so reject it fail-closed rather than trust it.
+ */
+function resolveMaxBuffer(maxBuffer: number | undefined): number {
+  if (maxBuffer === undefined) return DEFAULT_MAX_BUFFER
+  if (!Number.isFinite(maxBuffer) || maxBuffer <= 0) {
+    throw new FileIoError(
+      'UNSUPPORTED',
+      `device.files: maxBuffer must be a positive finite number, got ${maxBuffer}`,
+    )
+  }
+  return maxBuffer
+}
 
 /**
  * Moves bytes to/from the app sandbox for one resolved target. Receives an
@@ -67,12 +83,12 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
 
   return {
     async pull(remotePath, options) {
-      const maxBuffer = options?.maxBuffer ?? DEFAULT_MAX_BUFFER
+      const maxBuffer = resolveMaxBuffer(options?.maxBuffer)
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
       return transportFor(target).pull(path, { maxBuffer })
     },
     async push(source, remotePath, options) {
-      const maxBuffer = options?.maxBuffer ?? DEFAULT_MAX_BUFFER
+      const maxBuffer = resolveMaxBuffer(options?.maxBuffer)
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
       // A local-path source is read on the host; map its fs errors into the
       // FileIoError taxonomy so `device.files` never leaks a raw Node error

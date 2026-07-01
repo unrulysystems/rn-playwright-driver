@@ -36,6 +36,15 @@ export function resolveRemotePath(
         "device.files: the 'absolute' root requires a non-empty path",
       )
     }
+    // Require a genuinely absolute device path. A relative value would resolve
+    // against the `run-as` shell cwd (adb), silently reading/writing the wrong
+    // location instead of the requested path — fail closed (REQ-XPORT-004).
+    if (!remotePath.startsWith('/')) {
+      throw new FileIoError(
+        'UNSUPPORTED',
+        `device.files: the 'absolute' root requires a path starting with '/': ${JSON.stringify(remotePath)}`,
+      )
+    }
     return { absolute: true, path: remotePath }
   }
 

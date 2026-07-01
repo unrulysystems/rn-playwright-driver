@@ -103,6 +103,26 @@ describe('createDeviceFiles — pull', () => {
     )
   })
 
+  it('rejects a non-finite or non-positive maxBuffer before touching a transport', async () => {
+    // NaN/Infinity/0 would make every `size > maxBuffer` check false and silently
+    // disable the memory bound — fail closed instead.
+    const { select } = fakeTransport()
+    const files = createDeviceFiles({
+      platform: 'ios',
+      target: IOS_TARGET,
+      selectTransport: select,
+    })
+
+    await Promise.all(
+      [Number.NaN, Number.POSITIVE_INFINITY, 0, -1].map((bad) =>
+        expect(files.pull('obs.csv', { maxBuffer: bad })).rejects.toMatchObject({
+          code: 'UNSUPPORTED',
+        }),
+      ),
+    )
+    expect(select).not.toHaveBeenCalled()
+  })
+
   it('propagates a transport NOT_FOUND', async () => {
     const { select } = fakeTransport({
       pull: async () => {

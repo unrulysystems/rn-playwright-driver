@@ -143,10 +143,13 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
 - **REQ-FILES-005** `pull` of a missing path rejects with `FileIoError` code
   `NOT_FOUND`. It never resolves with an empty or partial `Buffer` (fail-closed).
 - **REQ-FILES-006** `push` rejects on write failure (unwritable/absent root) with
-  a typed error. `push` **creates intermediate parent directories** as needed
-  (adb `mkdir -p`; the host `fs` seam creates them for simctl; devicectl's
-  `copy to` creates the container path). This is unit-tested per transport with a
-  nested remote path.
+  a typed error. `push` **creates intermediate parent directories** as needed:
+  adb `mkdir -p` and the host `fs` seam (simctl) are unit-tested to create them.
+  For devicectl, the nested container-relative path is forwarded verbatim as the
+  `copy to` `--destination` (argv-tested); whether the tool itself creates the
+  intermediate container directories is a device-side behavior confirmed by the
+  pending real-device walkthrough (iOS-device ships **provisional**), not proven
+  by the injected `HostFileExec`.
 - **REQ-FILES-007** All failures surface as `FileIoError` with a `code`:
   `NOT_FOUND` (missing path), `UNAVAILABLE` (missing targeting context),
   `UNSUPPORTED` (root/transport combination unsupported), `TRANSPORT_FAILED`
@@ -322,8 +325,12 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 
 ## Traceability
 
-Unit floors are green; the E2E floor (sim + emulator) is authored and pending an
-attended run (see Open items). Paths are relative to `packages/`.
+Unit floors are green and the E2E floor **passes** on the iOS **simulator** and
+Android **emulator** (the independent oracle: app-written `document`/`cache`
+reads + push→pull round-trips, incl. a nested path). Still pending: the
+**physical**-hardware walkthroughs (iOS-device `devicectl`, Android device), which
+share the tested transports but are not exercised in CI. Paths are relative to
+`packages/`.
 
 | REQ                   | Test                                                                                             |
 | --------------------- | ------------------------------------------------------------------------------------------------ |

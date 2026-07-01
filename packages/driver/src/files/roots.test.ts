@@ -33,6 +33,14 @@ describe('resolveRemotePath — named roots (REQ-FILES-003)', () => {
       path: '/sdcard/Download/x',
     })
   })
+
+  it('rejects a relative path under the absolute root (would resolve vs run-as cwd)', () => {
+    // 'foo' with root:'absolute' must not become `cat "foo"` relative to the
+    // shell cwd — require a genuine absolute device path (REQ-XPORT-004).
+    expect(() => resolveRemotePath('android', 'absolute', 'foo/bar')).toThrow(
+      /absolute.*starting with '\/'/,
+    )
+  })
 })
 
 describe('resolveRemotePath — no-escape rule (REQ-FILES-004)', () => {
