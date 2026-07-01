@@ -108,17 +108,16 @@ the app-written file on both platforms:
 - \*`absolute` is **not supported on iOS** (simulator or device) and rejects
   `UNSUPPORTED`: `device.files` is app-sandbox-scoped, and on the simulator an
   absolute path would resolve to a raw host path. Use it only on Android.
-- On Android, `absolute` is an intentional escape hatch **bounded by the app
-  UID**, not confined to `/data/data/<pkg>`. The path runs under `run-as <pkg>`,
-  so it can reach anything that UID can — the private data dir **and** the
-  app-scoped external dir (`/sdcard/Android/data/<pkg>/…`). Reaching broader
-  external storage (`/sdcard/…`) depends on the app itself holding the relevant
-  Android storage permission — it is the app UID's reach, not a driver grant — and
-  nothing another app or the system owns is reachable (the kernel enforces this;
-  unreachable paths fail closed as `TRANSPORT_FAILED`). The E2E round-trips the
-  `absolute` mechanism through an app-private path (`/data/data/<pkg>/files/…`);
-  an external-storage path uses the identical `run-as` transport, differing only in
-  the path string (argv covered by unit tests). `..` is rejected so the touched path stays legible, and a
+- On Android, `absolute` is an intentional escape hatch **bounded by `run-as
+<pkg>`**. In practice `run-as` drops to the app UID but in the app's
+  **internal-storage** mount namespace, so `absolute` reaches the app-private tree
+  (`/data/data/<pkg>/…`) — the same sandbox the named roots resolve into, just
+  without the fixed root prefix. **External storage is NOT reachable**: `/sdcard/…`,
+  **including** the app-scoped `/sdcard/Android/data/<pkg>/…`, returns Permission
+  denied under `run-as` and therefore fails closed as `TRANSPORT_FAILED` (verified
+  by an E2E). Nothing another app or the system owns is reachable either. Use
+  `absolute` for app-private paths outside the named roots; it is not a route to
+  shared/external storage. `..` is rejected so the touched path stays legible, and a
   path containing shell metacharacters (quotes, backtick, `$`, backslash, or a
   newline) is rejected `UNSUPPORTED` before adb runs — the path is interpolated
   into a device-side `run-as … sh -c` command, so it must stay a plain path. Pass a

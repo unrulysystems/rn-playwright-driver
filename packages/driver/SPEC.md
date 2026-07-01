@@ -97,16 +97,16 @@ iOS** (both kinds) and rejects `UNSUPPORTED`: `device.files` is app-sandbox-scop
 and on the simulator an absolute path would resolve to a raw HOST path — a
 sandbox escape with the runner's privileges. On Android `absolute` is an
 intentional escape hatch **bounded by the app UID via `run-as`** — not confined
-to `/data/data/<pkg>`. It reaches anything that UID owns — the private data dir
-**and** the app-scoped external dir (`/sdcard/Android/data/<pkg>/…`); reaching
-broader external storage (`/sdcard/…`) depends on the app holding the relevant
-Android storage permission (the app UID's reach, not a driver grant), and nothing
-another app or the system owns is reachable (the kernel enforces the boundary;
-unreachable paths fail closed as `TRANSPORT_FAILED`). `..` is rejected
-(REQ-XPORT-004) so the touched path stays legible. Input is test-author-controlled,
-so this is a capability, not an injection surface. E2E coverage exercises the
-`absolute` mechanism via an app-private path; an external-storage path shares the
-identical `run-as` transport (path string only), covered by transport argv units.
+to `/data/data/<pkg>`. `run-as` drops to the app UID but in the app's
+**internal-storage** mount namespace, so `absolute` reaches the app-private tree
+(`/data/data/<pkg>/…`) and nothing another app or the system owns. **External
+storage is NOT reachable via `run-as`**: `/sdcard/…`, including the app-scoped
+`/sdcard/Android/data/<pkg>/…`, returns Permission denied and fails closed as
+`TRANSPORT_FAILED`. `..` is rejected (REQ-XPORT-004) so the touched path stays
+legible. Input is test-author-controlled, so this is a capability, not an injection
+surface. E2E coverage round-trips an app-private `absolute` path AND asserts an
+external-storage path fails closed (the run-as reach boundary is verified, not just
+asserted in prose).
 
 ### Transport selection
 
@@ -189,7 +189,12 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
     `push` is bounded symmetrically by the **same** bounded read: a host-file source
     rejects `TOO_LARGE` on the size fast-fail, then the bounded read holds the cap
     even if the file grows past the probe; a `Buffer` source (never probed) is caught
-    by a final length re-check.
+    by a final length re-check. A host-path source is **materialized into one heap
+    `Buffer` (≤ `maxBuffer`), not streamed** to the transport: the transports consume
+    a whole `Buffer`/stdin payload (adb stdin, simctl/devicectl staged temp), and the
+    contract is bounded test fixtures, so a bounded single allocation is the
+    deliberate tradeoff — chunked streaming would only matter above the cap, which is
+    rejected anyway.
 
 ### Transports — `REQ-XPORT-*`
 

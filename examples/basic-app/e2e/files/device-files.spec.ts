@@ -31,16 +31,13 @@ test.describe('device.files', () => {
   test("Android 'absolute' root round-trips a full run-as path (REQ-XPORT-004)", async ({
     device,
   }) => {
-    // `absolute` is Android-only (unsupported on iOS); exercise the documented
-    // public path on a real emulator, not just fake-adb unit coverage. Uses the
-    // app-private data dir rather than external storage (e.g. /sdcard): reaching
-    // broader /sdcard needs an Android storage permission this example app does not
-    // declare. Crucially this still verifies the `absolute` MECHANISM end to end —
-    // an external-storage path uses the identical `run-as` transport and differs
-    // only in the path string (argv covered by the transport unit tests), and
-    // `run-as` bounds `absolute` to the app UID either way — so the private-dir
-    // path keeps this test deterministic and permission-free. Matches the scoped
-    // claim in README/SPEC (REQ-XPORT-004).
+    // `absolute` is Android-only (unsupported on iOS). Via `run-as <pkg>` it reaches
+    // the app-private INTERNAL storage (`/data/data/<pkg>/…`) — that is the FULL
+    // reachable surface, so round-trip an internal absolute path on a real emulator
+    // (not just fake-adb unit coverage). External storage (`/sdcard`, even the
+    // app-scoped `/sdcard/Android/data/<pkg>/…`) is NOT reachable through run-as
+    // (Permission denied — run-as drops to the app UID but in the internal-storage
+    // mount namespace); the sibling test below pins that fail-closed boundary.
     test.skip(device.platform !== 'android', "'absolute' root is unsupported on iOS")
     const pkg = process.env.RN_APP_PACKAGE
     test.skip(!pkg, 'RN_APP_PACKAGE not set')
@@ -52,6 +49,24 @@ test.describe('device.files', () => {
     const pulled = await device.files.pull(abs, { root: 'absolute' })
 
     expect(Buffer.compare(pulled, payload)).toBe(0)
+  })
+
+  test("Android 'absolute' fails closed for external storage unreachable via run-as (REQ-FILES-007)", async ({
+    device,
+  }) => {
+    // run-as cannot traverse the external (sdcardfs) mount — even the app-scoped
+    // `/sdcard/Android/data/<pkg>/…` is Permission denied. device.files must fail
+    // closed with a FileIoError, never a silent wrong/empty result. This pins the
+    // real run-as reach boundary the README/SPEC document, so a regression that
+    // silently "succeeded" (or mis-mapped the path) would be caught here.
+    test.skip(device.platform !== 'android', "'absolute' root is unsupported on iOS")
+    const pkg = process.env.RN_APP_PACKAGE
+    test.skip(!pkg, 'RN_APP_PACKAGE not set')
+
+    const ext = `/sdcard/Android/data/${pkg}/files/rn-driver-ext-${randomBytes(4).toString('hex')}.bin`
+    await expect(
+      device.files.push(randomBytes(16), ext, { root: 'absolute' }),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
   test('push creates intermediate parent directories for a nested path (REQ-FILES-006)', async ({
