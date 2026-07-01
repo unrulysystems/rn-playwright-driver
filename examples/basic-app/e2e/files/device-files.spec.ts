@@ -25,6 +25,25 @@ test.describe('device.files', () => {
     expect(Buffer.compare(pulled, payload)).toBe(0)
   })
 
+  test('pull reads a file the app wrote via expo-file-system at the document root (REQ-FILES-003)', async ({
+    device,
+  }) => {
+    // The round-trip above proves host transport symmetry but not that the
+    // `document` root maps to the app's real documentDirectory. Have the app
+    // write the file itself via expo-file-system, then pull it host-side — a
+    // mis-mapped root would 404 or return the wrong bytes.
+    const name = 'rn-driver-app-written.txt'
+    const content = `app-written-${randomBytes(8).toString('hex')}`
+
+    const uri = await device.evaluate<string>(
+      `globalThis.__RN_DRIVER_EXAMPLE__.writeDocumentFile(${JSON.stringify(name)}, ${JSON.stringify(content)})`,
+    )
+    expect(uri).toContain(name)
+
+    const pulled = await device.files.pull(name, { root: 'document' })
+    expect(pulled.toString('utf8')).toBe(content)
+  })
+
   test('pull of a missing path fails closed with NOT_FOUND (REQ-FILES-005)', async ({ device }) => {
     await expect(device.files.pull('definitely-missing-file.xyz')).rejects.toMatchObject({
       code: 'NOT_FOUND',

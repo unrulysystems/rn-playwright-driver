@@ -1,3 +1,4 @@
+import { File, Paths } from 'expo-file-system'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
@@ -21,10 +22,23 @@ export default function App() {
 
   useEffect(() => {
     const globals = globalThis as typeof globalThis & {
-      __RN_DRIVER_EXAMPLE__?: { scrollToTop: () => void }
+      __RN_DRIVER_EXAMPLE__?: {
+        scrollToTop: () => void
+        writeDocumentFile: (name: string, content: string) => string
+      }
     }
     globals.__RN_DRIVER_EXAMPLE__ = {
       scrollToTop: () => scrollRef.current?.scrollTo({ y: 0, animated: false }),
+      // e2e affordance for device.files: the app writes a file to
+      // expo-file-system's documentDirectory so the driver can assert that its
+      // `document` root resolves to the same on-device location (not just that
+      // a host push/pull round-trips). Returns the uri so the caller can confirm.
+      writeDocumentFile: (name, content) => {
+        const file = new File(Paths.document, name)
+        file.create({ overwrite: true })
+        file.write(content)
+        return file.uri
+      },
     }
     return () => {
       delete globals.__RN_DRIVER_EXAMPLE__
