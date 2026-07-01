@@ -114,7 +114,8 @@ export function selectTarget(
       const available = matches.map((t) => t.title ?? t.deviceName ?? 'unknown').join(', ')
       throw new Error(
         `Ambiguous device target: ${matches.length} runtimes match "${options.deviceName}" (${available}). ` +
-          `Metro exposes no UDID to disambiguate — use a unique device name or pass pageIndex.`,
+          `Metro exposes no UDID to disambiguate — use a unique device name, or select by pageIndex ` +
+          `instead (deviceName takes precedence, so pageIndex is ignored while deviceName is set).`,
       )
     }
     return matches[0] as DebugTarget

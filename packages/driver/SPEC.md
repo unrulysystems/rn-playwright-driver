@@ -359,6 +359,16 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   device among several booted ones must pass an explicit `deviceName` to bind both
   identities. Revisit (fail closed even for one runtime, at that UX cost) only if
   `device.files` is ever pointed at an untrusted multi-device host.
+  **App-identity facet (same residual):** CDP selects by device name while
+  `device.files` carries the app bundle/package, so two RN apps on one Metro could
+  in principle diverge (evaluate app A, file I/O app B). In practice a **usable**
+  file target always carries a device pin — iOS requires `udid`+`bundleId`, Android
+  `serial`+`package` (`resolveFileTarget`) — so `filePinned` is set and the
+  multi-runtime ambiguity guard above already fails closed; the only path to a
+  divergent attach is an explicit operator `pageIndex` picking a specific runtime,
+  which is a deliberate caller choice. A reliable cross-check is not possible: Metro
+  exposes no machine-readable app identity on its CDP targets (the bundle appears,
+  when at all, only inside a free-form `title`).
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 - **iOS-simulator containment TOCTOU (accepted residual).** `resolveInsideContainer`
