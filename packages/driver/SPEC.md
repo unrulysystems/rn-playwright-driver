@@ -286,4 +286,26 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 
 ## Traceability
 
-Added during/after TDD: `REQ-* → test file:line`. Empty at SPEC authoring time.
+Unit floors are green; the E2E floor (sim + emulator) is authored and pending an
+attended run (see Open items). Paths are relative to `packages/`.
+
+| REQ                   | Test                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| REQ-FILES-001/002     | `driver/src/files/device-files.test.ts`; e2e `examples/basic-app/e2e/files/device-files.spec.ts` |
+| REQ-FILES-003         | `driver/src/files/roots.test.ts` ("named roots")                                                 |
+| REQ-FILES-004         | `driver/src/files/roots.test.ts` ("no-escape rule")                                              |
+| REQ-FILES-005         | `driver/src/files/device-files.test.ts` (NOT_FOUND); e2e spec                                    |
+| REQ-FILES-006         | `driver/src/files/device-files.test.ts` (push); transport push tests                             |
+| REQ-FILES-007         | `driver/src/files/device-files.test.ts`; `.../transports/*.test.ts`                              |
+| REQ-FILES-008         | `driver/src/files/transports/adb.test.ts` (TOO_LARGE)                                            |
+| REQ-XPORT-001         | `driver/src/files/transports/index.test.ts`                                                      |
+| REQ-XPORT-002         | `driver/src/files/transports/simctl.test.ts`                                                     |
+| REQ-XPORT-003 (prov.) | `driver/src/files/transports/devicectl.test.ts`                                                  |
+| REQ-XPORT-004         | `driver/src/files/transports/adb.test.ts`                                                        |
+| REQ-XPORT-005         | `adb.test.ts` / `simctl.test.ts` (error classification)                                          |
+| REQ-XPORT-006         | all `driver/src/files/transports/*.test.ts` (injected exec, no spawn)                            |
+| REQ-XPORT-007         | `device-files.test.ts` + `devicectl.test.ts` (absolute on iOS-device)                            |
+| REQ-TGT-001/004/005   | `driver/src/files/target.test.ts`                                                                |
+| REQ-TGT-002           | `runner/src/plan/env.test.ts`                                                                    |
+| REQ-TGT-003           | `driver/src/test-env.test.ts` (`targetFromEnv`)                                                  |
+| `device.files` wiring | `driver/src/files/device-wiring.test.ts` (fail-closed pre-connect)                               |

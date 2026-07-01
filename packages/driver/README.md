@@ -67,6 +67,55 @@ See the companion package READMEs for platform launch steps:
 - `@unrulysystems/rn-playwright-driver-instrumentation-companion`
 - `@unrulysystems/rn-playwright-driver-xctest-companion`
 
+## Device File I/O
+
+`device.files` reads and writes the running app's sandbox from the host, so a
+test can assert the real artifact a feature produces (a CSV/PDF export, a cache,
+a persisted snapshot) end to end — not just that a button is visible.
+
+```ts
+// Read a file the app wrote and assert its bytes.
+const csv = await device.files.pull('observation_1.csv', { root: 'document' })
+expect(csv.toString('utf8')).toContain('Interval,Actor,Engaged')
+
+// Push a fixture (host path or Buffer) into the sandbox.
+await device.files.push('./fixtures/seed.json', 'seed.json', { root: 'document' })
+```
+
+`pull` resolves with a `Buffer`; every failure is a typed `FileIoError` with a
+`code` (`NOT_FOUND` | `UNAVAILABLE` | `UNSUPPORTED` | `TRANSPORT_FAILED` |
+`TOO_LARGE`) — never a silent empty buffer.
+
+**Roots** (default `document`) mirror `expo-file-system`, so one call points at
+the app-written file on both platforms:
+
+| Root       | iOS (`<container>`) | Android (`/data/data/<pkg>`) |
+| ---------- | ------------------- | ---------------------------- |
+| `document` | `Documents/`        | `files/`                     |
+| `cache`    | `Library/Caches/`   | `cache/`                     |
+| `data`     | container root      | app-home root                |
+| `absolute` | verbatim path\*     | verbatim device path         |
+
+**Platform support:**
+
+| Target             | Transport                        | Status                       |
+| ------------------ | -------------------------------- | ---------------------------- |
+| iOS simulator      | `xcrun simctl get_app_container` | supported                    |
+| iOS device         | `xcrun devicectl device copy`    | **provisional** (see below)  |
+| Android emu/device | `adb … run-as <pkg>`             | supported (debuggable build) |
+
+- \*`absolute` is **not supported on a physical iOS device** (devicectl is
+  container-scoped) and rejects `UNSUPPORTED`.
+- Android requires a **debuggable** build (`run-as`); iOS requires a
+  **development-signed** app — both hold for E2E builds.
+- The **iOS-device** transport is unit-verified but **provisional** pending a
+  real-hardware walkthrough; iOS-simulator and Android are the verified paths.
+
+Targeting (bundle id, udid, package, adb serial) is supplied automatically by
+the `rn-driver` runner via `RN_APP_BUNDLE_ID` / `RN_SIM_UDID` /
+`RN_IOS_TARGET_KIND` / `RN_APP_PACKAGE` (`ANDROID_SERIAL`); set
+`DeviceOptions.target` explicitly for a direct `createDevice()`.
+
 ## Example E2E Gates
 
 The repo example app owns complete companion-backed scripts:
