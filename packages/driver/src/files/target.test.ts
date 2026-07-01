@@ -3,6 +3,22 @@ import type { TargetContext } from '../types'
 import { FileIoError } from './errors'
 import { resolveFileTarget } from './target'
 
+/**
+ * Assert a missing-target-context rejection carries the PUBLIC FileIoError code
+ * UNAVAILABLE (REQ-TGT-004), not just a matching message — a raw or wrongly-coded
+ * error would otherwise pass a message-only `toThrow(/.../)`.
+ */
+function expectUnavailable(fn: () => unknown, messageRe: RegExp): void {
+  try {
+    fn()
+    expect.unreachable('should have thrown')
+  } catch (error) {
+    expect(error).toBeInstanceOf(FileIoError)
+    expect((error as FileIoError).code).toBe('UNAVAILABLE')
+    expect((error as FileIoError).message).toMatch(messageRe)
+  }
+}
+
 describe('resolveFileTarget — iOS', () => {
   const full: TargetContext = { udid: 'UDID-1', bundleId: 'com.acme.app' }
 
@@ -37,11 +53,11 @@ describe('resolveFileTarget — iOS', () => {
   })
 
   it('throws UNAVAILABLE for a missing bundleId', () => {
-    expect(() => resolveFileTarget('ios', { udid: 'UDID-1' })).toThrow(/RN_APP_BUNDLE_ID/)
+    expectUnavailable(() => resolveFileTarget('ios', { udid: 'UDID-1' }), /RN_APP_BUNDLE_ID/)
   })
 
   it('throws UNAVAILABLE when no context is provided at all', () => {
-    expect(() => resolveFileTarget('ios', undefined)).toThrow(FileIoError)
+    expectUnavailable(() => resolveFileTarget('ios', undefined), /RN_SIM_UDID|RN_APP_BUNDLE_ID/)
   })
 })
 
@@ -64,13 +80,15 @@ describe('resolveFileTarget — Android', () => {
   })
 
   it('throws UNAVAILABLE naming ANDROID_SERIAL when the serial is missing', () => {
-    expect(() => resolveFileTarget('android', { packageName: 'com.acme.app' })).toThrow(
+    expectUnavailable(
+      () => resolveFileTarget('android', { packageName: 'com.acme.app' }),
       /ANDROID_SERIAL/,
     )
   })
 
   it('throws UNAVAILABLE naming RN_APP_PACKAGE when the package is missing', () => {
-    expect(() => resolveFileTarget('android', { serial: 'emulator-5554' })).toThrow(
+    expectUnavailable(
+      () => resolveFileTarget('android', { serial: 'emulator-5554' }),
       /RN_APP_PACKAGE/,
     )
   })

@@ -52,18 +52,23 @@ describe('selectTarget', () => {
       target({ id: 'a', deviceName: 'iPhone 17' }),
       target({ id: 'b', deviceName: 'Pixel 8' }),
     ]
-    expect(() => selectTarget(targets, { filePinned: true })).toThrow(/Ambiguous CDP target/)
+    expect(() => selectTarget(targets, {}, true)).toThrow(/Ambiguous CDP target/)
+  })
+
+  it('does not guard when file I/O is not pinned (multiple runtimes default to the first)', () => {
+    // filePinned=false (e.g. a target with only bundleId/adbPath, no udid/serial)
+    // must NOT fail a legitimate multi-runtime connect.
+    const first = target({ id: 'first' })
+    expect(selectTarget([first, target({ id: 'second' })], {}, false)).toBe(first)
   })
 
   it('allows a pinned single runtime (no ambiguity to guard)', () => {
     const only = target({ id: 'only', deviceName: 'iPhone 17' })
-    expect(selectTarget([only], { filePinned: true })).toBe(only)
+    expect(selectTarget([only], {}, true)).toBe(only)
   })
 
   it('honors an explicit pageIndex even when file I/O is pinned (deliberate caller choice)', () => {
     const second = target({ id: 'second' })
-    expect(
-      selectTarget([target({ id: 'first' }), second], { filePinned: true, pageIndex: 1 }),
-    ).toBe(second)
+    expect(selectTarget([target({ id: 'first' }), second], { pageIndex: 1 }, true)).toBe(second)
   })
 })

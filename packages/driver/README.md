@@ -107,8 +107,15 @@ the app-written file on both platforms:
 
 - \*`absolute` is **not supported on iOS** (simulator or device) and rejects
   `UNSUPPORTED`: `device.files` is app-sandbox-scoped, and on the simulator an
-  absolute path would resolve to a raw host path. Use it only on Android, where
-  `run-as` keeps it scoped to the app's uid.
+  absolute path would resolve to a raw host path. Use it only on Android.
+- On Android, `absolute` is an intentional escape hatch **bounded by the app
+  UID**, not confined to `/data/data/<pkg>`. The path runs under `run-as <pkg>`,
+  so it can reach anything that UID can — the private data dir **and**
+  app-accessible external storage (e.g. `/sdcard/…`) — but nothing another app or
+  the system owns (the kernel enforces this; unreachable paths fail closed as
+  `TRANSPORT_FAILED`). `..` is rejected so the touched path stays legible. Pass a
+  full path you intend; the standard `document`/`cache`/`data` roots are the
+  sandbox-relative alternative.
 - Android requires a **debuggable** build (`run-as`); iOS requires a
   **development-signed** app — both hold for E2E builds.
 - The **iOS-device** transport is unit-verified but **provisional** pending a

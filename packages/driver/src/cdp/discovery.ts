@@ -15,15 +15,6 @@ export type TargetSelectionOptions = {
   deviceName?: string
   /** Select target by page index (default: 0 = first Hermes target) */
   pageIndex?: number
-  /**
-   * True when `device.files` is pinned to an explicit device (`DeviceOptions.target`).
-   * Metro's CDP targets expose no UDID (see selectTarget), so CDP cannot be pinned
-   * to the same device — with more than one runtime and no explicit CDP selector,
-   * silently defaulting to the first target would evaluate against a different app
-   * than file I/O reads/writes (a confused deputy). Set, this makes that case fail
-   * closed instead of guessing.
-   */
-  filePinned?: boolean
 }
 
 /**
@@ -56,9 +47,19 @@ export async function discoverTargets(metroUrl: string): Promise<DebugTarget[]> 
  *
  * Throws if no matching target found.
  */
+/**
+ * @param filePinned True when `device.files` is pinned to a concrete device
+ *   (`DeviceOptions.target` with a udid/serial). Metro's CDP targets expose no
+ *   UDID (see below), so CDP cannot be pinned to the same device — with more than
+ *   one runtime and no explicit CDP selector, silently defaulting to the first
+ *   target would evaluate against a different app than file I/O reads/writes (a
+ *   confused deputy). When set, that case fails closed instead of guessing. Kept
+ *   OFF the public `TargetSelectionOptions` — it is internal, derived state.
+ */
 export function selectTarget(
   targets: DebugTarget[],
   options: TargetSelectionOptions = {},
+  filePinned = false,
 ): DebugTarget {
   if (targets.length === 0) {
     throw new Error('No Hermes debug targets found. Is the app running with Metro connected?')
@@ -105,7 +106,7 @@ export function selectTarget(
   // runtime is present. Defaulting to the first target here would attach CDP to a
   // different app than device.files targets. Only guards the implicit default —
   // an explicit pageIndex is the caller's deliberate choice.
-  if (options.filePinned && options.pageIndex === undefined && targets.length > 1) {
+  if (filePinned && options.pageIndex === undefined && targets.length > 1) {
     const available = targets.map((t) => t.deviceName ?? t.title ?? 'unknown').join(', ')
     throw new Error(
       `Ambiguous CDP target: device.files is pinned to a specific device but ${targets.length} ` +

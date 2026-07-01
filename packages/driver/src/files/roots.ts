@@ -45,6 +45,16 @@ export function resolveRemotePath(
         `device.files: the 'absolute' root requires a path starting with '/': ${JSON.stringify(remotePath)}`,
       )
     }
+    // Reject `..` even for absolute paths: a canonical absolute device path never
+    // needs it, and traversal only obscures which location is really touched. The
+    // real boundary is `run-as <pkg>` (the app UID); this keeps the requested path
+    // legible and defends in depth (REQ-XPORT-004).
+    if (remotePath.split('/').includes('..')) {
+      throw new FileIoError(
+        'UNSUPPORTED',
+        `device.files: the 'absolute' root must not contain '..': ${JSON.stringify(remotePath)}`,
+      )
+    }
     return { absolute: true, path: remotePath }
   }
 

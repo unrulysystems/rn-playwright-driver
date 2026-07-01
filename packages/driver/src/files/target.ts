@@ -11,10 +11,11 @@ import { FileIoError } from './errors'
 const DEFAULT_ADB_PATH = 'adb'
 const DEFAULT_XCRUN_PATH = 'xcrun'
 
-// Android package-name grammar (reverse-DNS: dotted `[A-Za-z_][A-Za-z0-9_]*`
-// segments). The package name is interpolated into a device-side `run-as <pkg>
-// sh -c '…'` script, so anything outside this grammar could inject shell
-// commands — reject it at the boundary (fail-closed) rather than quote-escape.
+// Android package-name grammar (reverse-DNS: two or more dotted segments, each
+// `[A-Za-z][A-Za-z0-9_]*` — a letter first, then letters/digits/underscores).
+// The package name is interpolated into a device-side `run-as <pkg> sh -c '…'`
+// script, so anything outside this grammar could inject shell commands — reject
+// it at the boundary (fail-closed) rather than quote-escape.
 const ANDROID_PACKAGE = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/
 
 /** Validated targeting, ready for a transport. iOS `kind` picks simctl vs devicectl. */

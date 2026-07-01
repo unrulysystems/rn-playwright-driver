@@ -41,6 +41,12 @@ describe('resolveRemotePath — named roots (REQ-FILES-003)', () => {
       /absolute.*starting with '\/'/,
     )
   })
+
+  it("rejects '..' traversal in an absolute path (defense in depth)", () => {
+    expect(() => resolveRemotePath('android', 'absolute', '/data/data/pkg/../x')).toThrow(
+      /must not contain '\.\.'/,
+    )
+  })
 })
 
 describe('resolveRemotePath — no-escape rule (REQ-FILES-004)', () => {

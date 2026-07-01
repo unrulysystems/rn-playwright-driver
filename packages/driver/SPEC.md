@@ -95,8 +95,13 @@ interface DeviceFiles {
 same `device.files` call on both platforms. \*`absolute` is **unsupported on
 iOS** (both kinds) and rejects `UNSUPPORTED`: `device.files` is app-sandbox-scoped,
 and on the simulator an absolute path would resolve to a raw HOST path — a
-sandbox escape with the runner's privileges. On Android an absolute
-`/data/data/<pkg>/…` path stays uid-scoped by `run-as`.
+sandbox escape with the runner's privileges. On Android `absolute` is an
+intentional escape hatch **bounded by the app UID via `run-as`** — not confined
+to `/data/data/<pkg>`. It reaches anything that UID owns (private data dir **and**
+app-accessible external storage such as `/sdcard/…`) and nothing else (the kernel
+enforces the boundary; unreachable paths fail closed as `TRANSPORT_FAILED`). `..`
+is rejected (REQ-XPORT-004) so the touched path stays legible. Input is
+test-author-controlled, so this is a capability, not an injection surface.
 
 ### Transport selection
 
@@ -200,6 +205,9 @@ $?'`: the bytes are recovered by splitting on the LAST sentinel occurrence, and
   trailing OK token to confirm the write landed. Paths are absolute
   (`/data/data/<pkg>/…`) and reject shell metacharacters; the package name is
   validated against the reverse-DNS grammar before interpolation (fail-closed).
+  The `absolute` root is UID-scoped by `run-as` (not confined to
+  `/data/data/<pkg>`; see the Root-resolution note) and rejects `..` so the
+  touched path stays legible.
 - **REQ-XPORT-005** Container-access denial — Android non-debuggable build (no
   `run-as`) or iOS production-signed app (no container access) — surfaces as
   `UNSUPPORTED`/`TRANSPORT_FAILED` with an actionable message, never a silent

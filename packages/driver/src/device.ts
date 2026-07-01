@@ -104,12 +104,13 @@ export class RNDevice implements Device {
   async connect(): Promise<void> {
     const metroUrl = this.options.metroUrl ?? DEFAULT_METRO_URL
     const targets = await discoverTargets(metroUrl)
-    // filePinned: when device.files targets an explicit device, CDP must not
-    // silently default to the first runtime among several (confused deputy).
-    const target = selectTarget(targets, {
-      ...this.options,
-      filePinned: this.options.target !== undefined,
-    })
+    // filePinned only when device.files targets a CONCRETE device — a udid (iOS)
+    // or serial (Android). A target carrying just an app/tool identity (bundleId,
+    // packageName, adbPath) pins no device, so it must NOT trip the confused-deputy
+    // guard and fail a legitimate multi-runtime connect.
+    const t = this.options.target
+    const filePinned = t?.udid !== undefined || t?.serial !== undefined
+    const target = selectTarget(targets, this.options, filePinned)
 
     // Register the console + exception forwarders BEFORE connecting. cdp.connect()
     // sends Runtime.enable internally, after which the runtime starts emitting

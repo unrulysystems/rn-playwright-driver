@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { FileIoError } from '../errors'
 import type { HostExecResult, HostFileExec } from '../host-file-exec'
 import type { HostFs } from '../host-fs'
 import { createSimctlTransport } from './simctl'
@@ -216,7 +215,7 @@ describe('simctl transport', () => {
 
     await expect(
       transport.pull({ absolute: false, subpath: 'Documents/x' }, { maxBuffer: 1 }),
-    ).rejects.toBeInstanceOf(FileIoError)
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
   it('maps a spawn-level get_app_container failure (rejection) to a FileIoError', async () => {
