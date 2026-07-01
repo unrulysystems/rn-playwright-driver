@@ -107,6 +107,18 @@ describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
     expect(selectTargetForConnect([only], { target: { udid: 'UDID-1' } })).toBe(only)
   })
 
+  it('treats an EMPTY-string selector as no selector (must not bypass the guard)', () => {
+    // selectTarget ignores a falsy deviceName/deviceId, so an empty string is not a
+    // usable CDP selector; it must not let a file pin slip past the multi-runtime
+    // guard and silently default to the first target (confused-deputy regression).
+    expect(() =>
+      selectTargetForConnect(two, { target: { udid: 'UDID-1' }, deviceName: '' }),
+    ).toThrow(/Ambiguous CDP target/)
+    expect(() => selectTargetForConnect(two, { target: { udid: 'UDID-1' }, deviceId: '' })).toThrow(
+      /Ambiguous CDP target/,
+    )
+  })
+
   it('honors an explicit pageIndex even when file I/O is pinned (deliberate caller choice)', () => {
     const second = target({ id: 'second' })
     expect(

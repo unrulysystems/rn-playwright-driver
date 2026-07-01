@@ -162,10 +162,14 @@ export function selectTargetForConnect(
 ): DebugTarget {
   const t = options.target
   const filePinned = t?.udid !== undefined || t?.serial !== undefined
+  // Mirror selectTarget's OWN truthiness: it enters the deviceId/deviceName branches
+  // only for non-empty strings, so an empty string is not a usable selector. Testing
+  // `!== undefined` here would let `{ target: { udid }, deviceName: '' }` slip past the
+  // guard and then fall through to first-target selection — reopening the very
+  // confused-deputy gap this guard closes. pageIndex 0 IS a deliberate choice (and is
+  // honored by selectTarget), so it still counts via `!== undefined`.
   const hasCdpSelector =
-    options.deviceId !== undefined ||
-    options.deviceName !== undefined ||
-    options.pageIndex !== undefined
+    Boolean(options.deviceId) || Boolean(options.deviceName) || options.pageIndex !== undefined
   if (filePinned && !hasCdpSelector && targets.length > 1) {
     const available = targets.map((x) => x.deviceName ?? x.title ?? 'unknown').join(', ')
     throw new Error(

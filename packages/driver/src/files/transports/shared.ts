@@ -27,8 +27,9 @@ const UNSUPPORTED_MARKERS = [
   /is not (debuggable|an application)/i,
 ]
 // The tool ran but the target device/tool is unreachable — a transport failure,
-// never a remote-file NOT_FOUND. `adb: device 'X' not found` matches the bare
-// "not found" that NOT_FOUND deliberately dropped, so classify it here first.
+// never a remote-file NOT_FOUND. Its text ("device 'X' not found") says "not found"
+// but names no missing FILE, which is why NOT_FOUND_MARKERS above are file-specific
+// (no bare `/not found/`) and this bucket is checked before them.
 //
 // The caller-controlled remote path is already MASKED out before matching (see
 // classifyCliFailure), so no path substring can trip these. The first two markers
@@ -68,9 +69,9 @@ export function classifyCliFailure(
   // Mask every verbatim occurrence of the remote path so it never participates in
   // marker matching (plain-string split/join — no regex-escaping needed).
   const scannable = remote.length > 0 ? diagnostic.split(remote).join('<path>') : diagnostic
-  // Check container-access (run-as) markers FIRST: `run-as: package not found`
-  // matches the broad `/not found/i` too, but it is a debuggable/access failure,
-  // not a missing remote file.
+  // Check container-access (run-as) markers FIRST: `run-as: package not found` is a
+  // debuggable/access failure, not a missing remote file. It shares the word "found"
+  // with the device markers below, so classify it here before either bucket.
   if (UNSUPPORTED_MARKERS.some((re) => re.test(scannable))) {
     return new FileIoError(
       'UNSUPPORTED',

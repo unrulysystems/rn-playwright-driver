@@ -30,13 +30,15 @@ export interface AdbTransportConfig {
 }
 
 // Sentinels emitted on device stdout — the only adb channel that survives
-// `exec-out` intact. Distinctive enough not to collide with real file bytes.
+// `exec-out` intact. The design is collision-TOLERANT, not collision-free: it does
+// not assume the token is absent from file bytes.
 //
 // The read appends `<READ_SENTINEL><cat-exit-code>` after the bytes in ONE
 // atomic command, so a single `cat` carries its own status: no probe, no
 // TOCTOU window, and cat's exit code is recovered even though adb drops it. The
 // bytes are recovered by splitting on the LAST sentinel occurrence — always the
-// appended one — so file content that happens to contain the token is preserved.
+// appended one — so file content that happens to contain the token is preserved
+// (covered by an adb.test.ts round-trip of bytes containing the sentinel).
 const READ_SENTINEL = '__RN_PW_READ__'
 const PUSH_OK = '__RN_PW_PUSH_OK__'
 // Headroom added to the stdout cap so the sentinel — and a missing/denied file's
