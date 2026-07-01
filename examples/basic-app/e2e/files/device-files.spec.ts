@@ -26,12 +26,8 @@ test.describe('device.files', () => {
   })
 
   test('pull of a missing path fails closed with NOT_FOUND (REQ-FILES-005)', async ({ device }) => {
-    let code: string | undefined
-    try {
-      await device.files.pull('definitely-missing-file.xyz')
-    } catch (error) {
-      code = (error as { code?: string }).code
-    }
-    expect(code).toBe('NOT_FOUND')
+    await expect(device.files.pull('definitely-missing-file.xyz')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    })
   })
 })

@@ -165,16 +165,17 @@ get_app_container <udid> <bundleId> data`, then reads/writes the host path at
   to a host temp then reads the `Buffer`; `push` writes the `Buffer` to a temp
   then `copy to`. Marked **provisional** (see Risk tags / Open items).
 - **REQ-XPORT-004** Android reads/writes the app-private sandbox via `adb …
-run-as <pkg>`. `adb exec-out` neither propagates the remote exit code (always
-  0) nor keeps remote stderr separate (it folds into stdout), so the transport
+run-as <pkg>`. `adb exec-out` neither propagates the remote exit code (always 0) nor keeps remote stderr separate (it folds into stdout), so the transport
   trusts **neither** — it signals every outcome on stdout via an explicit
-  sentinel. `pull` first probes readability (`sh -c 'if [ -r "<abs>" ]; …'`,
-  emitting an OK/DENIED/MISSING token) and only then streams bytes with
-  `exec-out … cat` (binary-clean stdout → `Buffer`); a MISSING token maps to
-  `NOT_FOUND`, never a Buffer of `cat`'s error text. `push` runs `run-as <pkg>
-sh -c 'mkdir -p "<dir>" && cat > "<abs>" && echo <OK>'` over stdin and requires
-  the trailing OK token to confirm the write landed. Paths are absolute
-  (`/data/data/<pkg>/…`) and reject shell metacharacters (fail-closed).
+  sentinel. `pull` runs one atomic `sh -c 'cat "<abs>"; printf "<SENTINEL>%d"
+$?'`: the bytes are recovered by splitting on the LAST sentinel occurrence, and
+  the trailing `cat` exit code decides success — a nonzero code (missing/denied)
+  maps to `NOT_FOUND`/`TRANSPORT_FAILED`, never a Buffer of `cat`'s error text,
+  and there is no probe/read TOCTOU window. `push` runs `run-as <pkg> sh -c
+'mkdir -p "<dir>" && cat > "<abs>" && echo <OK>'` over stdin and requires the
+  trailing OK token to confirm the write landed. Paths are absolute
+  (`/data/data/<pkg>/…`) and reject shell metacharacters; the package name is
+  validated against the reverse-DNS grammar before interpolation (fail-closed).
 - **REQ-XPORT-005** Container-access denial — Android non-debuggable build (no
   `run-as`) or iOS production-signed app (no container access) — surfaces as
   `UNSUPPORTED`/`TRANSPORT_FAILED` with an actionable message, never a silent

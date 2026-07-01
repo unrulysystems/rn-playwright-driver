@@ -155,4 +155,40 @@ describe('createDeviceFiles — push', () => {
     expect(pushes[0]?.data.toString()).toBe('from-disk')
     expect(pushes[0]?.path).toEqual({ absolute: false, subpath: 'Documents/seed.json' })
   })
+
+  it('maps a missing local source (ENOENT) to NOT_FOUND, not a raw Node error', async () => {
+    // The public DeviceFiles contract promises every failure is a FileIoError.
+    const { select } = fakeTransport()
+    const readLocalFile = vi.fn(async () => {
+      throw Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' })
+    })
+    const files = createDeviceFiles({
+      platform: 'ios',
+      target: IOS_TARGET,
+      selectTransport: select,
+      readLocalFile,
+    })
+
+    await expect(files.push('./missing.json', 'seed.json')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    })
+    expect(select).not.toHaveBeenCalled() // fail closed before touching the transport
+  })
+
+  it('maps other local-source read failures (EACCES) to TRANSPORT_FAILED', async () => {
+    const { select } = fakeTransport()
+    const readLocalFile = vi.fn(async () => {
+      throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' })
+    })
+    const files = createDeviceFiles({
+      platform: 'android',
+      target: ANDROID_TARGET,
+      selectTransport: select,
+      readLocalFile,
+    })
+
+    await expect(files.push('./locked.json', 'seed.json')).rejects.toMatchObject({
+      code: 'TRANSPORT_FAILED',
+    })
+  })
 })

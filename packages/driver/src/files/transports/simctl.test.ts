@@ -97,4 +97,18 @@ describe('simctl transport', () => {
       transport.pull({ absolute: false, subpath: 'Documents/x' }, { maxBuffer: 1 }),
     ).rejects.toBeInstanceOf(FileIoError)
   })
+
+  it('maps a spawn-level get_app_container failure (rejection) to a FileIoError', async () => {
+    // HostFileExec rejects for spawn failures (xcrun missing / timeout); those
+    // must surface as FileIoError, not a raw Node error (REQ-FILES-007).
+    const exec: HostFileExec = async () => {
+      throw Object.assign(new Error('spawn xcrun ENOENT'), { code: 'ENOENT' })
+    }
+    const { fs } = fakeFs({})
+    const transport = createSimctlTransport(CONFIG, exec, fs)
+
+    await expect(
+      transport.pull({ absolute: false, subpath: 'Documents/x' }, { maxBuffer: 1 }),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+  })
 })

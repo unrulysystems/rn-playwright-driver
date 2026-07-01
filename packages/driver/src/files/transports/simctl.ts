@@ -9,7 +9,7 @@ import { FileIoError } from '../errors'
 import type { HostFileExec } from '../host-file-exec'
 import type { HostFs } from '../host-fs'
 import type { ResolvedRemotePath } from '../roots'
-import { mapNodeFsError } from './shared'
+import { errorMessage, mapNodeFsError } from './shared'
 
 export interface SimctlTransportConfig {
   readonly udid: string
@@ -23,13 +23,23 @@ export function createSimctlTransport(
   fs: HostFs,
 ): FileTransport {
   const resolveContainer = async (): Promise<string> => {
-    const result = await exec(config.xcrunPath, [
-      'simctl',
-      'get_app_container',
-      config.udid,
-      config.bundleId,
-      'data',
-    ])
+    // Spawn-level failures (xcrun missing, timeout) reject; map them into the
+    // taxonomy so they never escape as raw Node errors (REQ-FILES-007).
+    let result: Awaited<ReturnType<HostFileExec>>
+    try {
+      result = await exec(config.xcrunPath, [
+        'simctl',
+        'get_app_container',
+        config.udid,
+        config.bundleId,
+        'data',
+      ])
+    } catch (error) {
+      throw new FileIoError(
+        'TRANSPORT_FAILED',
+        `device.files: simctl get_app_container could not run for ${config.bundleId}: ${errorMessage(error)}`,
+      )
+    }
     if (result.code !== 0) {
       throw new FileIoError(
         'TRANSPORT_FAILED',

@@ -12,6 +12,7 @@ import type { ResolvedRemotePath } from './roots'
 import { resolveRemotePath } from './roots'
 import type { ResolvedFileTarget } from './target'
 import { resolveFileTarget } from './target'
+import { mapNodeFsError } from './transports/shared'
 
 const DEFAULT_ROOT: FileRoot = 'document'
 /** 64 MiB — bounds the Android stdout stream; overflow fails closed (REQ-FILES-008). */
@@ -60,7 +61,19 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
     },
     async push(source, remotePath, options) {
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
-      const data = typeof source === 'string' ? await readLocalFile(source) : source
+      // A local-path source is read on the host; map its fs errors into the
+      // FileIoError taxonomy so `device.files` never leaks a raw Node error
+      // (the public contract promises every failure is a FileIoError).
+      let data: Buffer
+      if (typeof source === 'string') {
+        try {
+          data = await readLocalFile(source)
+        } catch (error) {
+          throw mapNodeFsError(error, source)
+        }
+      } else {
+        data = source
+      }
       await deps.selectTransport(target).push(path, data)
     },
   }

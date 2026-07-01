@@ -142,7 +142,8 @@ export class RNDevice implements Device {
     this._files = createDeviceFiles({
       platform: this._platform,
       target: this.options.target,
-      selectTransport: createDefaultTransportFactory(),
+      // Bound host file ops by the device timeout so a hung CLI can't stall them.
+      selectTransport: createDefaultTransportFactory(this.options.timeout),
     })
   }
 

@@ -9,8 +9,9 @@
  * A missing file's `cat: … No such file` text would therefore come back as the
  * file's bytes — a silent wrong Buffer, exactly what REQ-FILES-005 forbids. So
  * this transport trusts neither the exit code nor stderr: it signals every
- * outcome on stdout via an explicit sentinel, probing existence/readability
- * before reading bytes and requiring a success sentinel after writing them.
+ * outcome on stdout via an explicit sentinel. The read appends cat's own exit
+ * code after the bytes in one atomic command (so it fails closed without a
+ * probe or a TOCTOU window); the write appends a success sentinel it requires.
  */
 import type { FileTransport } from '../device-files'
 import { FileIoError } from '../errors'
@@ -30,9 +31,13 @@ export interface AdbTransportConfig {
 
 // Sentinels emitted on device stdout — the only adb channel that survives
 // `exec-out` intact. Distinctive enough not to collide with real file bytes.
-const PROBE_OK = '__RN_PW_FILE_OK__'
-const PROBE_DENIED = '__RN_PW_FILE_DENIED__'
-const PROBE_MISSING = '__RN_PW_FILE_MISSING__'
+//
+// The read appends `<READ_SENTINEL><cat-exit-code>` after the bytes in ONE
+// atomic command, so a single `cat` carries its own status: no probe, no
+// TOCTOU window, and cat's exit code is recovered even though adb drops it. The
+// bytes are recovered by splitting on the LAST sentinel occurrence — always the
+// appended one — so file content that happens to contain the token is preserved.
+const READ_SENTINEL = '__RN_PW_READ__'
 const PUSH_OK = '__RN_PW_PUSH_OK__'
 
 // Characters that would break out of the double-quoted path embedded in the
@@ -81,38 +86,54 @@ export function createAdbTransport(config: AdbTransportConfig, exec: HostFileExe
     async pull(path, { maxBuffer }) {
       const remote = devicePath(path)
 
-      // Probe existence/readability first: the exit code and stderr are useless
-      // over exec-out (see file header), so classify on the stdout sentinel.
-      const probe = await execOut(
-        `run-as ${config.packageName} sh -c 'if [ -r "${remote}" ]; then echo ${PROBE_OK}; elif [ -e "${remote}" ]; then echo ${PROBE_DENIED}; else echo ${PROBE_MISSING}; fi'`,
-        {},
-        'adb run-as probe',
-        remote,
-      )
-      const probeOut = `${probe.stdout.toString('utf8')}${probe.stderr}`
-      if (probeOut.includes(PROBE_MISSING)) {
-        throw new FileIoError('NOT_FOUND', `device.files: no such file: ${remote}`)
-      }
-      if (probeOut.includes(PROBE_DENIED)) {
-        throw new FileIoError(
-          'TRANSPORT_FAILED',
-          `device.files: ${remote} exists but is not readable under run-as`,
-        )
-      }
-      if (!probeOut.includes(PROBE_OK)) {
-        // No sentinel at all → run-as itself failed (non-debuggable build,
-        // unknown package); its message was folded into stdout.
-        throw classifyCliFailure('adb run-as probe', remote, probeOut, probe.code)
-      }
-
-      // Confirmed readable → stream the bytes. exec-out keeps stdout binary-clean.
+      // One atomic read: `cat` the bytes, then append the sentinel + cat's exit
+      // code. adb neither propagates the exit code nor keeps stderr out of
+      // stdout, so the sentinel is the only way to know whether the bytes are
+      // the file or cat's error text (see file header).
       const result = await execOut(
-        `run-as ${config.packageName} sh -c 'cat "${remote}"'`,
+        `run-as ${config.packageName} sh -c 'cat "${remote}"; printf "${READ_SENTINEL}%d" $?'`,
         { maxBuffer },
         'adb run-as cat',
         remote,
       )
-      return result.stdout
+
+      const marker = Buffer.from(READ_SENTINEL, 'utf8')
+      const split = result.stdout.lastIndexOf(marker)
+      if (split === -1) {
+        // No sentinel → the shell never ran (run-as denied, non-debuggable
+        // build, unknown package). Its message was folded into stdout/stderr.
+        throw classifyCliFailure(
+          'adb run-as cat',
+          remote,
+          `${result.stdout.toString('utf8')}${result.stderr}`,
+          result.code,
+        )
+      }
+      const body = result.stdout.subarray(0, split)
+      const exit = Number.parseInt(
+        result.stdout
+          .subarray(split + marker.length)
+          .toString('utf8')
+          .trim(),
+        10,
+      )
+      if (!Number.isInteger(exit)) {
+        throw new FileIoError(
+          'TRANSPORT_FAILED',
+          `device.files: adb run-as cat returned an unparseable status for ${remote}`,
+        )
+      }
+      if (exit !== 0) {
+        // cat failed → `body` holds its (folded) error text, not file bytes.
+        // Classify it and fail closed; never return the diagnostic as a Buffer.
+        throw classifyCliFailure(
+          'adb run-as cat',
+          remote,
+          `${body.toString('utf8')}${result.stderr}`,
+          exit,
+        )
+      }
+      return body
     },
 
     async push(path, data) {

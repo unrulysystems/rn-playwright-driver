@@ -74,4 +74,37 @@ describe('resolveFileTarget — Android', () => {
       /RN_APP_PACKAGE/,
     )
   })
+
+  it('accepts a reverse-DNS package with digits and underscores', () => {
+    expect(
+      resolveFileTarget('android', { serial: 's', packageName: 'com.acme_co.app2' }),
+    ).toMatchObject({ packageName: 'com.acme_co.app2' })
+  })
+
+  it('rejects a package name carrying shell metacharacters (injection guard)', () => {
+    // packageName is interpolated into a device-side `run-as <pkg> sh -c …`.
+    try {
+      resolveFileTarget('android', {
+        serial: 'emulator-5554',
+        packageName: 'com.acme.app; touch /tmp/pwned',
+      })
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect(error).toBeInstanceOf(FileIoError)
+      expect((error as FileIoError).code).toBe('UNAVAILABLE')
+      expect((error as FileIoError).message).toMatch(/invalid Android package name/)
+    }
+  })
+
+  it('rejects a $() command substitution in the package name', () => {
+    expect(() =>
+      resolveFileTarget('android', { serial: 's', packageName: 'com.a$(id).b' }),
+    ).toThrow(/invalid Android package name/)
+  })
+
+  it('rejects a single-segment package name (no dot)', () => {
+    expect(() => resolveFileTarget('android', { serial: 's', packageName: 'android' })).toThrow(
+      /invalid Android package name/,
+    )
+  })
 })

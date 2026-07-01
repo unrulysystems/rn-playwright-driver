@@ -32,8 +32,18 @@ export function selectFileTransport(
 /**
  * Build a {@link FileTransportFactory} backed by real host processes + fs. Used
  * by {@link RNDevice} to wire `device.files`; tests inject a fake factory instead.
+ *
+ * `timeoutMs` bounds every host CLI call (a hung `adb`/`simctl`/`devicectl` must
+ * not stall `device.files` forever); a per-call `options.timeoutMs` still wins.
  */
-export function createDefaultTransportFactory(): FileTransportFactory {
-  const deps: FileTransportDeps = { exec: createDefaultHostFileExec(), fs: createDefaultHostFs() }
+export function createDefaultTransportFactory(timeoutMs?: number): FileTransportFactory {
+  const exec = withDefaultTimeout(createDefaultHostFileExec(), timeoutMs)
+  const deps: FileTransportDeps = { exec, fs: createDefaultHostFs() }
   return (target) => selectFileTransport(target, deps)
+}
+
+/** Wrap an exec so calls inherit `timeoutMs` unless they set their own. */
+export function withDefaultTimeout(base: HostFileExec, timeoutMs?: number): HostFileExec {
+  if (timeoutMs === undefined) return base
+  return (command, args, options) => base(command, args, { timeoutMs, ...options })
 }

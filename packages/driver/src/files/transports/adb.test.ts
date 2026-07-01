@@ -23,18 +23,30 @@ function fakeExec(impl: (call: Call) => HostExecResult | Promise<HostExecResult>
 
 // `adb exec-out` always exits 0 and folds the remote stderr into stdout, so the
 // fakes model outcomes on stdout — never via a nonzero code or a clean stderr.
-const out = (stdout = ''): HostExecResult => ({ stdout: Buffer.from(stdout), stderr: '', code: 0 })
+// The read carries `<bytes>__RN_PW_READ__<cat-exit>`; helpers build that shape.
+const readOk = (bytes: string): HostExecResult => ({
+  stdout: Buffer.from(`${bytes}__RN_PW_READ__0`),
+  stderr: '',
+  code: 0,
+})
+const readFail = (foldedStderr: string, catExit = 1): HostExecResult => ({
+  stdout: Buffer.from(`${foldedStderr}__RN_PW_READ__${catExit}`),
+  stderr: '',
+  code: 0,
+})
+const noSentinel = (stdout: string): HostExecResult => ({
+  stdout: Buffer.from(stdout),
+  stderr: '',
+  code: 0,
+})
 // The device command adb forwards to the shell — args[3] after `-s <serial> exec-out`.
 const deviceCommand = (call: Call | undefined): string => call?.args[3] ?? ''
-const isProbe = (call: Call): boolean => deviceCommand(call).includes('if [ -r ')
 
 const ABS = '/data/data/com.acme.app/files/obs.csv'
 
 describe('adb transport — pull (REQ-XPORT-004)', () => {
-  it('probes readability then reads bytes over exec-out, binary-clean', async () => {
-    const { exec, calls } = fakeExec((call) =>
-      isProbe(call) ? out('__RN_PW_FILE_OK__\n') : out('csv-bytes'),
-    )
+  it('reads bytes in one atomic sentinel-terminated command, binary-clean', async () => {
+    const { exec, calls } = fakeExec(() => readOk('csv-bytes'))
     const transport = createAdbTransport(CONFIG, exec)
 
     const bytes = await transport.pull(
@@ -42,50 +54,57 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
       { maxBuffer: 4096 },
     )
 
-    // Probe: existence/readability signalled on stdout (the only reliable channel).
+    expect(calls).toHaveLength(1) // single round-trip: no separate probe, no TOCTOU window
     expect(calls[0]?.command).toBe('adb')
     expect(calls[0]?.args).toEqual([
       '-s',
       'emulator-5554',
       'exec-out',
-      `run-as com.acme.app sh -c 'if [ -r "${ABS}" ]; then echo __RN_PW_FILE_OK__; elif [ -e "${ABS}" ]; then echo __RN_PW_FILE_DENIED__; else echo __RN_PW_FILE_MISSING__; fi'`,
+      `run-as com.acme.app sh -c 'cat "${ABS}"; printf "__RN_PW_READ__%d" $?'`,
     ])
-    // Read: only after the probe confirms readability; maxBuffer is threaded through.
-    expect(calls[1]?.args).toEqual([
-      '-s',
-      'emulator-5554',
-      'exec-out',
-      `run-as com.acme.app sh -c 'cat "${ABS}"'`,
-    ])
-    expect(calls[1]?.options?.maxBuffer).toBe(4096)
-    expect(bytes.toString()).toBe('csv-bytes')
+    expect(calls[0]?.options?.maxBuffer).toBe(4096)
+    expect(bytes.toString()).toBe('csv-bytes') // sentinel + exit code stripped
+  })
+
+  it('recovers file bytes that themselves contain the sentinel token', async () => {
+    // Splitting on the LAST sentinel must preserve an embedded token in the file.
+    const { exec } = fakeExec(() => ({
+      stdout: Buffer.from('A__RN_PW_READ__9B__RN_PW_READ__0'),
+      stderr: '',
+      code: 0,
+    }))
+    const bytes = await createAdbTransport(CONFIG, exec).pull(
+      { absolute: false, subpath: 'files/x' },
+      { maxBuffer: 64 },
+    )
+    expect(bytes.toString()).toBe('A__RN_PW_READ__9B')
   })
 
   it('uses an absolute path verbatim', async () => {
-    const { exec, calls } = fakeExec((call) => (isProbe(call) ? out('__RN_PW_FILE_OK__') : out()))
+    const { exec, calls } = fakeExec(() => readOk(''))
     await createAdbTransport(CONFIG, exec).pull(
       { absolute: true, path: '/sdcard/x' },
       { maxBuffer: 1 },
     )
-    expect(deviceCommand(calls[0])).toContain('"/sdcard/x"')
-    expect(deviceCommand(calls[1])).toBe(`run-as com.acme.app sh -c 'cat "/sdcard/x"'`)
+    expect(deviceCommand(calls[0])).toBe(
+      `run-as com.acme.app sh -c 'cat "/sdcard/x"; printf "__RN_PW_READ__%d" $?'`,
+    )
   })
 
-  it('maps a missing file (stdout sentinel, exit 0) to NOT_FOUND and never reads', async () => {
-    // The real failure: exec-out exits 0 with the error on stdout, so the old
-    // exit-code check returned the error text as bytes. The probe catches it.
-    const { exec, calls } = fakeExec(() => out('__RN_PW_FILE_MISSING__\n'))
+  it('maps a missing file (cat exit 1, error folded into stdout) to NOT_FOUND', async () => {
+    // The real failure: exec-out exits 0 with cat's error on stdout. The sentinel
+    // carries cat's own exit code (1), so the error text is never returned as bytes.
+    const { exec } = fakeExec(() => readFail('cat: /data/.../x: No such file or directory\n'))
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: 'files/x' },
         { maxBuffer: 1 },
       ),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
-    expect(calls).toHaveLength(1) // fail closed before the cat
   })
 
-  it('maps a non-debuggable build (run-as text folded into stdout) to UNSUPPORTED', async () => {
-    const { exec } = fakeExec(() => out('run-as: package not debuggable: com.acme.app\n'))
+  it('maps a non-debuggable build (no sentinel — the shell never ran) to UNSUPPORTED', async () => {
+    const { exec } = fakeExec(() => noSentinel('run-as: package not debuggable: com.acme.app\n'))
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: 'files/x' },
@@ -94,8 +113,8 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
   })
 
-  it('maps a present-but-unreadable file to TRANSPORT_FAILED', async () => {
-    const { exec } = fakeExec(() => out('__RN_PW_FILE_DENIED__\n'))
+  it('maps a present-but-unreadable file (cat exit 1, permission denied) to TRANSPORT_FAILED', async () => {
+    const { exec } = fakeExec(() => readFail('cat: /data/.../x: Permission denied\n'))
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: 'files/x' },
@@ -104,9 +123,8 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
     ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
-  it('maps a maxBuffer overflow on the read to TOO_LARGE', async () => {
-    const { exec } = fakeExec((call) => {
-      if (isProbe(call)) return out('__RN_PW_FILE_OK__')
+  it('maps a maxBuffer overflow to TOO_LARGE', async () => {
+    const { exec } = fakeExec(() => {
       throw new HostExecMaxBufferError(64)
     })
     await expect(
@@ -118,7 +136,7 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
   })
 
   it('rejects a single-quote in the path (fail-closed) before spawning', async () => {
-    const { exec, calls } = fakeExec(() => out())
+    const { exec, calls } = fakeExec(() => readOk(''))
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: "files/o'brien.csv" },
@@ -129,7 +147,7 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
   })
 
   it('rejects a shell metacharacter ($) in the path before spawning', async () => {
-    const { exec, calls } = fakeExec(() => out())
+    const { exec, calls } = fakeExec(() => readOk(''))
     await expect(
       createAdbTransport(CONFIG, exec).pull(
         { absolute: false, subpath: 'files/$(rm -rf).csv' },
@@ -142,7 +160,7 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
 
 describe('adb transport — push', () => {
   it('pipes bytes via stdin into a run-as script that echoes a success sentinel', async () => {
-    const { exec, calls } = fakeExec(() => out('__RN_PW_PUSH_OK__\n'))
+    const { exec, calls } = fakeExec(() => noSentinel('__RN_PW_PUSH_OK__\n'))
     const data = Buffer.from('seed')
 
     await createAdbTransport(CONFIG, exec).push(
