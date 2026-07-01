@@ -29,6 +29,11 @@ export const ENV = {
   // Device/app targeting for host-side file I/O (device.files) — see
   // packages/driver/SPEC.md REQ-TGT-002. Non-secret (ids/paths only).
   appBundleId: 'RN_APP_BUNDLE_ID',
+  // Carries the iOS UDID for BOTH a simulator and a physical device (devicectl's
+  // --device also takes a UDID); the `SIM` is historical. Kept as-is deliberately:
+  // renaming this public env var would break existing runner/CI setups that emit
+  // it, and RN_IOS_TARGET_KIND already distinguishes sim vs. device. See the
+  // matching note in driver `src/test-env.ts` targetFromEnv.
   simUdid: 'RN_SIM_UDID',
   iosTargetKind: 'RN_IOS_TARGET_KIND',
   appPackage: 'RN_APP_PACKAGE',

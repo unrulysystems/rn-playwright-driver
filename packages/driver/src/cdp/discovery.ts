@@ -67,21 +67,33 @@ export function selectTarget(
     return match
   }
 
-  // Match by deviceName (substring, case-insensitive)
+  // Match by deviceName (case-insensitive)
   if (options.deviceName) {
     const needle = options.deviceName.toLowerCase()
-    const matches = targets.filter(
-      (t) =>
-        t.deviceName?.toLowerCase().includes(needle) || t.title?.toLowerCase().includes(needle),
+    // Prefer an EXACT name/title match before falling back to substring: the runner
+    // emits the selected simulator's exact name (RN_DEVICE_NAME), so `iPhone 17`
+    // must resolve to `iPhone 17` even when `iPhone 17 Pro` is also connected —
+    // substring-only matching would wrongly call that ambiguous.
+    const exact = targets.filter(
+      (t) => t.deviceName?.toLowerCase() === needle || t.title?.toLowerCase() === needle,
     )
+    const matches =
+      exact.length > 0
+        ? exact
+        : targets.filter(
+            (t) =>
+              t.deviceName?.toLowerCase().includes(needle) ||
+              t.title?.toLowerCase().includes(needle),
+          )
     if (matches.length === 0) {
       const available = targets.map((t) => t.deviceName ?? t.title ?? 'unknown').join(', ')
       throw new Error(`No target matching "${options.deviceName}". Available: ${available}`)
     }
-    // Fail closed on ambiguity. Metro's CDP targets expose no device UDID (only a
-    // name/title), so two same-named simulators cannot be told apart here.
-    // Silently taking the first match could attach to the wrong runtime — a loud
-    // error beats that; use a unique name or an explicit pageIndex.
+    // Fail closed on genuine ambiguity (multiple exact, or multiple substring with
+    // no exact). Metro's CDP targets expose no device UDID (only a name/title), so
+    // two truly same-named simulators cannot be told apart here. Silently taking the
+    // first match could attach to the wrong runtime — a loud error beats that; use a
+    // unique name or an explicit pageIndex.
     if (matches.length > 1) {
       const available = matches.map((t) => t.title ?? t.deviceName ?? 'unknown').join(', ')
       throw new Error(

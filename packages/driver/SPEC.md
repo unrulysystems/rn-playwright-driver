@@ -334,8 +334,10 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 - `../runner/SPEC.md`'s env-contract table now lists the `REQ-TGT-002` file-I/O
   targeting vars (`RN_APP_BUNDLE_ID`/`RN_SIM_UDID`/`RN_IOS_TARGET_KIND`/
   `RN_APP_PACKAGE`) — drift reconciled.
-- **iOS CDP/file-I/O keying:** CDP attachment pins by `RN_DEVICE_NAME` (substring
-  match) while `device.files` pins by `RN_SIM_UDID`. A live check confirmed Metro
+- **iOS CDP/file-I/O keying:** CDP attachment pins by `RN_DEVICE_NAME` (exact
+  name/title match preferred, substring fallback — so `iPhone 17` resolves to
+  `iPhone 17` even alongside `iPhone 17 Pro`) while `device.files` pins by
+  `RN_SIM_UDID`. A live check confirmed Metro
   exposes **no device UDID** in its CDP targets — only a name/title — so CDP
   cannot be pinned by UDID (emitting `RN_DEVICE_ID=simUdid` would match nothing
   and regress attach). With **duplicate simulator names** on a shared Metro, the

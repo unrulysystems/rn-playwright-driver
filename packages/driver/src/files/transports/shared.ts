@@ -30,11 +30,11 @@ const UNSUPPORTED_MARKERS = [
 // never a remote-file NOT_FOUND. `adb: device 'X' not found` matches the bare
 // "not found" that NOT_FOUND deliberately dropped, so classify it here first.
 //
-// The device markers are ANCHORED to the tool's own diagnostic prefix (`adb:` /
-// `error:`, or a line/string start), because the classified text folds in the
-// caller-controlled remote path (adb.ts folds `cat`'s "No such file: <path>").
-// An unanchored /device offline/ would misclassify a MISSING file whose name
-// contains "device offline" as TRANSPORT_FAILED instead of NOT_FOUND.
+// The caller-controlled remote path is already MASKED out before matching (see
+// classifyCliFailure), so no path substring can trip these. The first two markers
+// carry an ADDITIONAL `adb:`/`error:` prefix anchor as defense in depth (the
+// `device <serial>` / `no devices` phrases are the ones a path could plausibly
+// echo); the last two are diagnostic phrases distinctive enough to need no anchor.
 const DEVICE_ERROR_PREFIX = String.raw`(?:^|\n)\s*(?:adb|error):\s*`
 const DEVICE_UNAVAILABLE_MARKERS = [
   new RegExp(`${DEVICE_ERROR_PREFIX}device\\b[^\\n]*\\b(?:not found|offline|unauthorized)\\b`, 'i'),

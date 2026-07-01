@@ -28,6 +28,28 @@ describe('selectTarget', () => {
     )
   })
 
+  it('prefers an EXACT deviceName over a substring superset (iPhone 17 vs iPhone 17 Pro)', () => {
+    // The runner emits the exact selected name; `iPhone 17` must resolve to the
+    // `iPhone 17` runtime, not fail closed just because `iPhone 17 Pro` (which
+    // contains the needle as a substring) is also connected.
+    const exact = target({ id: 'a', deviceName: 'iPhone 17', title: 'com.acme.app (iPhone 17)' })
+    const targets = [
+      exact,
+      target({ id: 'b', deviceName: 'iPhone 17 Pro', title: 'com.acme.app (iPhone 17 Pro)' }),
+    ]
+    expect(selectTarget(targets, { deviceName: 'iPhone 17' })).toBe(exact)
+  })
+
+  it('still substring-matches when there is no exact name match', () => {
+    // `iPhone 17 P` matches only `iPhone 17 Pro` as a substring — unambiguous.
+    const pro = target({ id: 'b', deviceName: 'iPhone 17 Pro' })
+    expect(
+      selectTarget([target({ id: 'a', deviceName: 'Pixel 8' }), pro], {
+        deviceName: 'iPhone 17 P',
+      }),
+    ).toBe(pro)
+  })
+
   it('throws a clear error when no target matches the deviceName', () => {
     expect(() =>
       selectTarget([target({ deviceName: 'Pixel 8' })], { deviceName: 'iPhone' }),
