@@ -33,8 +33,8 @@ export default function App() {
       // expo-file-system's documentDirectory so the driver can assert that its
       // `document` root resolves to the same on-device location (not just that
       // a host push/pull round-trips). Returns the uri so the caller can confirm.
-      writeDocumentFile: (name, content) => {
-        const file = new File(Paths.document, name)
+      writeDocumentFile: (fileName, content) => {
+        const file = new File(Paths.document, fileName)
         file.create({ overwrite: true })
         file.write(content)
         return file.uri
