@@ -41,6 +41,19 @@ describe('resolveFileTarget — iOS', () => {
     expect(resolved).toMatchObject({ platform: 'ios', kind: 'device', xcrunPath: '/opt/xcrun' })
   })
 
+  it('fails closed with UNSUPPORTED for a SET-but-invalid iosKind (JS caller typo)', () => {
+    // TargetContext types iosKind, but a JS caller can slip a typo past it; it must
+    // not silently route to the simulator transport (parity with RN_IOS_TARGET_KIND).
+    try {
+      resolveFileTarget('ios', { ...full, iosKind: 'devcie' as unknown as 'device' })
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect(error).toBeInstanceOf(FileIoError)
+      expect((error as FileIoError).code).toBe('UNSUPPORTED')
+      expect((error as FileIoError).message).toMatch(/invalid target.iosKind/)
+    }
+  })
+
   it('throws UNAVAILABLE naming target.udid / RN_SIM_UDID when the udid is missing', () => {
     try {
       resolveFileTarget('ios', { bundleId: 'com.acme.app' })

@@ -57,6 +57,15 @@ export class HostExecMaxBufferError extends Error {
 export const STDERR_CAP = 256 * 1024
 
 /**
+ * Default stdout cap when a caller omits `maxBuffer`. Only `pull` streams a large
+ * payload and it always passes an explicit `maxBuffer`; the control commands
+ * (simctl container lookup, devicectl copy, adb push) emit tiny stdout, so this
+ * generous ceiling never truncates a legitimate one while still bounding a
+ * broken/hostile CLI that floods stdout with no cap set.
+ */
+export const DEFAULT_STDOUT_CAP = 16 * 1024 * 1024
+
+/**
  * Default {@link HostFileExec} backed by `child_process.spawn` — captures stdout
  * as a Buffer (binary-safe), writes `options.stdin` to the child, enforces
  * `maxBuffer` by killing the child on overflow, and reports a non-zero exit via
@@ -87,11 +96,14 @@ export function createDefaultHostFileExec(): HostFileExec {
               )
             }, options.timeoutMs)
           : undefined
+      // Always cap stdout: use the caller's maxBuffer when given, else a generous
+      // default so a control command that omits it still can't buffer unbounded.
+      const stdoutCap = options.maxBuffer ?? DEFAULT_STDOUT_CAP
       child.stdout.on('data', (chunk: Buffer) => {
         stdoutLen += chunk.length
-        if (options.maxBuffer !== undefined && stdoutLen > options.maxBuffer) {
+        if (stdoutLen > stdoutCap) {
           child.kill('SIGKILL')
-          finish(() => reject(new HostExecMaxBufferError(options.maxBuffer as number)))
+          finish(() => reject(new HostExecMaxBufferError(stdoutCap)))
           return
         }
         stdout.push(chunk)

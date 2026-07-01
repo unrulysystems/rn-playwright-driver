@@ -75,6 +75,9 @@ export class RNDevice implements Device {
   // Host-side file I/O, built in connect() once the platform is known. Null until
   // connected — the `files` getter throws a clear error before then.
   private _files: DeviceFiles | null = null
+  // Per-connection liveness token for device.files; flipped on disconnect so a
+  // captured reference fails closed (host-side file I/O outlives the CDP socket).
+  private _filesLifecycle: { connected: boolean } | null = null
   // Runtime-event listeners, keyed by event name. Function identity is the
   // unsubscribe key; payloads are cast at the typed on()/emit() boundary.
   private readonly _listeners = new Map<string, Set<(payload: unknown) => void>>()
@@ -142,11 +145,17 @@ export class RNDevice implements Device {
 
     // Host-side file I/O. Targeting is validated lazily (per op) so a device
     // without file targeting only fails when device.files is actually used.
+    // A per-connection lifecycle token ties file I/O to this connection: a
+    // reference captured before disconnect() fails closed afterwards, and a later
+    // reconnect gets a fresh token so the stale object stays disposed.
+    const filesLifecycle = { connected: true }
+    this._filesLifecycle = filesLifecycle
     this._files = createDeviceFiles({
       platform: this._platform,
       target: this.options.target,
       // Bound host file ops by the device timeout so a hung CLI can't stall them.
       selectTransport: createDefaultTransportFactory(this.options.timeout),
+      isLive: () => filesLifecycle.connected,
     })
   }
 
@@ -163,6 +172,12 @@ export class RNDevice implements Device {
       this._touchBackend = null
     }
     this._touchBackendInfo = null
+    // Dispose the file-I/O lifecycle token so any captured `device.files` reference
+    // fails closed after disconnect (host-side I/O would otherwise keep working).
+    if (this._filesLifecycle) {
+      this._filesLifecycle.connected = false
+      this._filesLifecycle = null
+    }
     this._files = null
     await this.cdp.disconnect()
   }

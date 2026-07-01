@@ -62,6 +62,12 @@ export async function readFileBoundedFromDisk(path: string, maxBytes: number): P
 }
 
 export interface HostFs {
+  /**
+   * Unbounded read — for SMALL control/diagnostic files only (e.g. devicectl's
+   * `--json-output`). Never read a device payload with this; use
+   * {@link HostFs.readFileBounded}, which enforces the `maxBuffer` memory bound
+   * (REQ-FILES-008).
+   */
   readFile(path: string): Promise<Buffer>
   /**
    * Read at most `maxBytes` into memory, throwing {@link HostFileTooLargeError} if

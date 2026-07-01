@@ -62,11 +62,28 @@ export interface DeviceFilesDeps {
   readonly readLocalFileBounded?: (path: string, maxBytes: number) => Promise<Buffer>
   /** Size (bytes) of a host file, checked before reading it (push guard). Defaults to fs.stat. */
   readonly localFileSize?: (path: string) => Promise<number>
+  /**
+   * Whether the owning device is still connected. `device.files` is host-side and
+   * would otherwise keep working after `disconnect()` for any reference captured
+   * before it — this ties each op to the device lifecycle, failing closed once the
+   * device is gone. Omitted (always-live) in unit tests.
+   */
+  readonly isLive?: () => boolean
 }
 
 export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
   const readLocalFileBounded = deps.readLocalFileBounded ?? readFileBoundedFromDisk
   const localFileSize = deps.localFileSize ?? (async (path: string) => (await stat(path)).size)
+
+  // Fail closed if the device disconnected after this object was captured.
+  const assertLive = (): void => {
+    if (deps.isLive && !deps.isLive()) {
+      throw new FileIoError(
+        'UNAVAILABLE',
+        'device.files: the device is disconnected — file I/O is only available on a connected device',
+      )
+    }
+  }
 
   // The target is fixed for the device, so build the transport once and reuse it
   // across operations — lets stateful transports (e.g. simctl's resolved
@@ -88,11 +105,13 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
 
   return {
     async pull(remotePath, options) {
+      assertLive()
       const maxBuffer = resolveMaxBuffer(options?.maxBuffer)
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
       return transportFor(target).pull(path, { maxBuffer })
     },
     async push(source, remotePath, options) {
+      assertLive()
       const maxBuffer = resolveMaxBuffer(options?.maxBuffer)
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
       // A local-path source is read on the host; map its fs errors into the

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createDefaultHostFileExec, HostExecMaxBufferError, STDERR_CAP } from './host-file-exec'
+import {
+  createDefaultHostFileExec,
+  DEFAULT_STDOUT_CAP,
+  HostExecMaxBufferError,
+  STDERR_CAP,
+} from './host-file-exec'
 
 // Integration-level: spawns the Node binary so the real spawn/stream/limit code
 // runs (the transports depend on exactly these bounds). No app or device needed.
@@ -25,6 +30,15 @@ describe('createDefaultHostFileExec', () => {
     const exec = createDefaultHostFileExec()
     await expect(
       exec(node, ['-e', 'process.stdout.write("x".repeat(10000))'], { maxBuffer: 100 }),
+    ).rejects.toBeInstanceOf(HostExecMaxBufferError)
+  })
+
+  it('bounds stdout by a default cap when maxBuffer is omitted (control commands)', async () => {
+    // simctl/devicectl/adb-push omit maxBuffer; a broken/hostile CLI flooding stdout
+    // must still be killed rather than buffer unbounded (REQ-FILES-008).
+    const exec = createDefaultHostFileExec()
+    await expect(
+      exec(node, ['-e', `process.stdout.write("x".repeat(${DEFAULT_STDOUT_CAP + 1_000_000}))`]),
     ).rejects.toBeInstanceOf(HostExecMaxBufferError)
   })
 

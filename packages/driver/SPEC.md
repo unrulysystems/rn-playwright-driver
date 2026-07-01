@@ -164,10 +164,16 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
 - **REQ-FILES-008** `pull` is bounded by `options.maxBuffer` (default 64 MiB) on
   **every** transport, never a truncated `Buffer`. Two mechanisms, by transport:
   - **Android** caps the adb stdout **stream**: the exec kills the child once
-    stdout exceeds `maxBuffer` (`HostExecMaxBufferError` → `TOO_LARGE`). Capture
-    accumulates chunks then `concat`s — the standard stream pattern (no length to
-    pre-size a subprocess pipe from), so a near-cap pull sees a transient second
-    copy; hard memory is still bounded by the kill.
+    stdout exceeds the cap (`HostExecMaxBufferError` → `TOO_LARGE`). The read grants
+    a small fixed **headroom** (`READ_DIAGNOSTIC_HEADROOM`, 64 KiB) over `maxBuffer`
+    so the trailing sentinel + a missing-file `cat:` diagnostic still fit and get
+    parsed; the returned **file bytes are re-checked against `maxBuffer` exactly**
+    (`adb.ts`), so the payload cap is `maxBuffer` while the stream ceiling is
+    `maxBuffer + 64 KiB`. Capture accumulates chunks then `concat`s — the standard
+    stream pattern (no length to pre-size a subprocess pipe from), so a near-cap pull
+    sees a transient second copy; hard memory is still bounded by the kill. Control
+    commands that omit `maxBuffer` (container lookup, copy, push) are bounded by a
+    generous `DEFAULT_STDOUT_CAP` so no exec can buffer stdout unbounded.
   - **iOS** (simctl/devicectl) `stat`s the file/staged payload as a cheap fast-fail,
     then performs a **bounded read** (`readFileBoundedFromDisk`) into a **single**
     buffer sized to the file (capped): a stable read peaks at ≈`filesize+1` ≤

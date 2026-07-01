@@ -31,6 +31,40 @@ function fakeTransport(overrides: Partial<FileTransport> = {}) {
   return { pulls, pushes, select }
 }
 
+describe('createDeviceFiles — lifecycle', () => {
+  it('fails closed with UNAVAILABLE once the device is disconnected (isLive false)', async () => {
+    // A reference captured before disconnect must not keep doing host-side I/O.
+    const { pulls, pushes, select } = fakeTransport()
+    const files = createDeviceFiles({
+      platform: 'ios',
+      target: IOS_TARGET,
+      selectTransport: select,
+      isLive: () => false,
+    })
+
+    await expect(files.pull('obs.csv')).rejects.toMatchObject({ code: 'UNAVAILABLE' })
+    await expect(files.push(Buffer.from('x'), 'seed.bin')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+    })
+    expect(select).not.toHaveBeenCalled() // fail closed before any transport
+    expect(pulls).toEqual([])
+    expect(pushes).toEqual([])
+  })
+
+  it('operates normally while the device is live (isLive true)', async () => {
+    const { pulls, select } = fakeTransport()
+    const files = createDeviceFiles({
+      platform: 'ios',
+      target: IOS_TARGET,
+      selectTransport: select,
+      isLive: () => true,
+    })
+
+    await files.pull('obs.csv')
+    expect(pulls).toHaveLength(1)
+  })
+})
+
 describe('createDeviceFiles — pull', () => {
   it('defaults to the document root + 64 MiB cap and passes the resolved subpath', async () => {
     const { pulls, select } = fakeTransport()

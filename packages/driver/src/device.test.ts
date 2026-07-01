@@ -615,6 +615,30 @@ describe('RNDevice failOnUncaughtException', () => {
     await expect(device.evaluate('1')).resolves.toBe('ok')
   })
 
+  it('device.files captured before disconnect() fails closed afterwards (lifecycle boundary)', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+
+    // Capture the host-side file I/O object BEFORE disconnect, then drop the
+    // connection. Host transports don't need the CDP socket, so without the
+    // lifecycle token this reference would keep working past the boundary.
+    const files = device.files
+    await device.disconnect()
+
+    await expect(files.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+  })
+
   it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {
     vi.clearAllMocks()
     mockSelectedTarget = defaultTarget()

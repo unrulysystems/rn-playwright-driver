@@ -50,10 +50,21 @@ export function resolveFileTarget(
     if (!udid) missing('an iOS simulator/device UDID', 'target.udid', 'RN_SIM_UDID')
     const bundleId = target?.bundleId
     if (!bundleId) missing('the app bundle id', 'target.bundleId', 'RN_APP_BUNDLE_ID')
+    // Fail closed on a SET-but-invalid iosKind rather than silently defaulting to
+    // simulator: `target` is a public createDevice option, so a JS caller's typo
+    // ('devcie') must not misroute simctl vs devicectl — mirrors how test-env.ts
+    // rejects an invalid RN_IOS_TARGET_KIND. Unset still defaults to simulator.
+    const iosKind = target?.iosKind
+    if (iosKind !== undefined && iosKind !== 'simulator' && iosKind !== 'device') {
+      throw new FileIoError(
+        'UNSUPPORTED',
+        `device.files: invalid target.iosKind ${JSON.stringify(iosKind)} — expected 'simulator' or 'device'`,
+      )
+    }
     return {
       platform: 'ios',
       // Default to `simulator` when unset — back-compat with current sim-only runs.
-      kind: target?.iosKind === 'device' ? 'device' : 'simulator',
+      kind: iosKind === 'device' ? 'device' : 'simulator',
       udid,
       bundleId,
       xcrunPath: target?.xcrunPath ?? DEFAULT_XCRUN_PATH,
