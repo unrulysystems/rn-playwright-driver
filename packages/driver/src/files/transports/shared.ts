@@ -5,16 +5,28 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-/** Map a Node fs rejection to the FileIoError taxonomy (ENOENT → NOT_FOUND). */
-export function mapNodeFsError(error: unknown, remote: string): FileIoError {
+/**
+ * Map a Node fs rejection to the FileIoError taxonomy (ENOENT → NOT_FOUND).
+ * `displayPath` is the path to name in the message — it may be a REMOTE container path
+ * (adb/simctl reads) OR a HOST/local path (a push source, a staged temp file), so the
+ * name is neutral rather than `remote`. Unlike classifyCliFailure, this path is NOT
+ * masked: a Node fs error is host-side, so echoing the path is a help, not a leak.
+ */
+export function mapNodeFsError(error: unknown, displayPath: string): FileIoError {
   if (error instanceof FileIoError) return error
   const code = (error as NodeJS.ErrnoException | undefined)?.code
   if (code === 'ENOENT') {
-    return new FileIoError('NOT_FOUND', `device.files: no such file: ${remote}`, { cause: error })
+    return new FileIoError('NOT_FOUND', `device.files: no such file: ${displayPath}`, {
+      cause: error,
+    })
   }
-  return new FileIoError('TRANSPORT_FAILED', `device.files: ${remote}: ${errorMessage(error)}`, {
-    cause: error,
-  })
+  return new FileIoError(
+    'TRANSPORT_FAILED',
+    `device.files: ${displayPath}: ${errorMessage(error)}`,
+    {
+      cause: error,
+    },
+  )
 }
 
 // File-specific NOT_FOUND markers only — a bare `not found` is intentionally
