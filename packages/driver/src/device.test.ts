@@ -84,26 +84,32 @@ vi.mock('./cdp/discovery', async (importOriginal) => {
   }
 })
 
-// Mock touch backend
-vi.mock('./touch', () => ({
-  // A FRESH backend per call so a reconnect's dispose can be attributed to the
-  // specific (old) backend it should tear down, not a shared singleton spy.
-  createTouchBackend: vi.fn().mockImplementation(() =>
-    Promise.resolve({
-      backend: {
-        tap: vi.fn(),
-        down: vi.fn(),
-        move: vi.fn(),
-        up: vi.fn(),
-        dispose: vi.fn(),
-      },
-      selection: {
-        backend: 'native-module',
-        available: ['native-module'],
-      },
-    }),
-  ),
-}))
+// Mock touch backend. Spread the REAL module so error classes the Pointer throws
+// (TouchBackendNotInitializedError) stay authentic — only createTouchBackend, the
+// spawn entry point, is stubbed. A hand-reimplemented error would drift from source.
+vi.mock('./touch', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./touch')>()
+  return {
+    ...actual,
+    // A FRESH backend per call so a reconnect's dispose can be attributed to the
+    // specific (old) backend it should tear down, not a shared singleton spy.
+    createTouchBackend: vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        backend: {
+          tap: vi.fn(),
+          down: vi.fn(),
+          move: vi.fn(),
+          up: vi.fn(),
+          dispose: vi.fn(),
+        },
+        selection: {
+          backend: 'native-module',
+          available: ['native-module'],
+        },
+      }),
+    ),
+  }
+})
 
 /** Route the mocked CDP evaluate so getWindowMetrics() resolves to `metrics`. */
 function mockWindowMetrics(metrics: unknown): void {
@@ -131,20 +137,23 @@ describe('RNDevice Core Primitives', () => {
   })
 
   describe('connect() target selection wiring', () => {
-    it('routes target selection through selectTargetForConnect, forwarding the pinned target', async () => {
-      // The confused-deputy guard lives in selectTargetForConnect; connect() must
-      // hand it DeviceOptions.target so filePinned is derived from udid/serial.
-      // (Guard behavior itself is unit-tested in cdp/discovery.test.ts.)
+    it('routes target selection through selectTargetForConnect, forwarding the COMPLETE pinned target', async () => {
+      // The confused-deputy guard lives in selectTargetForConnect; connect() must hand it
+      // the WHOLE DeviceOptions.target so filePinned is derived from the complete identity
+      // (udid+bundleId). Forward a complete pin — a lone udid is not filePinned, so it
+      // would pass even if connect() dropped bundleId and left the guard inactive in real
+      // file-I/O runs. (Guard behavior itself is unit-tested in cdp/discovery.test.ts.)
       vi.clearAllMocks()
       // Construct FIRST so mockEvaluateFn points at this device's CDP client,
       // THEN set the platform probe impl (mirrors connectWithPlatformProbe).
-      const pinned = new RNDevice({ timeout: 1000, target: { udid: 'UDID-42' } })
+      const target = { udid: 'UDID-42', bundleId: 'com.acme.app' }
+      const pinned = new RNDevice({ timeout: 1000, target })
       mockDefaultPlatform('ios')
       await pinned.connect()
 
       expect(discovery.selectTargetForConnect).toHaveBeenCalledTimes(1)
       const options = vi.mocked(discovery.selectTargetForConnect).mock.calls[0]?.[1]
-      expect(options?.target).toEqual({ udid: 'UDID-42' })
+      expect(options?.target).toEqual(target)
     })
   })
 
@@ -678,6 +687,11 @@ describe('RNDevice failOnUncaughtException', () => {
       code: 'UNAVAILABLE',
       message: expect.stringContaining('disconnected'),
     })
+    // The shared teardown also fails the pointer + backend info closed after a clean
+    // disconnect, not only after a failed reconnect (connect() and disconnect() run the
+    // SAME teardown, so they can't drift).
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
   })
 
   it('invalidates a device.files captured before a reconnect (no orphaned live token)', async () => {
@@ -741,6 +755,8 @@ describe('RNDevice failOnUncaughtException', () => {
     // And its info was cleared — getTouchBackendInfo() must not report a backend that
     // no longer exists after a failed reconnect.
     await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+    // The pointer must fail closed too, not route to the disposed old backend.
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
   })
 
   it('fails the old connection closed when a reconnect rejects during DISCOVERY (before cdp.connect)', async () => {
@@ -769,6 +785,7 @@ describe('RNDevice failOnUncaughtException', () => {
     })
     expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
     await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
   })
 
   it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {

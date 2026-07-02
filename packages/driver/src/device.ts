@@ -105,26 +105,15 @@ export class RNDevice implements Device {
   // --- Connection ---
 
   async connect(): Promise<void> {
-    // Tear the PRIOR connection's resources down UP FRONT — before ANYTHING that can
-    // reject (discoverTargets / selectTargetForConnect / cdp.connect / detectPlatform /
+    // Fully tear down any PRIOR connection UP FRONT — before ANYTHING that can reject
+    // (discoverTargets / selectTargetForConnect / cdp.connect / detectPlatform /
     // createTouchBackend below). A reconnect without an intervening disconnect() that
-    // rejects at ANY of those must fail the old connection closed: otherwise the old
-    // file-I/O lifecycle token stays `connected` (an older captured device.files keeps
-    // running host I/O against a half-torn-down device), the old touch backend's
-    // companion process/port stays alive, and getTouchBackendInfo() keeps reporting a
-    // backend that is already gone. Fail the old state closed first; mint fresh state
-    // only once the new connection is established. The captured device.files closes over
-    // the OLD token, so flipping it here is what makes the stale reference fail closed on
-    // BOTH a clean disconnect and a failed reconnect. registerRuntimeEventForwarders is
-    // idempotent, so the forwarders need no reset here. (Symmetric with disconnect().)
-    if (this._filesLifecycle) {
-      this._filesLifecycle.connected = false
-    }
-    if (this._touchBackend) {
-      await this._touchBackend.dispose()
-      this._touchBackend = null
-    }
-    this._touchBackendInfo = null
+    // rejects at ANY of those must fail the old connection closed on EVERY resource, so
+    // connect() and disconnect() share ONE teardown — an incomplete copy is exactly what
+    // let the file token, touch backend, backend info, pointer, and CDP socket drift out
+    // of sync across earlier fixes. Fail the old state closed first; mint fresh state
+    // only once the new connection is established.
+    await this.teardownConnection()
 
     const metroUrl = this.options.metroUrl ?? DEFAULT_METRO_URL
     const targets = await discoverTargets(metroUrl)
@@ -184,6 +173,21 @@ export class RNDevice implements Device {
   }
 
   async disconnect(): Promise<void> {
+    await this.teardownConnection()
+  }
+
+  /**
+   * Tear down every resource a connection owns, failing each closed. Shared by
+   * disconnect() and by connect()'s up-front reconnect teardown so the two can never
+   * drift — a partial copy is what previously left the CDP socket, pointer, touch
+   * backend info, or file-I/O token live after a failed reconnect. Idempotent and safe
+   * to call when never connected (first connect): every step guards on a null/empty
+   * resource, and cdp.disconnect() no-ops without a socket.
+   */
+  private async teardownConnection(): Promise<void> {
+    // Run the forwarder cleanups and clear the list so registerRuntimeEventForwarders()
+    // re-subscribes cleanly on the next connect (it early-returns while the list is
+    // non-empty).
     for (const cleanup of this._eventForwarderCleanups) {
       cleanup()
     }
@@ -196,6 +200,10 @@ export class RNDevice implements Device {
       this._touchBackend = null
     }
     this._touchBackendInfo = null
+    // Clear the pointer's backend so a pointer call after teardown fails closed via
+    // getBackend() instead of routing to the disposed backend (symmetric with
+    // getTouchBackendInfo(), which throws once _touchBackendInfo is null).
+    this._pointer.setBackend(null)
     // Dispose the file-I/O lifecycle token so any captured `device.files` reference
     // fails closed after disconnect (host-side I/O would otherwise keep working).
     if (this._filesLifecycle) {
@@ -203,6 +211,8 @@ export class RNDevice implements Device {
       this._filesLifecycle = null
     }
     this._files = null
+    // Close the CDP socket LAST so a reconnect never opens a second WebSocket while the
+    // prior one is still live (CDPClient.connect stores a new ws without closing the old).
     await this.cdp.disconnect()
   }
 

@@ -154,13 +154,14 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
 - **REQ-FILES-005** `pull` of a missing path rejects with `FileIoError` code
   `NOT_FOUND`. It never resolves with an empty or partial `Buffer` (fail-closed).
 - **REQ-FILES-006** `push` rejects on write failure (unwritable/absent root) with
-  a typed error. `push` **creates intermediate parent directories** as needed:
-  adb `mkdir -p` and the host `fs` seam (simctl) are unit-tested to create them.
-  For devicectl, the nested container-relative path is forwarded verbatim as the
-  `copy to` `--destination` (argv-tested); whether the tool itself creates the
-  intermediate container directories is a device-side behavior confirmed by the
-  pending real-device walkthrough (iOS-device ships **provisional**), not proven
-  by the injected `HostFileExec`.
+  a typed error. `push` **creates intermediate parent directories on simctl and
+  adb**: adb `mkdir -p` and the host `fs` seam (simctl) are unit-tested to create
+  them. **devicectl does NOT create them itself** — the nested container-relative
+  path is forwarded verbatim as the `copy to` `--destination` (argv-tested) and
+  parent creation is delegated to the tool, a device-side behavior confirmed only by
+  the pending real-device walkthrough (iOS-device ships **provisional**), not proven
+  by the injected `HostFileExec`. If the tool does not create them, the non-zero exit
+  maps to `TRANSPORT_FAILED` (fail-closed), never a silent partial write.
 - **REQ-FILES-007** All failures surface as `FileIoError` with a `code`:
   `NOT_FOUND` (missing path), `UNAVAILABLE` (missing targeting context),
   `UNSUPPORTED` (root/transport combination unsupported), `TRANSPORT_FAILED`

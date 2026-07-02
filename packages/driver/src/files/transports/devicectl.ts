@@ -163,6 +163,13 @@ export function createDevicectlTransport(
             { cause: error },
           )
         }
+        // PROVISIONAL parent-dir behavior (REQ-FILES-006): unlike simctl (host `fs`
+        // seam) and adb (`mkdir -p`), this transport does NOT create intermediate
+        // container directories itself — it forwards the nested container-relative path
+        // verbatim as `copy to --destination` and relies on `devicectl` to create them.
+        // Whether it does is a device-side behavior pending the real-device walkthrough
+        // (iOS-device ships provisional). If it does not, assertOk maps the non-zero exit
+        // to TRANSPORT_FAILED, so a nested push fails CLOSED — never silently partial.
         const result = await runCopy(copy('to', src, remote, jsonOut))
         await assertOk(result, remote, jsonOut)
       } finally {

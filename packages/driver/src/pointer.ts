@@ -52,7 +52,10 @@ export class Pointer {
     this.timeoutProvider = timeoutProvider
   }
 
-  setBackend(backend: TouchBackend): void {
+  // Nullable: connect()/disconnect() teardown clears the backend to null so a pointer
+  // call after disconnect (or a failed reconnect) fails closed via getBackend() rather
+  // than routing to a disposed backend.
+  setBackend(backend: TouchBackend | null): void {
     this.backend = backend
   }
 
