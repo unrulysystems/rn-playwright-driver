@@ -122,54 +122,68 @@ export class RNDevice implements Device {
     // ambiguous CDP selection among multiple runtimes).
     const target = selectTargetForConnect(targets, this.options)
 
-    // Register the console + exception forwarders BEFORE connecting. cdp.connect()
-    // sends Runtime.enable internally, after which the runtime starts emitting
-    // events; subscribing afterwards drops anything fired in that window (a console
-    // log or an uncaught exception). onEvent only populates a handler map — no
-    // socket required — so registering first is always safe and closes the gap.
-    this.registerRuntimeEventForwarders()
+    // connect() is ATOMIC: once we start opening the socket, either the whole
+    // connection comes up or we tear our OWN partial state back down and reject. The
+    // up-front teardown above only clears a PRIOR connection; a first connect that
+    // opens the WebSocket and then fails in detectPlatform()/createTouchBackend() would
+    // otherwise leak the socket + forwarders, because the caller (e.g. the Playwright
+    // fixture) does not call disconnect() when connect() rejects.
+    try {
+      // Register the console + exception forwarders BEFORE connecting. cdp.connect()
+      // sends Runtime.enable internally, after which the runtime starts emitting
+      // events; subscribing afterwards drops anything fired in that window (a console
+      // log or an uncaught exception). onEvent only populates a handler map — no
+      // socket required — so registering first is always safe and closes the gap.
+      this.registerRuntimeEventForwarders()
 
-    await this.cdp.connect(target.webSocketDebuggerUrl)
+      await this.cdp.connect(target.webSocketDebuggerUrl)
 
-    // Detect platform from target info or via JS
-    this._platform = await this.detectPlatform(target)
+      // Detect platform from target info or via JS
+      this._platform = await this.detectPlatform(target)
 
-    const { backend, selection } = await createTouchBackend(
-      {
+      const { backend, selection } = await createTouchBackend(
+        {
+          platform: this._platform,
+          evaluate: this.evaluate.bind(this),
+          waitForTimeout: this.waitForTimeout.bind(this),
+        },
+        this.options.touch,
+      )
+      // The prior backend was already disposed up front (see the reconnect teardown at
+      // the top of connect()), so this only installs the new one.
+      this._touchBackend = backend
+      const backendInfo: TouchBackendInfo = {
+        selected: selection.backend,
+        available: selection.available,
+      }
+      if (selection.reason !== undefined) {
+        backendInfo.reason = selection.reason
+      }
+      this._touchBackendInfo = backendInfo
+      this._pointer.setBackend(backend)
+
+      // Host-side file I/O. Targeting is validated lazily (per op) so a device
+      // without file targeting only fails when device.files is actually used.
+      // A per-connection lifecycle token ties file I/O to this connection: a reference
+      // captured before disconnect() (or before a reconnect) fails closed afterwards. The
+      // prior token was already invalidated up front (see the reconnect teardown above),
+      // so here we only mint the fresh token this connection's device.files closes over.
+      const filesLifecycle = { connected: true }
+      this._filesLifecycle = filesLifecycle
+      this._files = createDeviceFiles({
         platform: this._platform,
-        evaluate: this.evaluate.bind(this),
-        waitForTimeout: this.waitForTimeout.bind(this),
-      },
-      this.options.touch,
-    )
-    // The prior backend was already disposed up front (see the reconnect teardown at
-    // the top of connect()), so this only installs the new one.
-    this._touchBackend = backend
-    const backendInfo: TouchBackendInfo = {
-      selected: selection.backend,
-      available: selection.available,
+        target: this.options.target,
+        // Bound host file ops by the device timeout so a hung CLI can't stall them.
+        selectTransport: createDefaultTransportFactory(this.options.timeout),
+        isLive: () => filesLifecycle.connected,
+      })
+    } catch (error) {
+      // Fail closed: tear down whatever this attempt brought up (socket, forwarders,
+      // any partially installed backend/token) before propagating, so a rejected
+      // connect never leaves a half-open connection behind.
+      await this.teardownConnection()
+      throw error
     }
-    if (selection.reason !== undefined) {
-      backendInfo.reason = selection.reason
-    }
-    this._touchBackendInfo = backendInfo
-    this._pointer.setBackend(backend)
-
-    // Host-side file I/O. Targeting is validated lazily (per op) so a device
-    // without file targeting only fails when device.files is actually used.
-    // A per-connection lifecycle token ties file I/O to this connection: a reference
-    // captured before disconnect() (or before a reconnect) fails closed afterwards. The
-    // prior token was already invalidated up front (see the reconnect teardown above),
-    // so here we only mint the fresh token this connection's device.files closes over.
-    const filesLifecycle = { connected: true }
-    this._filesLifecycle = filesLifecycle
-    this._files = createDeviceFiles({
-      platform: this._platform,
-      target: this.options.target,
-      // Bound host file ops by the device timeout so a hung CLI can't stall them.
-      selectTransport: createDefaultTransportFactory(this.options.timeout),
-      isLive: () => filesLifecycle.connected,
-    })
   }
 
   async disconnect(): Promise<void> {

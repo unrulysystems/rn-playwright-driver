@@ -20,6 +20,7 @@ type MockTarget = {
 let mockEvaluateFn: ReturnType<typeof vi.fn>
 let mockOnEventFn: ReturnType<typeof vi.fn>
 let mockConnectFn: ReturnType<typeof vi.fn>
+let mockDisconnectFn: ReturnType<typeof vi.fn>
 let mockSelectedTarget: MockTarget
 
 function defaultTarget(): MockTarget {
@@ -57,6 +58,7 @@ vi.mock('./cdp/client', () => {
         mockEvaluateFn = this.evaluate
         mockOnEventFn = this.onEvent
         mockConnectFn = this.connect
+        mockDisconnectFn = this.disconnect
       }
     },
   }
@@ -258,6 +260,14 @@ describe('RNDevice Core Primitives', () => {
       await expect(platformDevice.connect()).rejects.toThrow(
         'Could not detect platform: CDP target carried no device identity and the Platform.OS probe failed',
       )
+      // connect() is atomic: the socket opened (cdp.connect resolved) but detectPlatform
+      // then rejected, so connect() must tear its OWN partial state down before rejecting
+      // — the caller never calls disconnect() on a rejected connect. cdp.disconnect() is
+      // called TWICE: once by the up-front teardown (idempotent no-op, no socket yet) and
+      // once by the catch after the socket opened. The second call is the proof the catch
+      // teardown fired — a count of 1 would mean only the up-front ran and the socket leaked.
+      expect(mockConnectFn).toHaveBeenCalledTimes(1)
+      expect(mockDisconnectFn).toHaveBeenCalledTimes(2)
     })
 
     it('throws when target name metadata is unknown and Platform.OS is unsupported', async () => {
@@ -665,6 +675,34 @@ describe('RNDevice failOnUncaughtException', () => {
     await expect(device.evaluate('1')).resolves.toBe('ok')
   })
 
+  it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({ timeout: 1000, failOnUncaughtException: true })
+    mockEvaluateFn.mockImplementation((expr: string) => {
+      if (isPlatformProbe(expr)) {
+        return Promise.resolve('ios')
+      }
+      return Promise.resolve('ok')
+    })
+    await device.connect()
+
+    // Drain happens one-per-operation; without a cap, a storm between operations
+    // grows the buffer without bound. Fire far more than the cap.
+    for (let i = 0; i < 500; i++) {
+      fireCdpEvent('Runtime.exceptionThrown', {
+        exceptionDetails: { exception: { description: `Error: storm ${i}` } },
+      })
+    }
+
+    const buffer = (device as unknown as { _uncaughtExceptions: PageError[] })._uncaughtExceptions
+    expect(buffer.length).toBeLessThanOrEqual(64)
+    // The OLDEST is retained (first failure is the most diagnostic).
+    expect(buffer[0]?.message).toBe('Error: storm 0')
+  })
+})
+
+describe('RNDevice connection lifecycle', () => {
   it('device.files captured before disconnect() fails closed afterwards (lifecycle boundary)', async () => {
     vi.clearAllMocks()
     mockSelectedTarget = defaultTarget()
@@ -788,29 +826,27 @@ describe('RNDevice failOnUncaughtException', () => {
     await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
   })
 
-  it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {
+  it('fails closed when a FIRST connect rejects after the socket opens (partial-connect cleanup)', async () => {
+    // Complement of the reconnect cases: not replacing a prior connection, but cleaning
+    // up THIS attempt. cdp.connect() opens the socket, then createTouchBackend() rejects
+    // — connect()'s catch must tear the socket + forwarders back down (the caller does
+    // not call disconnect() on a rejected connect).
     vi.clearAllMocks()
     mockSelectedTarget = defaultTarget()
-    const device = new RNDevice({ timeout: 1000, failOnUncaughtException: true })
-    mockEvaluateFn.mockImplementation((expr: string) => {
-      if (isPlatformProbe(expr)) {
-        return Promise.resolve('ios')
-      }
-      return Promise.resolve('ok')
-    })
-    await device.connect()
+    const device = new RNDevice({ timeout: 1000 })
+    mockDefaultPlatform('ios')
+    vi.mocked(createTouchBackend).mockRejectedValueOnce(new Error('no touch backend available'))
 
-    // Drain happens one-per-operation; without a cap, a storm between operations
-    // grows the buffer without bound. Fire far more than the cap.
-    for (let i = 0; i < 500; i++) {
-      fireCdpEvent('Runtime.exceptionThrown', {
-        exceptionDetails: { exception: { description: `Error: storm ${i}` } },
-      })
-    }
+    await expect(device.connect()).rejects.toThrow('no touch backend available')
 
-    const buffer = (device as unknown as { _uncaughtExceptions: PageError[] })._uncaughtExceptions
-    expect(buffer.length).toBeLessThanOrEqual(64)
-    // The OLDEST is retained (first failure is the most diagnostic).
-    expect(buffer[0]?.message).toBe('Error: storm 0')
+    // Socket opened then the attempt failed → teardown closed it (and cleared forwarders).
+    // cdp.disconnect() fires twice: up-front teardown (no-op, no socket) + the catch after
+    // the socket opened. The 2nd call proves the catch cleanup ran (1 would mean it leaked).
+    expect(mockConnectFn).toHaveBeenCalledTimes(1)
+    expect(mockDisconnectFn).toHaveBeenCalledTimes(2)
+    // No half-open state is observable.
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
+    expect(() => device.files).toThrow()
   })
 })

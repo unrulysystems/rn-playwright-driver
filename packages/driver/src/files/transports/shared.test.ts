@@ -18,7 +18,7 @@ describe('classifyCliFailure', () => {
     ).toBe('NOT_FOUND')
   })
 
-  it('does NOT misreport a device-not-found as a missing remote file (M#4)', () => {
+  it('does NOT misreport a device-not-found as a missing remote file (REQ-FILES-005/007)', () => {
     // `adb: device 'X' not found` is a transport failure, not a missing file —
     // the bare "not found" must not fall into the NOT_FOUND bucket.
     expect(
