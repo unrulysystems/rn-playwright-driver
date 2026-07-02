@@ -36,7 +36,11 @@ jobs:
       # package's publishConfig.access = "public".
       - name: Configure npm for public registry
         run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+          if [ -n "${NPM_TOKEN}" ]; then
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+          fi
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Run the test suite before publishing — the release-manifest invariant
       # (no workspace: specs shipped; published harness/bin only imports published
