@@ -6,11 +6,6 @@ export type DebugTarget = {
   deviceId?: string
   deviceName?: string
   description?: string
-  // The app identity Metro attaches to a Hermes target — the iOS bundleId / Android
-  // package name. The runner's hermes-target probe waits on this
-  // (`target.appId === probe.appId`), and selectTargetForConnect matches it against a
-  // file pin so CDP attaches to the SAME app device.files targets. Absent on older Metro.
-  appId?: string
 }
 
 export type TargetSelectionOptions = {
@@ -145,29 +140,23 @@ export type ConnectSelectionOptions = TargetSelectionOptions & {
  * Target selection for `RNDevice.connect`, adding the `device.files` confused-deputy
  * guard on top of {@link selectTarget}. `filePinned` (a COMPLETE file-I/O identity —
  * iOS `udid`+`bundleId` or Android `serial`+`packageName`) is INTERNAL, derived
- * state.
+ * state: Metro's CDP targets expose no UDID, so CDP cannot be pinned to the same
+ * device. When file I/O is pinned but no explicit CDP selector is given and more than
+ * one runtime is connected, defaulting to the first target would evaluate against a
+ * different app than file I/O reads/writes — fail closed instead of guessing. A lone
+ * serial/udid is NOT a pin (device.files would be UNAVAILABLE without the app id), so
+ * it never blocks a plain touch/evaluate connect. An explicit pageIndex is the
+ * caller's deliberate choice and is honored.
  *
- * APP-IDENTITY MATCH (primary): Metro attaches the app identity to each Hermes target
- * as `appId` (bundleId / package name — the runner's hermes-target probe waits on it).
- * When file I/O is pinned, we prefer the target whose `appId` equals the pin's
- * bundleId/packageName, so `evaluate()` and `device.files` bind to the SAME app even on
- * a shared Metro hosting multiple RN apps. A UNIQUE app match is used directly (no
- * ambiguity — the app identity is proof), short-circuiting the guard below.
- *
- * DEVICE-AMBIGUITY GUARD (fallback): if the pin's app can't be uniquely matched by
- * `appId` — older Metro that omits it, or the SAME app running on multiple devices —
- * and no explicit CDP selector is given with more than one runtime connected,
- * defaulting to the first target could evaluate against a different device than file
- * I/O targets, so fail closed. Metro exposes no device UDID, so same-app-on-two-devices
- * still needs an explicit `deviceName`. A lone serial/udid is NOT a pin (device.files
- * would be UNAVAILABLE without the app id), so it never blocks a plain touch/evaluate
- * connect. An explicit pageIndex is the caller's deliberate choice and is honored.
- *
- * SINGLE-RUNTIME RESIDUAL (accepted; see SPEC "Open items"): with exactly one connected
- * runtime that carries no `appId`, we connect CDP to it even under a file pin — it is
- * the only runtime, and requiring a redundant selector would break the common
- * single-device pin-by-UDID setup. When Metro DOES expose `appId`, a unique match now
- * proves identity even for a single runtime.
+ * SINGLE-RUNTIME RESIDUAL (accepted; see SPEC "Open items"): with exactly one
+ * connected runtime we connect CDP to it, even under a file pin, because it is the
+ * only runtime that exists — there is nothing safer to fail toward, and requiring
+ * a redundant CDP selector would break the common single-device pin-by-UDID setup.
+ * We still cannot PROVE that sole runtime is the pinned device (Metro exposes no
+ * UDID), so an operator targeting a specific device among several booted ones
+ * should pass an explicit `deviceName` to bind evaluate() and device.files to the
+ * same runtime. This is the single-runtime instance of the same Metro-no-UDID
+ * limitation the multi-runtime guard above mitigates.
  */
 export function selectTargetForConnect(
   targets: DebugTarget[],
@@ -188,9 +177,6 @@ export function selectTargetForConnect(
   // device.files can't even use). Mirrors that falsy check.
   const filePinned =
     (Boolean(t?.udid) && Boolean(t?.bundleId)) || (Boolean(t?.serial) && Boolean(t?.packageName))
-  // The pin's app identity — bundleId (iOS) or packageName (Android) — to match against
-  // a Metro target's `appId`. undefined when not file-pinned.
-  const pinnedAppId = t?.bundleId ?? t?.packageName
   // Mirror selectTarget's OWN truthiness: it enters the deviceId/deviceName branches
   // only for non-empty strings, so an empty string is not a usable selector. Testing
   // `!== undefined` here would let `{ target: { udid }, deviceName: '' }` slip past the
@@ -199,23 +185,12 @@ export function selectTargetForConnect(
   // honored by selectTarget), so it still counts via `!== undefined`.
   const hasCdpSelector =
     Boolean(options.deviceId) || Boolean(options.deviceName) || options.pageIndex !== undefined
-  if (filePinned && pinnedAppId && !hasCdpSelector) {
-    // Prefer the runtime whose Metro-exposed appId matches the pin. A UNIQUE match binds
-    // evaluate() to the exact app device.files targets — safe even among many runtimes.
-    const appMatches = targets.filter((x) => x.appId !== undefined && x.appId === pinnedAppId)
-    if (appMatches.length === 1) {
-      return appMatches[0] as DebugTarget
-    }
-    // 0 matches (older Metro omits appId, or the pinned app isn't connected) or >1 (the
-    // SAME app on multiple devices) → fall through to the device-ambiguity guard below.
-  }
   if (filePinned && !hasCdpSelector && targets.length > 1) {
     const available = targets.map((x) => x.deviceName ?? x.title ?? 'unknown').join(', ')
     throw new Error(
       `Ambiguous CDP target: device.files is pinned to a specific device but ${targets.length} ` +
-        `runtimes are connected (${available}) and no CDP selector uniquely matched. Metro exposes ` +
-        `no UDID to tell same-app-on-different-device runtimes apart — pass deviceName or pageIndex ` +
-        `so evaluate() and device.files use the same runtime.`,
+        `runtimes are connected (${available}) and no CDP selector was given. Metro exposes no UDID ` +
+        `to match them — pass deviceName or pageIndex so evaluate() and device.files use the same runtime.`,
     )
   }
   return selectTarget(targets, options)

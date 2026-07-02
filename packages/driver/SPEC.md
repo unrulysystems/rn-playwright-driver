@@ -381,17 +381,16 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   device among several booted ones must pass an explicit `deviceName` to bind both
   identities. Revisit (fail closed even for one runtime, at that UX cost) only if
   `device.files` is ever pointed at an untrusted multi-device host.
-  **App-identity facet (now actively matched, not just guarded):** Metro DOES expose a
-  machine-readable app identity on each Hermes target — `appId` (the iOS bundleId /
-  Android package; the runner's hermes-target probe waits on it). `selectTargetForConnect`
-  matches the file pin's bundleId/packageName against `appId`, so on a shared Metro
-  hosting two RN apps, CDP binds to the SAME app `device.files` targets — a UNIQUE match
-  is used directly, no divergence even without a device selector. The residual shrinks to
-  the **same app on multiple devices** (appId non-unique): Metro exposes no device UDID
-  to tell those apart, so the multi-runtime guard still fails closed and an operator must
-  pass `deviceName`. An explicit operator `pageIndex` picking a specific runtime remains a
-  deliberate caller choice. Older Metro that omits `appId` degrades to the device-name/
-  pageIndex guard (0 app matches → fall through).
+  **App-identity facet (same residual):** CDP selects by device name while
+  `device.files` carries the app bundle/package, so two RN apps on one Metro could
+  in principle diverge (evaluate app A, file I/O app B). In practice a **usable**
+  file target always carries a device pin — iOS requires `udid`+`bundleId`, Android
+  `serial`+`package` (`resolveFileTarget`) — so `filePinned` is set and the
+  multi-runtime ambiguity guard above already fails closed; the only path to a
+  divergent attach is an explicit operator `pageIndex` picking a specific runtime,
+  which is a deliberate caller choice. A reliable cross-check is not possible: Metro
+  exposes no machine-readable app identity on its CDP targets (the bundle appears,
+  when at all, only inside a free-form `title`).
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 - **iOS-simulator containment TOCTOU (accepted residual).** `resolveInsideContainer`
