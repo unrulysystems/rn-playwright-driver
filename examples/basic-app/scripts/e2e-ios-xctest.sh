@@ -405,7 +405,7 @@ fs.chmodSync(configFile, 0o600)
 NODE
 
 echo "Generating iOS project with Expo prebuild"
-npx expo prebuild --platform ios --no-install
+./node_modules/.bin/expo prebuild --platform ios --no-install
 node ../../packages/xctest-companion/bin/scaffold.js --ios-dir ios --project-name "$APP_SCHEME"
 cp "$TOUCH_CONFIG_FILE" "ios/${UITEST_SCHEME}/RNDriverTouchCompanionRuntimeConfig.json"
 chmod 600 "ios/${UITEST_SCHEME}/RNDriverTouchCompanionRuntimeConfig.json"
@@ -418,7 +418,7 @@ if ! xcodebuild_clean -list -workspace "ios/${APP_SCHEME}.xcworkspace" 2>/dev/nu
 fi
 
 echo "Starting Metro at ${METRO_URL}"
-CI=1 EXPO_NO_TELEMETRY=1 npx expo start --localhost --port "$METRO_PORT" >"$METRO_LOG" 2>&1 &
+CI=1 EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo start --localhost --port "$METRO_PORT" >"$METRO_LOG" 2>&1 &
 METRO_PID="$!"
 wait_for_metro
 configure_ios_packager_host
@@ -457,7 +457,7 @@ if RN_TOUCH_BACKEND=xctest \
   RN_APP_BUNDLE_ID="$APP_BUNDLE_ID" \
   RN_SIM_UDID="$SIM_UDID" \
   RN_IOS_TARGET_KIND=simulator \
-  npx playwright test "${SPECS[@]}" --reporter=line; then
+  ./node_modules/.bin/playwright test "${SPECS[@]}" --reporter=line; then
   STATUS="pass"
 else
   STATUS="fail"

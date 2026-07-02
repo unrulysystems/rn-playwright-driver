@@ -8,8 +8,10 @@ export function cmd(command: string, args: string[]): CommandSpec {
   return { command, args }
 }
 
-export function npx(args: string[]): CommandSpec {
-  return { command: 'npx', args }
+export function packageBin(bin: string, args: string[]): CommandSpec {
+  // Use the app workspace's installed binaries; npm exec/npx can touch npm
+  // resolution/network paths and hang before the verifier ever reaches Metro.
+  return { command: `./node_modules/.bin/${bin}`, args }
 }
 
 function shell(command: string): CommandSpec {
@@ -28,7 +30,9 @@ export function metroStartStep(metro: ResolvedMetro): Step {
       type: 'command',
       background: true,
       processKey: 'metro',
-      command: shell(metro.command ?? `npx expo start --localhost --port ${metro.port}`),
+      command: shell(
+        metro.command ?? `./node_modules/.bin/expo start --localhost --port ${metro.port}`,
+      ),
     },
   }
 }
@@ -45,10 +49,10 @@ export function playwrightCommand(
   specs: readonly string[],
   passthrough: readonly string[],
 ): CommandSpec {
-  const args = ['playwright', 'test']
+  const args = ['test']
   if (playwright?.config) args.push('--config', playwright.config)
   const effectiveSpecs = specs.length > 0 ? specs : (playwright?.specs ?? [])
   args.push(...effectiveSpecs, ...passthrough)
   args.push('--reporter=line')
-  return npx(args)
+  return packageBin('playwright', args)
 }

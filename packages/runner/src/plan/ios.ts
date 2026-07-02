@@ -2,7 +2,7 @@ import type { IosConfig, PlaywrightConfig } from '../config'
 import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
 import { buildIosDriverEnv } from './env'
 import type { ResolvedIosTarget, ResolvedMetro } from './resolved'
-import { cmd, metroStartStep, npx, playwrightCommand } from './shared'
+import { cmd, metroStartStep, packageBin, playwrightCommand } from './shared'
 import type { CleanupAction, CommandSpec, Plan, Step } from './types'
 
 export interface PlanIosInput {
@@ -65,7 +65,7 @@ export function planIos(input: PlanIosInput): Plan {
     description: 'Generate iOS project (expo prebuild)',
     action: {
       type: 'command',
-      command: npx(['expo', 'prebuild', '--platform', 'ios', '--no-install']),
+      command: packageBin('expo', ['prebuild', '--platform', 'ios', '--no-install']),
     },
     skippable: true,
   })

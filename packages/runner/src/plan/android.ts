@@ -2,7 +2,7 @@ import type { AndroidConfig, PlaywrightConfig } from '../config'
 import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
 import { buildAndroidDriverEnv } from './env'
 import type { ResolvedAndroidTarget, ResolvedMetro } from './resolved'
-import { metroStartStep, npx, playwrightCommand } from './shared'
+import { metroStartStep, packageBin, playwrightCommand } from './shared'
 import type { CleanupAction, CommandSpec, Plan, Step } from './types'
 
 export interface PlanAndroidInput {
@@ -47,7 +47,7 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     description: 'Generate Android project (expo prebuild)',
     action: {
       type: 'command',
-      command: npx(['expo', 'prebuild', '--platform', 'android', '--no-install']),
+      command: packageBin('expo', ['prebuild', '--platform', 'android', '--no-install']),
     },
     skippable: true,
   })

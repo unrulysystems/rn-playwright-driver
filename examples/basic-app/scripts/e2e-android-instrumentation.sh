@@ -347,7 +347,7 @@ require_booted_device
 
 echo "Using Android device ${SERIAL}"
 echo "Generating Android project with Expo prebuild"
-npx expo prebuild --platform android --no-install
+./node_modules/.bin/expo prebuild --platform android --no-install
 
 echo "Building app and androidTest APKs"
 configure_jdk
@@ -366,7 +366,7 @@ adb -s "$SERIAL" install -r -t "$TEST_APK"
 install_device_touch_auth_token
 
 echo "Starting Metro at ${METRO_URL}"
-CI=1 EXPO_NO_TELEMETRY=1 npx expo start --localhost --port "$METRO_PORT" >"$METRO_LOG" 2>&1 &
+CI=1 EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo start --localhost --port "$METRO_PORT" >"$METRO_LOG" 2>&1 &
 METRO_PID="$!"
 wait_for_metro
 
@@ -398,7 +398,7 @@ if RN_TOUCH_BACKEND=instrumentation \
   RN_DEVICE_NAME="$TARGET_DEVICE_NAME" \
   RN_APP_PACKAGE="$APP_ID" \
   ANDROID_SERIAL="$SERIAL" \
-  npx playwright test "${SPECS[@]}" --reporter=line; then
+  ./node_modules/.bin/playwright test "${SPECS[@]}" --reporter=line; then
   STATUS="pass"
 else
   STATUS="fail"

@@ -6,8 +6,8 @@ const PW = { config: 'playwright.config.ts', specs: ['e2e/a.spec.ts', 'e2e/b'] }
 describe('playwrightCommand (REQ-CLI-005)', () => {
   it('uses the config spec list when no positional specs are given', () => {
     const cmd = playwrightCommand(PW, [], [])
+    expect(cmd.command).toBe('./node_modules/.bin/playwright')
     expect(cmd.args).toEqual([
-      'playwright',
       'test',
       '--config',
       'playwright.config.ts',

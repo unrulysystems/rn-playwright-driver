@@ -74,23 +74,22 @@ function makeRunner(
 const labels = (calls: Recorded[], type: Recorded['type']) =>
   calls.filter((c) => c.type === type).map((c) => c.label)
 const order = (calls: Recorded[], pred: (c: Recorded) => boolean) => calls.findIndex(pred)
+const isPlaywrightExec = (c: Recorded) =>
+  c.type === 'exec' && c.spec?.command.endsWith('/playwright') === true
 
 describe('executePlan (iOS plan against a mock runner)', () => {
   const plan = buildDryRunPlan(configFixture(), 'ios')
 
   it('runs the full lifecycle then Playwright, and returns the Playwright exit code', async () => {
     const { runner, calls } = makeRunner({
-      execCode: (s) => (s.args.includes('playwright') ? 7 : 0),
+      execCode: (s) => (s.command.endsWith('/playwright') ? 7 : 0),
     })
     const result = await executePlan(plan, runner, { logDir: '/tmp/logs' })
 
     expect(result.playwrightCode).toBe(7)
     expect(labels(calls, 'spawn')).toEqual(['metro', 'companion'])
     // Playwright runs after the companion is up.
-    const playwrightAt = order(
-      calls,
-      (c) => c.type === 'exec' && (c.spec?.args.includes('playwright') ?? false),
-    )
+    const playwrightAt = order(calls, isPlaywrightExec)
     const companionReadyAt = order(calls, (c) => c.type === 'probe' && c.label === 'xctest-hello')
     expect(playwrightAt).toBeGreaterThan(companionReadyAt)
   })
@@ -99,9 +98,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     const { runner, calls } = makeRunner()
     await executePlan(plan, runner, { logDir: '/tmp/logs' })
 
-    const playwright = calls.find(
-      (c) => c.type === 'exec' && (c.spec?.args.includes('playwright') ?? false),
-    )
+    const playwright = calls.find(isPlaywrightExec)
     expect(playwright?.spec?.env).toMatchObject(plan.driverEnv)
   })
 
@@ -126,7 +123,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(labels(calls, 'free')).toContain('9999')
     expect(labels(calls, 'rm')).toContain('<token-file>')
     // Playwright never ran.
-    expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(false)
+    expect(calls.some(isPlaywrightExec)).toBe(false)
   })
 
   it('fast-fails the companion stage when xcodebuild reports a build failure (no readiness wait)', async () => {
@@ -147,7 +144,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(companionProbe?.watch?.logPath).toContain('companion')
     // Cleanup still runs defensively; Playwright never does.
     expect(labels(calls, 'kill')).toEqual(expect.arrayContaining(['companion', 'metro']))
-    expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(false)
+    expect(calls.some(isPlaywrightExec)).toBe(false)
   })
 
   it('skip-build skips skippable steps but keeps the token/config refresh', async () => {
@@ -178,7 +175,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     // the mock probe now honors isAlive, a regression in execute's "no handle =>
     // alive" gating would surface here as a metro-stage StageError.
     expect(labels(calls, 'probe')).toContain('metro-status')
-    expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(true)
+    expect(calls.some(isPlaywrightExec)).toBe(true)
     expect(result.playwrightCode).toBe(0)
   })
 
