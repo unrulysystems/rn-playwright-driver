@@ -11,6 +11,8 @@ export interface PlanIosInput {
   readonly resolved: ResolvedIosTarget
   readonly playwright: PlaywrightConfig | undefined
   readonly timeoutMs: number | undefined
+  /** Project/config directory for commands that run relative to the app workspace. */
+  readonly projectCwd?: string
   /** Positional spec paths; override the config spec list when non-empty. */
   readonly specs: readonly string[]
   /** Args after `--`; always appended to the Playwright invocation. */
@@ -28,8 +30,12 @@ export interface PlanIosInput {
  * separate `0600` file referenced by `authTokenFile`; it never enters the plan.
  */
 export function planIos(input: PlanIosInput): Plan {
-  const { ios, metro, resolved, playwright, timeoutMs, specs, passthrough } = input
+  const { ios, metro, resolved, playwright, timeoutMs, projectCwd, specs, passthrough } = input
   const isDevClient = ios.launch.kind === 'expo-dev-client'
+  const runtimeConfigFile =
+    projectCwd && !resolved.runtimeConfigFile.startsWith('<')
+      ? `${projectCwd}/${resolved.runtimeConfigFile}`
+      : resolved.runtimeConfigFile
 
   const steps: Step[] = []
   const push = (step: Step) => steps.push(step)
@@ -65,7 +71,7 @@ export function planIos(input: PlanIosInput): Plan {
     description: 'Generate iOS project (expo prebuild)',
     action: {
       type: 'command',
-      command: packageBin('expo', ['prebuild', '--platform', 'ios', '--no-install']),
+      command: packageBin('expo', ['prebuild', '--platform', 'ios', '--no-install'], projectCwd),
     },
     skippable: true,
   })
@@ -81,15 +87,19 @@ export function planIos(input: PlanIosInput): Plan {
       // Pass the resolved UI-test scheme so a custom `ios.uitestScheme` scaffolds
       // the SAME target that companion startup later builds (default is
       // `${appScheme}UITests`).
-      command: cmd('node', [
-        resolved.scaffoldBin,
-        '--ios-dir',
-        'ios',
-        '--project-name',
-        ios.appScheme,
-        '--uitest-scheme',
-        resolved.uitestScheme,
-      ]),
+      command: cmd(
+        'node',
+        [
+          resolved.scaffoldBin,
+          '--ios-dir',
+          'ios',
+          '--project-name',
+          ios.appScheme,
+          '--uitest-scheme',
+          resolved.uitestScheme,
+        ],
+        projectCwd,
+      ),
     },
     skippable: true,
   })
@@ -99,7 +109,7 @@ export function planIos(input: PlanIosInput): Plan {
     description: 'Write companion runtime config (port + token-file ref)',
     action: {
       type: 'write-file',
-      path: resolved.runtimeConfigFile,
+      path: runtimeConfigFile,
       contents: runtimeConfigJson(resolved, ios),
       mode: 0o600,
     },
@@ -108,12 +118,15 @@ export function planIos(input: PlanIosInput): Plan {
     id: 'ios.pods',
     stage: 'build',
     description: 'Install CocoaPods',
-    action: { type: 'command', command: cmd('pod', ['install', '--project-directory=ios']) },
+    action: {
+      type: 'command',
+      command: cmd('pod', ['install', '--project-directory=ios'], projectCwd),
+    },
     skippable: true,
   })
 
   // metro — start (or reuse) the packager and wait for it.
-  push(metroStartStep(metro))
+  push(metroStartStep(metro, projectCwd))
   push({
     id: 'metro.ready',
     stage: 'metro',
@@ -172,16 +185,20 @@ export function planIos(input: PlanIosInput): Plan {
     description: `Build app scheme ${ios.appScheme}`,
     action: {
       type: 'command',
-      command: xcodebuild([
-        'build',
-        '-workspace',
-        ios.workspace,
-        '-scheme',
-        ios.appScheme,
-        '-destination',
-        resolved.destination,
-        `RCT_METRO_PORT=${metro.port}`,
-      ]),
+      command: xcodebuild(
+        [
+          'build',
+          '-workspace',
+          ios.workspace,
+          '-scheme',
+          ios.appScheme,
+          '-destination',
+          resolved.destination,
+          `RCT_METRO_PORT=${metro.port}`,
+        ],
+        undefined,
+        projectCwd,
+      ),
     },
     skippable: true,
   })
@@ -238,8 +255,9 @@ export function planIos(input: PlanIosInput): Plan {
         ],
         {
           RN_TOUCH_XCTEST_PORT: String(resolved.touchPort),
-          RN_TOUCH_XCTEST_CONFIG_FILE: resolved.runtimeConfigFile,
+          RN_TOUCH_XCTEST_CONFIG_FILE: runtimeConfigFile,
         },
+        projectCwd,
       ),
     },
   })
@@ -324,7 +342,7 @@ export function planIos(input: PlanIosInput): Plan {
     // left in the app project.
     {
       type: 'remove-file',
-      path: resolved.runtimeConfigFile,
+      path: runtimeConfigFile,
       description: 'Remove per-run companion runtime config',
     },
   ]
@@ -334,7 +352,7 @@ export function planIos(input: PlanIosInput): Plan {
     steps,
     cleanup,
     driverEnv: buildIosDriverEnv(resolved, metro, timeoutMs, ios.bundleId),
-    playwright: playwrightCommand(playwright, specs, passthrough),
+    playwright: playwrightCommand(playwright, specs, passthrough, projectCwd),
   }
 }
 
@@ -359,8 +377,8 @@ function xcrun(args: string[]): CommandSpec {
 }
 
 /** `env -u LD xcodebuild …` with optional extra env. */
-function xcodebuild(args: string[], env?: Record<string, string>): CommandSpec {
+function xcodebuild(args: string[], env?: Record<string, string>, cwd?: string): CommandSpec {
   return env
-    ? { command: 'env', args: ['-u', 'LD', 'xcodebuild', ...args], env }
-    : { command: 'env', args: ['-u', 'LD', 'xcodebuild', ...args] }
+    ? { command: 'env', args: ['-u', 'LD', 'xcodebuild', ...args], env, ...(cwd ? { cwd } : {}) }
+    : { command: 'env', args: ['-u', 'LD', 'xcodebuild', ...args], ...(cwd ? { cwd } : {}) }
 }

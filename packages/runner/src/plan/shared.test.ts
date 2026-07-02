@@ -1,59 +1,26 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
-import { playwrightCommand, resolvePackageBin } from './shared'
+import { describe, expect, it } from 'vitest'
+import { packageBin, playwrightCommand } from './shared'
 
 const PW = { config: 'playwright.config.ts', specs: ['e2e/a.spec.ts', 'e2e/b'] }
-const tmpRoots: string[] = []
 
-afterEach(() => {
-  for (const dir of tmpRoots.splice(0)) rmSync(dir, { recursive: true, force: true })
-})
-
-describe('resolvePackageBin', () => {
-  it('resolves a workspace-local package binary', () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'rn-bin-local-'))
-    tmpRoots.push(root)
-    const app = path.join(root, 'app')
-    const bin = path.join(app, 'node_modules', '.bin', 'playwright')
-    mkdirSync(path.dirname(bin), { recursive: true })
-    writeFileSync(bin, '#!/bin/sh\n')
-
-    expect(resolvePackageBin('playwright', app)).toBe(bin)
-  })
-
-  it('walks up to a hoisted package binary when the app workspace has no .bin entry', () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'rn-bin-hoist-'))
-    tmpRoots.push(root)
-    const app = path.join(root, 'packages', 'app')
-    mkdirSync(path.join(app, 'node_modules', '.bin'), { recursive: true })
-    const bin = path.join(root, 'node_modules', '.bin', 'expo')
-    mkdirSync(path.dirname(bin), { recursive: true })
-    writeFileSync(bin, '#!/bin/sh\n')
-
-    expect(resolvePackageBin('expo', app)).toBe(bin)
-  })
-
-  it('falls back to the project-local package binary path when no installed bin is visible', () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'rn-bin-missing-'))
-    tmpRoots.push(root)
-
-    expect(resolvePackageBin('expo', root)).toBe(path.join(root, 'node_modules', '.bin', 'expo'))
+describe('packageBin', () => {
+  it('keeps package-bin commands symbolic so planning stays pure', () => {
+    expect(packageBin('expo', ['start'], '/app')).toEqual({
+      command: 'expo',
+      args: ['start'],
+      cwd: '/app',
+      packageBin: true,
+    })
   })
 })
 
 describe('playwrightCommand (REQ-CLI-005)', () => {
   it('uses the config spec list when no positional specs are given', () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'rn-bin-playwright-'))
-    tmpRoots.push(root)
-    const bin = path.join(root, 'node_modules', '.bin', 'playwright')
-    mkdirSync(path.dirname(bin), { recursive: true })
-    writeFileSync(bin, '#!/bin/sh\n')
+    const cmd = playwrightCommand(PW, [], [], '/app')
 
-    const cmd = playwrightCommand(PW, [], [], root)
-
-    expect(cmd.command).toBe(bin)
+    expect(cmd.command).toBe('playwright')
+    expect(cmd.cwd).toBe('/app')
+    expect(cmd.packageBin).toBe(true)
     expect(cmd.args).toEqual([
       'test',
       '--config',

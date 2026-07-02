@@ -1,39 +1,25 @@
-import { existsSync } from 'node:fs'
-import path from 'node:path'
 import type { PlaywrightConfig } from '../config'
 import type { ResolvedMetro } from './resolved'
 import type { CommandSpec, Step } from './types'
 
 /** Command constructors. Secret values NEVER flow through these — only paths. */
 
-export function cmd(command: string, args: string[]): CommandSpec {
-  return { command, args }
+export function cmd(command: string, args: string[], cwd?: string): CommandSpec {
+  return { command, args, ...(cwd ? { cwd } : {}) }
 }
 
-export function packageBin(bin: string, args: string[], cwd = process.cwd()): CommandSpec {
-  // Use installed package binaries; npm exec/npx can touch npm resolution/network
-  // paths and hang before the verifier ever reaches Metro.
-  return { command: resolvePackageBin(bin, cwd), args }
+export function packageBin(bin: string, args: string[], cwd?: string): CommandSpec {
+  // Resolved by NodeProcessRunner at the OS boundary. npm exec/npx can touch npm
+  // resolution/network paths and hang before the verifier ever reaches Metro.
+  return { command: bin, args, packageBin: true, ...(cwd ? { cwd } : {}) }
 }
 
-export function resolvePackageBin(bin: string, cwd = process.cwd()): string {
-  const start = path.resolve(cwd)
-  for (let dir = start; ; dir = path.dirname(dir)) {
-    const candidate = path.join(dir, 'node_modules', '.bin', bin)
-    if (existsSync(candidate)) return candidate
-    if (process.platform === 'win32' && existsSync(`${candidate}.cmd`)) return `${candidate}.cmd`
-    const parent = path.dirname(dir)
-    if (parent === dir) break
-  }
-  return path.join(start, 'node_modules', '.bin', process.platform === 'win32' ? `${bin}.cmd` : bin)
-}
-
-function shell(command: string): CommandSpec {
-  return { command: 'sh', args: ['-c', command] }
+function shell(command: string, cwd?: string): CommandSpec {
+  return { command: 'sh', args: ['-c', command], ...(cwd ? { cwd } : {}) }
 }
 
 /** The Metro start step, shared by both platforms. */
-export function metroStartStep(metro: ResolvedMetro): Step {
+export function metroStartStep(metro: ResolvedMetro, cwd?: string): Step {
   return {
     id: 'metro.start',
     stage: 'metro',
@@ -45,8 +31,8 @@ export function metroStartStep(metro: ResolvedMetro): Step {
       background: true,
       processKey: 'metro',
       command: metro.command
-        ? shell(metro.command)
-        : packageBin('expo', ['start', '--localhost', '--port', String(metro.port)]),
+        ? shell(metro.command, cwd)
+        : packageBin('expo', ['start', '--localhost', '--port', String(metro.port)], cwd),
     },
   }
 }
@@ -62,7 +48,7 @@ export function playwrightCommand(
   playwright: PlaywrightConfig | undefined,
   specs: readonly string[],
   passthrough: readonly string[],
-  cwd = process.cwd(),
+  cwd?: string,
 ): CommandSpec {
   const args = ['test']
   if (playwright?.config) args.push('--config', playwright.config)

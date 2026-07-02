@@ -1,8 +1,8 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { metroTargetMatchesDeviceName, readWatchedLog } from './process-runner'
+import { metroTargetMatchesDeviceName, readWatchedLog, resolvePackageBin } from './process-runner'
 
 // The OS-boundary process runner is verified by the live e2e oracle, NOT unit tests — except
 // `readWatchedLog`, whose FAIL-CLOSED contract (a missing/unreadable companion log is a defect, not
@@ -41,6 +41,43 @@ describe('readWatchedLog (fail-closed companion log read)', () => {
     // must propagate rather than be masked as an empty log.
     await expect(readWatchedLog(dir)).rejects.toThrow(
       /cannot read companion log for fast-fail marker detection/,
+    )
+  })
+})
+
+describe('resolvePackageBin', () => {
+  let dir: string
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'rn-package-bin-'))
+  })
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('resolves a workspace-local package binary', async () => {
+    const app = join(dir, 'local-app')
+    const bin = join(app, 'node_modules', '.bin', 'playwright')
+    await mkdir(join(app, 'node_modules', '.bin'), { recursive: true })
+    await writeFile(bin, '#!/bin/sh\n')
+
+    expect(resolvePackageBin('playwright', app)).toBe(bin)
+  })
+
+  it('walks up to a hoisted package binary when the app workspace has no .bin entry', async () => {
+    const root = join(dir, 'hoisted-root')
+    const app = join(root, 'packages', 'app')
+    const bin = join(root, 'node_modules', '.bin', 'expo')
+    await mkdir(join(app, 'node_modules', '.bin'), { recursive: true })
+    await mkdir(join(root, 'node_modules', '.bin'), { recursive: true })
+    await writeFile(bin, '#!/bin/sh\n')
+
+    expect(resolvePackageBin('expo', app)).toBe(bin)
+  })
+
+  it('throws a clear error when no installed package binary exists', () => {
+    expect(() => resolvePackageBin('expo', join(dir, 'missing'))).toThrow(
+      /could not resolve installed binary/,
     )
   })
 })

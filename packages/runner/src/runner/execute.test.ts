@@ -75,14 +75,14 @@ const labels = (calls: Recorded[], type: Recorded['type']) =>
   calls.filter((c) => c.type === type).map((c) => c.label)
 const order = (calls: Recorded[], pred: (c: Recorded) => boolean) => calls.findIndex(pred)
 const isPlaywrightExec = (c: Recorded) =>
-  c.type === 'exec' && c.spec?.command.endsWith('/playwright') === true
+  c.type === 'exec' && c.spec?.command === 'playwright' && c.spec.packageBin === true
 
 describe('executePlan (iOS plan against a mock runner)', () => {
   const plan = buildDryRunPlan(configFixture(), 'ios')
 
   it('runs the full lifecycle then Playwright, and returns the Playwright exit code', async () => {
     const { runner, calls } = makeRunner({
-      execCode: (s) => (s.command.endsWith('/playwright') ? 7 : 0),
+      execCode: (s) => (s.command === 'playwright' && s.packageBin ? 7 : 0),
     })
     const result = await executePlan(plan, runner, { logDir: '/tmp/logs' })
 

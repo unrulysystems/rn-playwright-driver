@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn as nodeSpawn } from 'node:child_process'
-import { createReadStream, openSync } from 'node:fs'
+import { createReadStream, existsSync, openSync } from 'node:fs'
 import { chmod, readFile, rm, writeFile as fsWriteFile } from 'node:fs/promises'
+import path from 'node:path'
 import type {
   CommandSpec,
   ExecResult,
@@ -27,8 +28,9 @@ export class NodeProcessRunner implements ProcessRunner {
 
   exec(spec: CommandSpec, _opts?: { logPath?: string }): Promise<ExecResult> {
     return new Promise((resolve, reject) => {
+      const command = resolveCommand(spec)
       const usesStdin = Boolean(spec.stdinFromFile) || spec.stdinContents !== undefined
-      const child = nodeSpawn(spec.command, [...spec.args], {
+      const child = nodeSpawn(command, [...spec.args], {
         cwd: spec.cwd,
         env: { ...process.env, ...spec.env },
         stdio: [usesStdin ? 'pipe' : 'inherit', 'inherit', 'inherit'],
@@ -46,8 +48,9 @@ export class NodeProcessRunner implements ProcessRunner {
   }
 
   spawn(spec: CommandSpec, opts: { key: string; logPath: string }): SpawnHandle {
+    const command = resolveCommand(spec)
     const fd = openSync(opts.logPath, 'a')
-    const child = nodeSpawn(spec.command, [...spec.args], {
+    const child = nodeSpawn(command, [...spec.args], {
       cwd: spec.cwd,
       env: { ...process.env, ...spec.env },
       detached: true,
@@ -167,6 +170,22 @@ export class NodeProcessRunner implements ProcessRunner {
   }
 }
 
+export function resolvePackageBin(bin: string, cwd = process.cwd()): string {
+  const start = path.resolve(cwd)
+  for (let dir = start; ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, 'node_modules', '.bin', bin)
+    if (existsSync(candidate)) return candidate
+    if (process.platform === 'win32' && existsSync(`${candidate}.cmd`)) return `${candidate}.cmd`
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+  }
+  throw new Error(`could not resolve installed binary "${bin}" from ${cwd}`)
+}
+
+function resolveCommand(spec: CommandSpec): string {
+  return spec.packageBin ? resolvePackageBin(spec.command, spec.cwd) : spec.command
+}
+
 function killGroup(pid: number, signal: NodeJS.Signals): void {
   try {
     process.kill(-pid, signal) // negative pid → process group
@@ -250,7 +269,7 @@ async function metroStatusOk(metroUrl: string): Promise<boolean> {
   }
 }
 
-export interface MetroTarget {
+interface MetroTarget {
   readonly title?: string
   readonly description?: string
   readonly vm?: string

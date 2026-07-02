@@ -73,10 +73,15 @@ export async function executePlan(
     }
 
     runner.log(`Running Playwright: ${plan.playwright.command} ${plan.playwright.args.join(' ')}`)
-    const result = await runner.exec({
-      ...plan.playwright,
-      env: { ...plan.playwright.env, ...plan.driverEnv },
-    })
+    let result
+    try {
+      result = await runner.exec({
+        ...plan.playwright,
+        env: { ...plan.playwright.env, ...plan.driverEnv },
+      })
+    } catch (error) {
+      throw new StageError('playwright', 'playwright', commandErrorMessage(error))
+    }
     return { playwrightCode: result.code }
   } finally {
     await runCleanup(plan.cleanup, runner, opts, processes)
@@ -95,15 +100,23 @@ async function runStep(
 
   switch (action.type) {
     case 'command': {
-      if (action.background) {
-        const key = action.processKey ?? step.id
-        const handle = runner.spawn(action.command, { key, logPath: logPathFor(opts.logDir, key) })
-        processes.set(key, handle)
-        return
-      }
-      const result = await runner.exec(action.command)
-      if (result.code !== 0 && !action.allowFailure) {
-        throw new StageError(step.stage, step.id, `command exited ${result.code}`)
+      try {
+        if (action.background) {
+          const key = action.processKey ?? step.id
+          const handle = runner.spawn(action.command, {
+            key,
+            logPath: logPathFor(opts.logDir, key),
+          })
+          processes.set(key, handle)
+          return
+        }
+        const result = await runner.exec(action.command)
+        if (result.code !== 0 && !action.allowFailure) {
+          throw new StageError(step.stage, step.id, `command exited ${result.code}`)
+        }
+      } catch (error) {
+        if (error instanceof StageError) throw error
+        throw new StageError(step.stage, step.id, commandErrorMessage(error))
       }
       return
     }
@@ -161,6 +174,10 @@ async function runStep(
       throw new Error(`unhandled action: ${JSON.stringify(_exhaustive)}`)
     }
   }
+}
+
+function commandErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 async function runCleanup(
