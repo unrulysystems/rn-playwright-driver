@@ -108,7 +108,13 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
       assertLive()
       const maxBuffer = resolveMaxBuffer(options?.maxBuffer)
       const { target, path } = prepare(remotePath, options?.root ?? DEFAULT_ROOT)
-      return transportFor(target).pull(path, { maxBuffer })
+      const bytes = await transportFor(target).pull(path, { maxBuffer })
+      // Re-check AFTER the await: a preflight-only check would let an op that started
+      // while live but finished after disconnect/reconnect return data captured against
+      // a connection that is no longer the device's. Fail closed on that boundary
+      // crossing so device.files never yields bytes from a dead/stale connection.
+      assertLive()
+      return bytes
     },
     async push(source, remotePath, options) {
       assertLive()
@@ -154,6 +160,12 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
         )
       }
       await transportFor(target).push(path, data)
+      // Re-check AFTER the await (see pull): if the connection dropped during the write,
+      // fail closed rather than report success. The host transport may have landed the
+      // bytes (it runs by udid/serial, independent of CDP), but the caller must not TRUST
+      // a push that raced a disconnect — treat it as failed and re-verify on a fresh
+      // connection. Fail-closed-on-uncertainty matches the rest of device.files.
+      assertLive()
     },
   }
 }

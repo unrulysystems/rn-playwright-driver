@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FileIoError } from '../errors'
 import {
   HostExecMaxBufferError,
   type HostExecResult,
@@ -78,6 +79,18 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
         { maxBuffer: 4 },
       ),
     ).rejects.toMatchObject({ code: 'TOO_LARGE' })
+  })
+
+  it('rejects with a typed FileIoError INSTANCE, not a plain object carrying a code', async () => {
+    // The public contract promises every failure is a FileIoError (README/SPEC). The
+    // `{ code }` assertions elsewhere would pass on a bare Error/object — assert the
+    // instance here so a regression in error construction is caught.
+    const { exec } = fakeExec(() => readFail('cat: /data/.../x: No such file or directory\n'))
+    const error = await createAdbTransport(CONFIG, exec)
+      .pull({ absolute: false, subpath: 'files/x' }, { maxBuffer: 4 })
+      .catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(FileIoError)
+    expect((error as FileIoError).code).toBe('NOT_FOUND')
   })
 
   it('classifies a missing file as NOT_FOUND regardless of a small maxBuffer', async () => {

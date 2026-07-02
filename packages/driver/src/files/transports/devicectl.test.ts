@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FileIoError } from '../errors'
 import type { HostExecResult, HostFileExec } from '../host-file-exec'
 import { type HostFs, HostFileTooLargeError } from '../host-fs'
 import { createDevicectlTransport } from './devicectl'
@@ -122,6 +123,22 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
       '--json-output',
       '/tmp/dc/result.json',
     ])
+  })
+
+  it('rejects with a typed FileIoError INSTANCE, not a plain object carrying a code', async () => {
+    // The public contract promises every failure is a FileIoError (README/SPEC); assert
+    // the instance so a regression in classifyCliFailure/assertOk error construction is caught.
+    const { exec } = fakeExec(() => ({
+      stdout: Buffer.alloc(0),
+      stderr: 'The requested file does not exist.',
+      code: 1,
+    }))
+    const { fs } = fakeFs()
+    const error = await createDevicectlTransport(CONFIG, exec, fs)
+      .pull({ absolute: false, subpath: 'Documents/x' }, { maxBuffer: 1 })
+      .catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(FileIoError)
+    expect((error as FileIoError).code).toBe('NOT_FOUND')
   })
 
   it('fails closed on a nonzero `copy to` exit — push checks assertOk, never silent success', async () => {

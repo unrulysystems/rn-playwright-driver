@@ -78,6 +78,41 @@ describe('createDeviceFiles — lifecycle', () => {
     await files.pull('obs.csv')
     expect(pulls).toHaveLength(1)
   })
+
+  it('fails closed when the connection drops DURING a pull (boundary crossing, not just preflight)', async () => {
+    // Live at entry, disconnects mid-read. A preflight-only guard would return the bytes;
+    // the post-await re-check must fail closed so no data from a dropped connection leaks.
+    let live = true
+    const { select } = fakeTransport({
+      pull: async () => {
+        live = false // disconnect/reconnect races the in-flight read
+        return Buffer.from('bytes')
+      },
+    })
+    const files = createDeviceFiles({
+      platform: 'ios',
+      target: IOS_TARGET,
+      selectTransport: select,
+      isLive: () => live,
+    })
+    await expectFileIoError(files.pull('obs.csv'), 'UNAVAILABLE')
+  })
+
+  it('fails closed when the connection drops DURING a push (boundary crossing)', async () => {
+    let live = true
+    const { select } = fakeTransport({
+      push: async () => {
+        live = false // disconnect races the in-flight write
+      },
+    })
+    const files = createDeviceFiles({
+      platform: 'ios',
+      target: IOS_TARGET,
+      selectTransport: select,
+      isLive: () => live,
+    })
+    await expectFileIoError(files.push(Buffer.from('x'), 'seed.bin'), 'UNAVAILABLE')
+  })
 })
 
 describe('createDeviceFiles — pull', () => {

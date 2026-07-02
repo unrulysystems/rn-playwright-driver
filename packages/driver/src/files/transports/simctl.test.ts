@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { FileIoError } from '../errors'
 import type { HostExecResult, HostFileExec } from '../host-file-exec'
 import { type HostFs, HostFileTooLargeError } from '../host-fs'
 import { createSimctlTransport } from './simctl'
@@ -73,6 +74,18 @@ describe('simctl transport', () => {
     })
     expect(reads).toEqual(['/sim/Containers/Data/App/ABC/Documents/obs.csv'])
     expect(bytes.toString()).toBe('@/sim/Containers/Data/App/ABC/Documents/obs.csv')
+  })
+
+  it('rejects with a typed FileIoError INSTANCE, not a plain object carrying a code', async () => {
+    // The public contract promises every failure is a FileIoError (README/SPEC); assert
+    // the instance so a regression from `new FileIoError` to a bare Error/object is caught.
+    const { exec } = fakeExec(() => ok('/sim/ABC'))
+    const { fs } = fakeFs({ size: async () => 5_000 })
+    const error = await createSimctlTransport(CONFIG, exec, fs)
+      .pull({ absolute: false, subpath: 'Documents/big.bin' }, { maxBuffer: 1_000 })
+      .catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(FileIoError)
+    expect((error as FileIoError).code).toBe('TOO_LARGE')
   })
 
   it('rejects TOO_LARGE when the sandbox file exceeds maxBuffer, before reading it', async () => {

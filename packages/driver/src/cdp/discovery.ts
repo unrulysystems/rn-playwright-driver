@@ -146,28 +146,22 @@ export type ConnectSelectionOptions = TargetSelectionOptions & {
 
 /**
  * Target selection for `RNDevice.connect`, adding the `device.files` confused-deputy
- * guard on top of {@link selectTarget}. `filePinned` (a COMPLETE file-I/O identity —
- * iOS `udid`+`bundleId` or Android `serial`+`packageName`) is INTERNAL, derived
- * state: Metro's CDP targets expose no UDID, so CDP cannot be pinned to the same
- * device. When file I/O is pinned but no explicit CDP selector is given and more than
- * one runtime is connected, defaulting to the first target would evaluate against a
- * different app than file I/O reads/writes — fail closed instead of guessing. A lone
- * serial/udid is NOT a pin (device.files would be UNAVAILABLE without the app id), so
- * it never blocks a plain touch/evaluate connect. An explicit deviceName/pageIndex is
- * the caller's deliberate choice and is honored as-is: nothing Metro exposes maps to the
- * pinned udid/serial, so CDP selection under a pin cannot be auto-cross-checked against
- * the file target. Two shortcuts to do so were tried and reverted (app-id tie-break;
- * exact-only deviceName) — see SPEC "App-identity facet".
+ * guard on top of {@link selectTarget}.
  *
- * SINGLE-RUNTIME RESIDUAL (accepted; see SPEC "Open items"): with exactly one
- * connected runtime we connect CDP to it, even under a file pin, because it is the
- * only runtime that exists — there is nothing safer to fail toward, and requiring
- * a redundant CDP selector would break the common single-device pin-by-UDID setup.
- * We still cannot PROVE that sole runtime is the pinned device (Metro exposes no
- * UDID), so an operator targeting a specific device among several booted ones
- * should pass an explicit `deviceName` to bind evaluate() and device.files to the
- * same runtime. This is the single-runtime instance of the same Metro-no-UDID
- * limitation the multi-runtime guard above mitigates.
+ * Operational contract:
+ * - `filePinned` = a COMPLETE file-I/O identity (iOS `udid`+`bundleId` or Android
+ *   `serial`+`packageName`); INTERNAL, derived from `options.target`. A lone serial/udid
+ *   is NOT a pin (device.files would be UNAVAILABLE), so it never blocks a plain connect.
+ * - When file-pinned with NO explicit CDP selector and >1 runtime connected, FAIL CLOSED
+ *   (`Ambiguous CDP target`) rather than default to the first — evaluate() could bind to a
+ *   different app/device than device.files.
+ * - An explicit `deviceName`/`pageIndex` is the operator's deliberate choice, honored as-is
+ *   (not auto-cross-checked against the pin).
+ *
+ * WHY selection can't be smarter, the single-runtime residual, and the two reverted
+ * disambiguation shortcuts (app-id tie-break; exact-only deviceName) are documented in
+ * `SPEC.md` → "App-identity facet" / "Open items" — the short version: nothing Metro
+ * exposes maps to the pinned udid/serial.
  */
 export function selectTargetForConnect(
   targets: DebugTarget[],

@@ -133,11 +133,10 @@ export function targetFromEnv(env: TestEnvironment): TargetContext | undefined {
   const target: TargetContext = {}
   if (env.RN_APP_BUNDLE_ID) target.bundleId = env.RN_APP_BUNDLE_ID
   if (env.RN_APP_PACKAGE) target.packageName = env.RN_APP_PACKAGE
-  // RN_SIM_UDID carries the iOS UDID for BOTH a simulator and a physical device
-  // (devicectl's --device also takes a UDID). The `SIM` in the name is historical;
-  // it maps to the capability-neutral `target.udid`. Kept as-is because the runner
-  // and existing setups emit this exact name — renaming is a breaking env-contract
-  // change, out of scope for a naming nit.
+  // RN_SIM_UDID carries the iOS UDID → the capability-neutral `target.udid`. Named for
+  // the simulator because the runner's iOS lifecycle is simulator-only (simctl); the
+  // driver reuses the same UDID for the PROVISIONAL devicectl (physical-device) path,
+  // selected by RN_IOS_TARGET_KIND. See the rationale in runner `constants.ts` (ENV.simUdid).
   if (env.RN_SIM_UDID) target.udid = env.RN_SIM_UDID
   // Pin the adb serial to ANDROID_SERIAL ONLY — the capability-neutral device
   // the runner launched and the driver env contract emits (SPEC.md REQ-TGT).
