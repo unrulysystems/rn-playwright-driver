@@ -124,19 +124,22 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     ])
   })
 
-  it('classifies a missing source as NOT_FOUND', async () => {
+  it('classifies a missing source as NOT_FOUND and still cleans up the staging dir', async () => {
     const { exec } = fakeExec(() => ({
       stdout: Buffer.alloc(0),
       stderr: 'The requested file does not exist.',
       code: 1,
     }))
-    const { fs } = fakeFs()
+    const { fs, removed } = fakeFs()
     await expect(
       createDevicectlTransport(CONFIG, exec, fs).pull(
         { absolute: false, subpath: 'Documents/x' },
         { maxBuffer: 1 },
       ),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    // The `finally { remove(dir) }` must fire on the CLI-failure path too — a leaked
+    // staging temp dir per failed pull would accumulate. Guards the pull cleanup branch.
+    expect(removed).toEqual(['/tmp/dc'])
   })
 
   it('reads the --json-output diagnostic (not just stderr) to classify a failure', async () => {
@@ -238,6 +241,7 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     // `copy from` succeeded, so the remote file existed; a missing/unreadable
     // HOST-staged payload is a staging failure, not a missing remote file.
     const { exec } = fakeExec(ok)
+    const removed: string[] = []
     const fs: HostFs = {
       readFile: async () => {
         throw Object.assign(new Error('enoent'), { code: 'ENOENT' })
@@ -245,7 +249,9 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
       readFileBounded: (p, m) => boundedFrom(fs)(p, m),
       writeFile: async () => {},
       mkdtempDir: async () => '/tmp/dc',
-      remove: async () => {},
+      remove: async (p) => {
+        removed.push(p)
+      },
       realpath: async (path) => path,
       size: async () => 0,
     }
@@ -255,12 +261,14 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
         { maxBuffer: 1 },
       ),
     ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+    expect(removed).toEqual(['/tmp/dc']) // staging cleaned up even when the host read fails
   })
 
   it('maps a staging write failure to TRANSPORT_FAILED, not NOT_FOUND, on push (REQ-FILES-007)', async () => {
     // ENOENT on the HOST staging write must not be mislabeled a remote NOT_FOUND
     // (mapNodeFsError would have done that) — it is a staging/transport failure.
     const { exec } = fakeExec(ok)
+    const removed: string[] = []
     const fs: HostFs = {
       readFile: async () => Buffer.from('x'),
       readFileBounded: (p, m) => boundedFrom(fs)(p, m),
@@ -268,7 +276,9 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
         throw Object.assign(new Error('enoent'), { code: 'ENOENT' })
       },
       mkdtempDir: async () => '/tmp/dc',
-      remove: async () => {},
+      remove: async (p) => {
+        removed.push(p)
+      },
       realpath: async (path) => path,
       size: async () => 0,
     }
@@ -278,6 +288,9 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
         Buffer.from('x'),
       ),
     ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+    // push stages the payload into the temp dir before `copy to`; the `finally` must
+    // remove it even when the host staging write throws. Guards the push cleanup branch.
+    expect(removed).toEqual(['/tmp/dc'])
   })
 
   it('maps a staging-dir creation failure to TRANSPORT_FAILED (REQ-FILES-007)', async () => {

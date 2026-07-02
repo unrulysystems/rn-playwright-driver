@@ -388,9 +388,16 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   `serial`+`package` (`resolveFileTarget`) — so `filePinned` is set and the
   multi-runtime ambiguity guard above already fails closed; the only path to a
   divergent attach is an explicit operator `pageIndex` picking a specific runtime,
-  which is a deliberate caller choice. A reliable cross-check is not possible: Metro
-  exposes no machine-readable app identity on its CDP targets (the bundle appears,
-  when at all, only inside a free-form `title`).
+  which is a deliberate caller choice. **`appId` was evaluated as a cross-check and
+  REJECTED as unsound (do not reintroduce):** Metro _does_ expose `appId` on a Hermes
+  target (the iOS bundleId / Android package — the runner's hermes-target probe waits
+  on it), but it proves APP identity, not the pinned DEVICE. Selecting on it mis-binds
+  two ways — (1) iOS `bundleId` and Android `packageName` are routinely the SAME string
+  (`com.acme.app`), so an iOS pin would match an Android runtime cross-platform; (2) the
+  same app on two devices shares one `appId`, and Metro exposes no UDID to tell them
+  apart — so a lone `appId` match cannot prove it is the pinned device. app identity ≠
+  device identity, so the guard fails closed rather than select on `appId`; an operator
+  disambiguates with `deviceName`/`pageIndex`.
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 - **iOS-simulator containment TOCTOU (accepted residual).** `resolveInsideContainer`
