@@ -849,4 +849,43 @@ describe('RNDevice connection lifecycle', () => {
     await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
     expect(() => device.files).toThrow()
   })
+
+  it('fails EVERYTHING closed even when the touch backend dispose rejects', async () => {
+    // A rejecting dispose must not abort the teardown before the CDP socket, pointer, and
+    // file I/O are failed closed. Synchronous resets run first; dispose + cdp.disconnect
+    // run under allSettled so one failing never skips the other.
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    vi.mocked(createTouchBackend).mockResolvedValueOnce({
+      backend: {
+        tap: vi.fn(),
+        down: vi.fn(),
+        move: vi.fn(),
+        up: vi.fn(),
+        dispose: vi.fn().mockRejectedValue(new Error('dispose failed')),
+      },
+      selection: { backend: 'native-module', available: ['native-module'] },
+    } as unknown as Awaited<ReturnType<typeof createTouchBackend>>)
+    await device.connect()
+    const files = device.files
+
+    // disconnect() surfaces the dispose failure (honest), but ALL other resources are
+    // still torn down and the CDP socket is still closed.
+    await expect(device.disconnect()).rejects.toThrow('dispose failed')
+
+    expect(mockDisconnectFn).toHaveBeenCalledTimes(2) // up-front (no-op) + this disconnect
+    await expect(files.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
+  })
 })

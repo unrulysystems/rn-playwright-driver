@@ -11,12 +11,15 @@
  * - `UNAVAILABLE` — required targeting context (udid/bundleId/serial/package) is
  *   missing OR present-but-unusable (e.g. a malformed package name that fails the
  *   shell-safety check) for the active platform, so no transport can run.
- * - `UNSUPPORTED` — the caller asked for something this surface will not do,
- *   independent of whether the device is reachable. Covers: an unknown/unsupported
- *   root (roots.ts), a root/transport combination the platform can't serve (e.g. the
- *   `absolute` root on a physical iOS device — devicectl is domain-scoped and cannot
- *   reach outside the app container), an invalid `target.iosKind`, and an invalid
- *   `maxBuffer` (non-positive / non-finite). Distinct from `UNAVAILABLE`, which is a
+ * - `UNSUPPORTED` — the environment or the request cannot support this operation, as
+ *   opposed to a transient/missing-context failure. Covers, from the CALLER side: an
+ *   unknown/unsupported root (roots.ts), a root/transport combination the platform
+ *   can't serve (e.g. the `absolute` root on a physical iOS device — devicectl is
+ *   domain-scoped and cannot reach outside the app container), an invalid
+ *   `target.iosKind`, and an invalid `maxBuffer` (non-positive / non-finite); and from
+ *   the DEVICE side (REQ-XPORT-005): an app container that cannot be entered — a
+ *   non-debuggable Android build or an unknown package under `run-as` (shared.ts maps
+ *   those markers here, not to `NOT_FOUND`). Distinct from `UNAVAILABLE`, which is a
  *   well-formed request the current context can't satisfy.
  * - `TRANSPORT_FAILED` — the underlying tool (simctl/devicectl/adb) exited
  *   non-zero or produced output that could not be parsed.

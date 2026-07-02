@@ -180,8 +180,10 @@ export class RNDevice implements Device {
     } catch (error) {
       // Fail closed: tear down whatever this attempt brought up (socket, forwarders,
       // any partially installed backend/token) before propagating, so a rejected
-      // connect never leaves a half-open connection behind.
-      await this.teardownConnection()
+      // connect never leaves a half-open connection behind. Swallow a teardown-level
+      // rejection so it can't MASK the original connect failure — teardown's synchronous
+      // fail-closed resets have already run, so the state is safe regardless.
+      await this.teardownConnection().catch(() => {})
       throw error
     }
   }
@@ -197,8 +199,16 @@ export class RNDevice implements Device {
    * backend info, or file-I/O token live after a failed reconnect. Idempotent and safe
    * to call when never connected (first connect): every step guards on a null/empty
    * resource, and cdp.disconnect() no-ops without a socket.
+   *
+   * Resilient to a throwing teardown step: the SYNCHRONOUS fail-closed resets run first
+   * (they cannot throw), so the connection's observable capabilities — pointer, file I/O
+   * token, backend info — are always failed closed even if an AWAITED step (backend
+   * dispose or cdp.disconnect) rejects. The two awaited steps run under allSettled so a
+   * failed backend dispose can never skip closing the CDP socket; the first rejection is
+   * surfaced afterward.
    */
   private async teardownConnection(): Promise<void> {
+    // --- Synchronous fail-closed resets (cannot throw) ---
     // Run the forwarder cleanups and clear the list so registerRuntimeEventForwarders()
     // re-subscribes cleanly on the next connect (it early-returns while the list is
     // non-empty).
@@ -209,10 +219,6 @@ export class RNDevice implements Device {
     // Drop buffered exceptions so a stale one can't poison a later reconnect of
     // this same device instance.
     this._uncaughtExceptions.length = 0
-    if (this._touchBackend) {
-      await this._touchBackend.dispose()
-      this._touchBackend = null
-    }
     this._touchBackendInfo = null
     // Clear the pointer's backend so a pointer call after teardown fails closed via
     // getBackend() instead of routing to the disposed backend (symmetric with
@@ -225,9 +231,19 @@ export class RNDevice implements Device {
       this._filesLifecycle = null
     }
     this._files = null
-    // Close the CDP socket LAST so a reconnect never opens a second WebSocket while the
-    // prior one is still live (CDPClient.connect stores a new ws without closing the old).
-    await this.cdp.disconnect()
+
+    // --- Awaited teardowns (may reject) ---
+    // Null the backend field BEFORE awaiting dispose so a concurrent/re-entrant teardown
+    // never double-disposes it. Run dispose + cdp.disconnect under allSettled so a failed
+    // dispose still closes the CDP socket (a reconnect must never open a second WebSocket
+    // over a live one). Surface the first rejection once both have settled.
+    const backend = this._touchBackend
+    this._touchBackend = null
+    const results = await Promise.allSettled([backend?.dispose(), this.cdp.disconnect()])
+    const rejected = results.find((r) => r.status === 'rejected')
+    if (rejected?.status === 'rejected') {
+      throw rejected.reason
+    }
   }
 
   async ping(): Promise<boolean> {

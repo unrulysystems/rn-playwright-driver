@@ -2,10 +2,13 @@
  * E2E for `device.files` — host-side sandbox I/O against a real
  * simulator/emulator container.
  *
- * Two kinds of test live here:
+ * All tests use the shared connected `device` fixture (it calls `device.connect()`,
+ * which attaches to the app runtime, on setup). The split below is about what the test
+ * BODY depends on, not whether a connection exists:
  *  - **Host-only** (push/pull round-trips, nested push, missing → NOT_FOUND): the
- *    transports are host-side (simctl/adb) and never touch the RN runtime, so
- *    these need NO in-app affordance and run without waiting on the app.
+ *    transports are host-side (simctl/adb) and never touch the RN runtime during the
+ *    test, so these need NO in-app affordance and don't gate on any app-side readiness
+ *    hook — only on the container existing.
  *  - **App-affordance oracles** (grouped below): they cross-check that a host root
  *    maps to the app's real expo-file-system directory, so they call into
  *    `__RN_DRIVER_EXAMPLE__` and are gated on its readiness — kept separate so a
