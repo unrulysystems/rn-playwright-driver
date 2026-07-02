@@ -132,6 +132,26 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 
+  it('reads the --json-output diagnostic (not just stderr) to classify a failure', async () => {
+    // stderr alone is unclassifiable (would be TRANSPORT_FAILED); the NOT_FOUND signal
+    // lives ONLY in the --json-output file, so a NOT_FOUND verdict proves assertOk
+    // reads result.json and folds it into the diagnostic before classifying.
+    const { exec } = fakeExec(() => ({
+      stdout: Buffer.alloc(0),
+      stderr: 'devicectl exited with error',
+      code: 1,
+    }))
+    const { fs } = fakeFs({
+      '/tmp/dc/result.json': '{"error":{"message":"The requested file does not exist."}}',
+    })
+    await expect(
+      createDevicectlTransport(CONFIG, exec, fs).pull(
+        { absolute: false, subpath: 'Documents/x' },
+        { maxBuffer: 1 },
+      ),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
   it('rejects the absolute root as UNSUPPORTED (container-scoped)', async () => {
     const { exec, calls } = fakeExec(ok)
     const { fs } = fakeFs()

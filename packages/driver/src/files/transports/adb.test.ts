@@ -175,24 +175,39 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
     ).rejects.toMatchObject({ code: 'TOO_LARGE' })
   })
 
-  it('rejects a single-quote in the path (fail-closed) before spawning', async () => {
+  // Every shell-breaking character UNSAFE_PATH guards must be rejected before any
+  // spawn — dropping one from the class would silently reopen device-side
+  // `run-as … sh -c` injection. Cover the FULL set on pull, not a sample.
+  it.each([
+    ['single quote', "files/o'brien.csv"],
+    ['double quote', 'files/a"b.csv'],
+    ['backtick', 'files/a`whoami`.csv'],
+    ['dollar', 'files/$(rm -rf).csv'],
+    ['backslash', 'files/a\\b.csv'],
+    ['newline', 'files/a\nb.csv'],
+    ['carriage return', 'files/a\rb.csv'],
+  ])('rejects %s in the path (fail-closed) before spawning — pull', async (_label, subpath) => {
     const { exec, calls } = fakeExec(() => readOk(''))
     await expect(
-      createAdbTransport(CONFIG, exec).pull(
-        { absolute: false, subpath: "files/o'brien.csv" },
-        { maxBuffer: 1 },
-      ),
+      createAdbTransport(CONFIG, exec).pull({ absolute: false, subpath }, { maxBuffer: 1 }),
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
     expect(calls).toHaveLength(0)
   })
 
-  it('rejects a shell metacharacter ($) in the path before spawning', async () => {
-    const { exec, calls } = fakeExec(() => readOk(''))
+  // push interpolates the path into the SAME device-side script, so it must reject
+  // the identical class before spawning.
+  it.each([
+    ['single quote', "files/o'brien.csv"],
+    ['double quote', 'files/a"b.csv'],
+    ['backtick', 'files/a`whoami`.csv'],
+    ['dollar', 'files/$(rm -rf).csv'],
+    ['backslash', 'files/a\\b.csv'],
+    ['newline', 'files/a\nb.csv'],
+    ['carriage return', 'files/a\rb.csv'],
+  ])('rejects %s in the path (fail-closed) before spawning — push', async (_label, subpath) => {
+    const { exec, calls } = fakeExec(() => noSentinel('__RN_PW_PUSH_OK__\n'))
     await expect(
-      createAdbTransport(CONFIG, exec).pull(
-        { absolute: false, subpath: 'files/$(rm -rf).csv' },
-        { maxBuffer: 1 },
-      ),
+      createAdbTransport(CONFIG, exec).push({ absolute: false, subpath }, Buffer.from('x')),
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' })
     expect(calls).toHaveLength(0)
   })
