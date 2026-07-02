@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { readWatchedLog } from './process-runner'
+import { metroTargetMatchesDeviceName, readWatchedLog } from './process-runner'
 
 // The OS-boundary process runner is verified by the live e2e oracle, NOT unit tests — except
 // `readWatchedLog`, whose FAIL-CLOSED contract (a missing/unreadable companion log is a defect, not
@@ -42,5 +42,31 @@ describe('readWatchedLog (fail-closed companion log read)', () => {
     await expect(readWatchedLog(dir)).rejects.toThrow(
       /cannot read companion log for fast-fail marker detection/,
     )
+  })
+})
+
+describe('metroTargetMatchesDeviceName', () => {
+  it('matches deviceName directly', () => {
+    expect(
+      metroTargetMatchesDeviceName({ appId: 'com.acme.app', deviceName: 'iPhone 17' }, 'iPhone 17'),
+    ).toBe(true)
+  })
+
+  it('matches a deviceName-less Metro target by trailing title parenthetical', () => {
+    expect(
+      metroTargetMatchesDeviceName(
+        { appId: 'com.acme.app', title: 'com.acme.app (iPhone 17)' },
+        'iPhone 17',
+      ),
+    ).toBe(true)
+  })
+
+  it('does not match arbitrary title text outside the trailing parenthetical', () => {
+    expect(
+      metroTargetMatchesDeviceName(
+        { appId: 'com.acme.app', title: 'iPhone 17 — Hermes' },
+        'iPhone 17',
+      ),
+    ).toBe(false)
   })
 })

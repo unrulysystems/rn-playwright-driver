@@ -237,6 +237,27 @@ destination_simulator_udid() {
   return 1
 }
 
+simulator_name_for_udid() {
+  SIM_UDID="$1" node <<'NODE'
+const { execFileSync } = require('node:child_process')
+
+const udid = process.env.SIM_UDID
+const devicesJson = execFileSync('xcrun', ['simctl', 'list', 'devices', 'available', '--json'], {
+  encoding: 'utf8',
+})
+const data = JSON.parse(devicesJson)
+const match = Object.values(data.devices || {})
+  .flat()
+  .find((device) => device.udid === udid)
+
+if (!match) {
+  throw new Error(`No available simulator found for UDID ${udid}`)
+}
+
+console.log(match.name)
+NODE
+}
+
 configure_ios_packager_host() {
   local udid
   udid="$(destination_simulator_udid)" || fail "IOS_DESTINATION must include a simulator id, got: ${DEVICE_DESTINATION}"
@@ -426,12 +447,13 @@ open_host_launch_url
 wait_for_hermes_target
 
 echo "Running iOS e2e with RN_TOUCH_BACKEND=xctest"
-SIM_UDID="${DEVICE_DESTINATION##*,id=}"
-[[ "$SIM_UDID" != "$DEVICE_DESTINATION" ]] || fail "IOS_DESTINATION must include ',id=<simulator-udid>' for device.files targeting"
+SIM_UDID="$(destination_simulator_udid)" || fail "IOS_DESTINATION must include ',id=<simulator-udid>' for device.files targeting"
+SIM_DEVICE_NAME="$(simulator_name_for_udid "$SIM_UDID")" || fail "could not resolve simulator name for ${SIM_UDID}"
 if RN_TOUCH_BACKEND=xctest \
   RN_TOUCH_XCTEST_PORT="$TOUCH_PORT" \
   RN_TOUCH_XCTEST_TOKEN_FILE="$TOUCH_AUTH_TOKEN_FILE" \
   RN_METRO_URL="$METRO_URL" \
+  RN_DEVICE_NAME="$SIM_DEVICE_NAME" \
   RN_APP_BUNDLE_ID="$APP_BUNDLE_ID" \
   RN_SIM_UDID="$SIM_UDID" \
   RN_IOS_TARGET_KIND=simulator \

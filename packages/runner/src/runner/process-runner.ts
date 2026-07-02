@@ -250,12 +250,31 @@ async function metroStatusOk(metroUrl: string): Promise<boolean> {
   }
 }
 
-interface MetroTarget {
+export interface MetroTarget {
   readonly title?: string
   readonly description?: string
   readonly vm?: string
   readonly appId?: string
   readonly deviceName?: string
+}
+
+function titleParenthetical(title: string | undefined): string | undefined {
+  return title?.match(/\(([^)]+)\)\s*$/)?.[1]
+}
+
+export function metroTargetMatchesDeviceName(
+  target: MetroTarget,
+  deviceNameMatch: string,
+): boolean {
+  const needle = deviceNameMatch.toLowerCase()
+  return (
+    String(target.deviceName ?? '')
+      .toLowerCase()
+      .includes(needle) ||
+    String(titleParenthetical(target.title) ?? '')
+      .toLowerCase()
+      .includes(needle)
+  )
 }
 
 async function hermesTargetPresent(
@@ -274,7 +293,7 @@ async function hermesTargetPresent(
         String(target.description ?? '').includes('React Native')
       if (!isReactNative || target.appId !== probe.appId) return false
       if (!probe.deviceNameMatch) return true
-      return String(target.deviceName ?? '').includes(probe.deviceNameMatch)
+      return metroTargetMatchesDeviceName(target, probe.deviceNameMatch)
     })
   } catch {
     return false
