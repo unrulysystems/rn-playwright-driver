@@ -330,7 +330,6 @@ require_command adb
 require_command curl
 require_command nc
 require_command node
-require_command npx
 select_metro_port
 if [[ -z "$TOUCH_AUTH_TOKEN" ]]; then
   require_command openssl

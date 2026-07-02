@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import type { PlaywrightConfig } from '../config'
 import type { ResolvedMetro } from './resolved'
 import type { CommandSpec, Step } from './types'
@@ -8,10 +10,22 @@ export function cmd(command: string, args: string[]): CommandSpec {
   return { command, args }
 }
 
-export function packageBin(bin: string, args: string[]): CommandSpec {
-  // Use the app workspace's installed binaries; npm exec/npx can touch npm
-  // resolution/network paths and hang before the verifier ever reaches Metro.
-  return { command: `./node_modules/.bin/${bin}`, args }
+export function packageBin(bin: string, args: string[], cwd = process.cwd()): CommandSpec {
+  // Use installed package binaries; npm exec/npx can touch npm resolution/network
+  // paths and hang before the verifier ever reaches Metro.
+  return { command: resolvePackageBin(bin, cwd), args }
+}
+
+export function resolvePackageBin(bin: string, cwd = process.cwd()): string {
+  const start = path.resolve(cwd)
+  for (let dir = start; ; dir = path.dirname(dir)) {
+    const candidate = path.join(dir, 'node_modules', '.bin', bin)
+    if (existsSync(candidate)) return candidate
+    if (process.platform === 'win32' && existsSync(`${candidate}.cmd`)) return `${candidate}.cmd`
+    const parent = path.dirname(dir)
+    if (parent === dir) break
+  }
+  return path.join(start, 'node_modules', '.bin', process.platform === 'win32' ? `${bin}.cmd` : bin)
 }
 
 function shell(command: string): CommandSpec {
@@ -30,9 +44,9 @@ export function metroStartStep(metro: ResolvedMetro): Step {
       type: 'command',
       background: true,
       processKey: 'metro',
-      command: shell(
-        metro.command ?? `./node_modules/.bin/expo start --localhost --port ${metro.port}`,
-      ),
+      command: metro.command
+        ? shell(metro.command)
+        : packageBin('expo', ['start', '--localhost', '--port', String(metro.port)]),
     },
   }
 }
@@ -48,11 +62,12 @@ export function playwrightCommand(
   playwright: PlaywrightConfig | undefined,
   specs: readonly string[],
   passthrough: readonly string[],
+  cwd = process.cwd(),
 ): CommandSpec {
   const args = ['test']
   if (playwright?.config) args.push('--config', playwright.config)
   const effectiveSpecs = specs.length > 0 ? specs : (playwright?.specs ?? [])
   args.push(...effectiveSpecs, ...passthrough)
   args.push('--reporter=line')
-  return packageBin('playwright', args)
+  return packageBin('playwright', args, cwd)
 }

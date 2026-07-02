@@ -363,7 +363,6 @@ wait_for_hermes_target() {
 require_command curl
 require_command bun
 require_command nc
-require_command npx
 require_command pod
 require_command xcrun
 require_command xcodebuild
