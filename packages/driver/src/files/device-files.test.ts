@@ -31,6 +31,23 @@ function fakeTransport(overrides: Partial<FileTransport> = {}) {
   return { pulls, pushes, select }
 }
 
+/**
+ * Assert a `device.files` call rejects with a TYPED {@link FileIoError} of `code`. The
+ * public contract (types.ts / README) promises every failure is a `FileIoError`, not a
+ * plain Error/object that merely carries a `code` — a `toMatchObject({ code })` alone
+ * would pass on the latter, so this checks `instanceof` too. Fails if the call resolves.
+ */
+async function expectFileIoError(promise: Promise<unknown>, code: FileIoError['code']) {
+  const error = await promise.then(
+    () => {
+      throw new Error('expected device.files to reject with a FileIoError, but it resolved')
+    },
+    (e: unknown) => e,
+  )
+  expect(error).toBeInstanceOf(FileIoError)
+  expect((error as FileIoError).code).toBe(code)
+}
+
 describe('createDeviceFiles — lifecycle', () => {
   it('fails closed with UNAVAILABLE once the device is disconnected (isLive false)', async () => {
     // A reference captured before disconnect must not keep doing host-side I/O.
@@ -42,10 +59,8 @@ describe('createDeviceFiles — lifecycle', () => {
       isLive: () => false,
     })
 
-    await expect(files.pull('obs.csv')).rejects.toMatchObject({ code: 'UNAVAILABLE' })
-    await expect(files.push(Buffer.from('x'), 'seed.bin')).rejects.toMatchObject({
-      code: 'UNAVAILABLE',
-    })
+    await expectFileIoError(files.pull('obs.csv'), 'UNAVAILABLE')
+    await expectFileIoError(files.push(Buffer.from('x'), 'seed.bin'), 'UNAVAILABLE')
     expect(select).not.toHaveBeenCalled() // fail closed before any transport
     expect(pulls).toEqual([])
     expect(pushes).toEqual([])
@@ -102,7 +117,7 @@ describe('createDeviceFiles — pull', () => {
     const { select } = fakeTransport()
     const files = createDeviceFiles({ platform: 'ios', target: undefined, selectTransport: select })
 
-    await expect(files.pull('obs.csv')).rejects.toMatchObject({ code: 'UNAVAILABLE' })
+    await expectFileIoError(files.pull('obs.csv'), 'UNAVAILABLE')
     expect(select).not.toHaveBeenCalled()
   })
 
@@ -114,7 +129,7 @@ describe('createDeviceFiles — pull', () => {
       selectTransport: select,
     })
 
-    await expect(files.pull('../escape')).rejects.toMatchObject({ code: 'UNSUPPORTED' })
+    await expectFileIoError(files.pull('../escape'), 'UNSUPPORTED')
     expect(select).not.toHaveBeenCalled()
   })
 
@@ -130,9 +145,7 @@ describe('createDeviceFiles — pull', () => {
           selectTransport: select,
         })
 
-        await expect(files.pull('/etc/passwd', { root: 'absolute' })).rejects.toMatchObject({
-          code: 'UNSUPPORTED',
-        })
+        await expectFileIoError(files.pull('/etc/passwd', { root: 'absolute' }), 'UNSUPPORTED')
         expect(select).not.toHaveBeenCalled() // fail closed before any transport
       }),
     )
@@ -150,9 +163,7 @@ describe('createDeviceFiles — pull', () => {
 
     await Promise.all(
       [Number.NaN, Number.POSITIVE_INFINITY, 0, -1].map((bad) =>
-        expect(files.pull('obs.csv', { maxBuffer: bad })).rejects.toMatchObject({
-          code: 'UNSUPPORTED',
-        }),
+        expectFileIoError(files.pull('obs.csv', { maxBuffer: bad }), 'UNSUPPORTED'),
       ),
     )
     expect(select).not.toHaveBeenCalled()
@@ -170,7 +181,7 @@ describe('createDeviceFiles — pull', () => {
       selectTransport: select,
     })
 
-    await expect(files.pull('missing.csv')).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    await expectFileIoError(files.pull('missing.csv'), 'NOT_FOUND')
   })
 
   it('propagates a transport TOO_LARGE', async () => {
@@ -185,7 +196,7 @@ describe('createDeviceFiles — pull', () => {
       selectTransport: select,
     })
 
-    await expect(files.pull('big.bin')).rejects.toMatchObject({ code: 'TOO_LARGE' })
+    await expectFileIoError(files.pull('big.bin'), 'TOO_LARGE')
   })
 })
 
@@ -259,9 +270,7 @@ describe('createDeviceFiles — push', () => {
       localFileSize,
     })
 
-    await expect(files.push('./big.bin', 'seed.bin', { maxBuffer: 1_000 })).rejects.toMatchObject({
-      code: 'TOO_LARGE',
-    })
+    await expectFileIoError(files.push('./big.bin', 'seed.bin', { maxBuffer: 1_000 }), 'TOO_LARGE')
     expect(readLocalFileBounded).not.toHaveBeenCalled() // bounded before the read
     expect(pushes).toEqual([])
   })
@@ -283,10 +292,9 @@ describe('createDeviceFiles — push', () => {
       localFileSize,
     })
 
-    await expect(files.push('./grows.bin', 'seed.bin', { maxBuffer: 1_000 })).rejects.toMatchObject(
-      {
-        code: 'TOO_LARGE',
-      },
+    await expectFileIoError(
+      files.push('./grows.bin', 'seed.bin', { maxBuffer: 1_000 }),
+      'TOO_LARGE',
     )
     expect(pushes).toEqual([])
   })
@@ -299,9 +307,10 @@ describe('createDeviceFiles — push', () => {
       selectTransport: select,
     })
 
-    await expect(
+    await expectFileIoError(
       files.push(Buffer.alloc(2048), 'seed.bin', { maxBuffer: 1024 }),
-    ).rejects.toMatchObject({ code: 'TOO_LARGE' })
+      'TOO_LARGE',
+    )
     expect(pushes).toEqual([])
   })
 
@@ -319,9 +328,7 @@ describe('createDeviceFiles — push', () => {
       localFileSize,
     })
 
-    await expect(files.push('./missing.json', 'seed.json')).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-    })
+    await expectFileIoError(files.push('./missing.json', 'seed.json'), 'NOT_FOUND')
     expect(select).not.toHaveBeenCalled() // fail closed before touching the transport
   })
 
@@ -355,8 +362,6 @@ describe('createDeviceFiles — push', () => {
       localFileSize,
     })
 
-    await expect(files.push('./locked.json', 'seed.json')).rejects.toMatchObject({
-      code: 'TRANSPORT_FAILED',
-    })
+    await expectFileIoError(files.push('./locked.json', 'seed.json'), 'TRANSPORT_FAILED')
   })
 })

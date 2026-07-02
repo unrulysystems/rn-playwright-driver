@@ -124,6 +124,26 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
     ])
   })
 
+  it('fails closed on a nonzero `copy to` exit — push checks assertOk, never silent success', async () => {
+    // The staging write succeeds, but `devicectl device copy to` exits nonzero (device
+    // write failed). push MUST assertOk the copy-to result — a regression that drops that
+    // check would report a FAILED device write as success. Guards devicectl.ts:182.
+    const { exec, calls } = fakeExec(() => ({
+      stdout: Buffer.alloc(0),
+      stderr: 'devicectl copy to failed',
+      code: 1,
+    }))
+    const { fs, removed } = fakeFs()
+    await expect(
+      createDevicectlTransport(CONFIG, exec, fs).push(
+        { absolute: false, subpath: 'Documents/seed.json' },
+        Buffer.from('x'),
+      ),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+    expect(calls[0]?.args[3]).toBe('to') // it did attempt `copy to` before failing closed
+    expect(removed).toEqual(['/tmp/dc']) // and still cleaned up staging
+  })
+
   it('classifies a missing source as NOT_FOUND and still cleans up the staging dir', async () => {
     const { exec } = fakeExec(() => ({
       stdout: Buffer.alloc(0),
