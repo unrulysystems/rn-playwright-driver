@@ -67,6 +67,84 @@ See the companion package READMEs for platform launch steps:
 - `@unrulysystems/rn-playwright-driver-instrumentation-companion`
 - `@unrulysystems/rn-playwright-driver-xctest-companion`
 
+## Device File I/O
+
+`device.files` reads and writes the running app's sandbox from the host, so a
+test can assert the real artifact a feature produces (a CSV/PDF export, a cache,
+a persisted snapshot) end to end — not just that a button is visible.
+
+```ts
+// Read a file the app wrote and assert its bytes.
+const csv = await device.files.pull('observation_1.csv', { root: 'document' })
+expect(csv.toString('utf8')).toContain('Interval,Actor,Engaged')
+
+// Push a fixture (host path or Buffer) into the sandbox.
+await device.files.push('./fixtures/seed.json', 'seed.json', { root: 'document' })
+```
+
+`pull` resolves with a `Buffer`; every failure is a typed `FileIoError` with a
+`code` (`NOT_FOUND` | `UNAVAILABLE` | `UNSUPPORTED` | `TRANSPORT_FAILED` |
+`TOO_LARGE`) — never a silent empty buffer.
+
+**Roots** (default `document`) mirror `expo-file-system`, so one call points at
+the app-written file on both platforms:
+
+| Root       | iOS (`<container>`) | Android (`/data/data/<pkg>`) |
+| ---------- | ------------------- | ---------------------------- |
+| `document` | `Documents/`        | `files/`                     |
+| `cache`    | `Library/Caches/`   | `cache/`                     |
+| `data`     | container root      | app-home root                |
+| `absolute` | unsupported\*       | verbatim device path         |
+
+**Platform support:**
+
+| Target           | Transport                        | Status                       |
+| ---------------- | -------------------------------- | ---------------------------- |
+| iOS simulator    | `xcrun simctl get_app_container` | supported                    |
+| iOS device       | `xcrun devicectl device copy`    | **provisional** (see below)  |
+| Android emulator | `adb … run-as <pkg>`             | supported (debuggable build) |
+| Android device   | `adb … run-as <pkg>`             | **pending** hardware verify  |
+
+- \*`absolute` is **not supported on iOS** (simulator or device) and rejects
+  `UNSUPPORTED`: `device.files` is app-sandbox-scoped, and on the simulator an
+  absolute path would resolve to a raw host path. Use it only on Android.
+- On Android, `absolute` is an intentional escape hatch: the path is passed to
+  `run-as <pkg>` **verbatim**, so its reach is exactly **whatever the app UID can
+  access** — no path-prefix restriction. That is the app-private tree
+  (`/data/data/<pkg>/…`, the same sandbox the named roots resolve into, minus the
+  fixed prefix) **plus** any UID-accessible path such as the app's own
+  `/proc/self/…`. It **cannot** read another app's sandbox or root/privileged files
+  (the kernel enforces the UID boundary), and — because `run-as` uses the app's
+  **internal-storage** mount namespace — **external storage is NOT reachable**:
+  `/sdcard/…`, **including** the app-scoped `/sdcard/Android/data/<pkg>/…`, returns
+  Permission denied and fails closed as `TRANSPORT_FAILED` (verified by an E2E). The
+  path is test-author-controlled, so this is a deliberate capability, not an
+  injection surface. `..` is rejected so the touched path stays legible, and a
+  path containing shell metacharacters (quotes, backtick, `$`, backslash, or a
+  newline) is rejected `UNSUPPORTED` before adb runs — the path is interpolated
+  into a device-side `run-as … sh -c` command, so it must stay a plain path. Pass a
+  full path you intend; the standard `document`/`cache`/`data` roots are the
+  sandbox-relative alternative.
+- Android requires a **debuggable** build (`run-as`); iOS requires a
+  **development-signed** app — both hold for E2E builds.
+- The **iOS-device** transport is unit-verified but **provisional** pending a
+  real-hardware walkthrough. The verified E2E paths are the **iOS simulator** and
+  the **Android emulator**; **physical Android** shares the emulator's `run-as`
+  transport but its hardware walkthrough is still pending.
+
+Targeting (bundle id, udid, package, adb serial) is supplied automatically by
+the `rn-driver` runner via `RN_APP_BUNDLE_ID` / `RN_SIM_UDID` /
+`RN_IOS_TARGET_KIND` / `RN_APP_PACKAGE` (`ANDROID_SERIAL`); set
+`DeviceOptions.target` explicitly for a direct `createDevice()`. When your `target`
+carries a **complete file-I/O identity** (iOS `udid` + `bundleId`, or Android
+`serial` + `packageName`) **and more than one runtime is connected to the same
+Metro**, also pass a CDP selector (`deviceName` or `pageIndex`) — Metro exposes no
+UDID, so `createDevice` fails closed (`Ambiguous CDP target`) rather than risk
+attaching `evaluate()` to a different app than `device.files` reads. A lone
+`udid`/`serial` (e.g. `ANDROID_SERIAL` set only for touch/adb, no app id) is **not**
+a file pin — `device.files` would be `UNAVAILABLE` anyway — so it never forces a
+selector. With a single runtime (the usual runner flow) no selector is needed.
+
 ## Example E2E Gates
 
 The repo example app owns complete companion-backed scripts:

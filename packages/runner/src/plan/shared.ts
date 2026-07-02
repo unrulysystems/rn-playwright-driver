@@ -1,23 +1,33 @@
+import path from 'node:path'
 import type { PlaywrightConfig } from '../config'
 import type { ResolvedMetro } from './resolved'
 import type { CommandSpec, Step } from './types'
 
 /** Command constructors. Secret values NEVER flow through these — only paths. */
 
-export function cmd(command: string, args: string[]): CommandSpec {
-  return { command, args }
+export function cmd(command: string, args: string[], cwd?: string): CommandSpec {
+  return { command, args, ...(cwd ? { cwd } : {}) }
 }
 
-export function npx(args: string[]): CommandSpec {
-  return { command: 'npx', args }
+export function packageBin(bin: string, args: string[], cwd?: string): CommandSpec {
+  // Resolved by NodeProcessRunner at the OS boundary. npm exec/npx can touch npm
+  // resolution/network paths and hang before the verifier ever reaches Metro.
+  return { command: bin, args, packageBin: true, ...(cwd ? { cwd } : {}) }
 }
 
-function shell(command: string): CommandSpec {
-  return { command: 'sh', args: ['-c', command] }
+export function projectPath(projectCwd: string | undefined, relativePath: string): string {
+  if (!projectCwd || path.isAbsolute(relativePath) || relativePath.startsWith('<')) {
+    return relativePath
+  }
+  return path.join(projectCwd, relativePath)
+}
+
+function shell(command: string, cwd?: string): CommandSpec {
+  return { command: 'sh', args: ['-c', command], ...(cwd ? { cwd } : {}) }
 }
 
 /** The Metro start step, shared by both platforms. */
-export function metroStartStep(metro: ResolvedMetro): Step {
+export function metroStartStep(metro: ResolvedMetro, cwd?: string): Step {
   return {
     id: 'metro.start',
     stage: 'metro',
@@ -28,7 +38,12 @@ export function metroStartStep(metro: ResolvedMetro): Step {
       type: 'command',
       background: true,
       processKey: 'metro',
-      command: shell(metro.command ?? `npx expo start --localhost --port ${metro.port}`),
+      command: metro.command
+        ? shell(metro.command, cwd)
+        : {
+            ...packageBin('expo', ['start', '--localhost', '--port', String(metro.port)], cwd),
+            env: { CI: '1', EXPO_NO_TELEMETRY: '1' },
+          },
     },
   }
 }
@@ -44,11 +59,12 @@ export function playwrightCommand(
   playwright: PlaywrightConfig | undefined,
   specs: readonly string[],
   passthrough: readonly string[],
+  cwd?: string,
 ): CommandSpec {
-  const args = ['playwright', 'test']
+  const args = ['test']
   if (playwright?.config) args.push('--config', playwright.config)
   const effectiveSpecs = specs.length > 0 ? specs : (playwright?.specs ?? [])
   args.push(...effectiveSpecs, ...passthrough)
   args.push('--reporter=line')
-  return npx(args)
+  return packageBin('playwright', args, cwd)
 }

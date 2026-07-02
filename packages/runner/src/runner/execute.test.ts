@@ -16,6 +16,9 @@ interface Recorded {
 function makeRunner(
   opts: {
     execCode?: (spec: CommandSpec) => number
+    spawnError?: (spec: CommandSpec) => Error | null
+    writeFileError?: (path: string) => Error | null
+    freePortError?: (port: number) => Error | null
     probeResult?: (probe: ReadinessProbe) => boolean
     /** Simulate the real probe's fast-fail: return a marker for a probe to throw ProbeFailure. */
     probeFailure?: (probe: ReadinessProbe) => string | null
@@ -30,6 +33,8 @@ function makeRunner(
     },
     spawn(spec, o) {
       calls.push({ type: 'spawn', label: o.key, spec })
+      const error = opts.spawnError?.(spec)
+      if (error) throw error
       alive.set(o.key, true)
       return { key: o.key, pid: 4242 }
     },
@@ -43,6 +48,8 @@ function makeRunner(
     },
     writeFile(path) {
       calls.push({ type: 'write', label: path })
+      const error = opts.writeFileError?.(path)
+      if (error) return Promise.reject(error)
       return Promise.resolve()
     },
     removeFile(path) {
@@ -51,6 +58,8 @@ function makeRunner(
     },
     freePort(port) {
       calls.push({ type: 'free', label: String(port) })
+      const error = opts.freePortError?.(port)
+      if (error) return Promise.reject(error)
       return Promise.resolve()
     },
     probe(probe, isAlive, watch) {
@@ -74,25 +83,32 @@ function makeRunner(
 const labels = (calls: Recorded[], type: Recorded['type']) =>
   calls.filter((c) => c.type === type).map((c) => c.label)
 const order = (calls: Recorded[], pred: (c: Recorded) => boolean) => calls.findIndex(pred)
+const isPlaywrightExec = (c: Recorded) =>
+  c.type === 'exec' && c.spec?.command === 'playwright' && c.spec.packageBin === true
 
 describe('executePlan (iOS plan against a mock runner)', () => {
   const plan = buildDryRunPlan(configFixture(), 'ios')
 
   it('runs the full lifecycle then Playwright, and returns the Playwright exit code', async () => {
     const { runner, calls } = makeRunner({
-      execCode: (s) => (s.args.includes('playwright') ? 7 : 0),
+      execCode: (s) => (s.command === 'playwright' && s.packageBin ? 7 : 0),
     })
     const result = await executePlan(plan, runner, { logDir: '/tmp/logs' })
 
     expect(result.playwrightCode).toBe(7)
     expect(labels(calls, 'spawn')).toEqual(['metro', 'companion'])
     // Playwright runs after the companion is up.
-    const playwrightAt = order(
-      calls,
-      (c) => c.type === 'exec' && (c.spec?.args.includes('playwright') ?? false),
-    )
+    const playwrightAt = order(calls, isPlaywrightExec)
     const companionReadyAt = order(calls, (c) => c.type === 'probe' && c.label === 'xctest-hello')
     expect(playwrightAt).toBeGreaterThan(companionReadyAt)
+  })
+
+  it('forwards driverEnv into the Playwright process env', async () => {
+    const { runner, calls } = makeRunner()
+    await executePlan(plan, runner, { logDir: '/tmp/logs' })
+
+    const playwright = calls.find(isPlaywrightExec)
+    expect(playwright?.spec?.env).toMatchObject(plan.driverEnv)
   })
 
   it('gates: a background process is spawned before its readiness probe', async () => {
@@ -116,7 +132,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(labels(calls, 'free')).toContain('9999')
     expect(labels(calls, 'rm')).toContain('<token-file>')
     // Playwright never ran.
-    expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(false)
+    expect(calls.some(isPlaywrightExec)).toBe(false)
   })
 
   it('fast-fails the companion stage when xcodebuild reports a build failure (no readiness wait)', async () => {
@@ -137,7 +153,37 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(companionProbe?.watch?.logPath).toContain('companion')
     // Cleanup still runs defensively; Playwright never does.
     expect(labels(calls, 'kill')).toEqual(expect.arrayContaining(['companion', 'metro']))
-    expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(false)
+    expect(calls.some(isPlaywrightExec)).toBe(false)
+  })
+
+  it('attributes write-file and free-port failures to their lifecycle stage', async () => {
+    const writeFailure = await executePlan(
+      plan,
+      makeRunner({ writeFileError: () => new Error('EACCES') }).runner,
+      { logDir: '/tmp/logs' },
+    ).catch((e: unknown) => e)
+    expect(writeFailure).toBeInstanceOf(StageError)
+    expect(writeFailure).toMatchObject({ stage: 'build', stepId: 'ios.runtime-config' })
+
+    const freePortFailure = await executePlan(
+      plan,
+      makeRunner({ freePortError: () => new Error('lsof failed') }).runner,
+      { logDir: '/tmp/logs' },
+    ).catch((e: unknown) => e)
+    expect(freePortFailure).toBeInstanceOf(StageError)
+    expect(freePortFailure).toMatchObject({ stage: 'companion', stepId: 'ios.free-port' })
+  })
+
+  it('attributes synchronous background spawn failures to their lifecycle stage', async () => {
+    const error = await executePlan(
+      plan,
+      makeRunner({ spawnError: (spec) => (spec.command === 'sh' ? new Error('ENOENT') : null) })
+        .runner,
+      { logDir: '/tmp/logs' },
+    ).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(StageError)
+    expect(error).toMatchObject({ stage: 'metro', stepId: 'metro.start' })
   })
 
   it('skip-build skips skippable steps but keeps the token/config refresh', async () => {
@@ -168,7 +214,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     // the mock probe now honors isAlive, a regression in execute's "no handle =>
     // alive" gating would surface here as a metro-stage StageError.
     expect(labels(calls, 'probe')).toContain('metro-status')
-    expect(calls.some((c) => c.spec?.args.includes('playwright'))).toBe(true)
+    expect(calls.some(isPlaywrightExec)).toBe(true)
     expect(result.playwrightCode).toBe(0)
   })
 

@@ -2,7 +2,7 @@ import type { AndroidConfig, PlaywrightConfig } from '../config'
 import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
 import { buildAndroidDriverEnv } from './env'
 import type { ResolvedAndroidTarget, ResolvedMetro } from './resolved'
-import { metroStartStep, npx, playwrightCommand } from './shared'
+import { metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
 import type { CleanupAction, CommandSpec, Plan, Step } from './types'
 
 export interface PlanAndroidInput {
@@ -11,6 +11,8 @@ export interface PlanAndroidInput {
   readonly resolved: ResolvedAndroidTarget
   readonly playwright: PlaywrightConfig | undefined
   readonly timeoutMs: number | undefined
+  /** Project/config directory for commands that run relative to the app workspace. */
+  readonly projectCwd?: string
   /** Positional spec paths; override the config spec list when non-empty. */
   readonly specs: readonly string[]
   /** Args after `--`; always appended to the Playwright invocation. */
@@ -30,12 +32,21 @@ export interface PlanAndroidInput {
  * so the value never enters argv.
  */
 export function planAndroid(input: PlanAndroidInput): Plan {
-  const { android, metro, resolved, playwright, timeoutMs, specs, passthrough, hermesDeviceName } =
-    input
+  const {
+    android,
+    metro,
+    resolved,
+    playwright,
+    timeoutMs,
+    projectCwd,
+    specs,
+    passthrough,
+    hermesDeviceName,
+  } = input
   const serial = resolved.serial
   const gradleTasks = android.gradleTasks ?? [...DEFAULTS.androidGradleTasks]
-  const appApk = android.appApkPath ?? DEFAULTS.androidAppApkPath
-  const testApk = android.testApkPath ?? DEFAULTS.androidTestApkPath
+  const appApk = projectPath(projectCwd, android.appApkPath ?? DEFAULTS.androidAppApkPath)
+  const testApk = projectPath(projectCwd, android.testApkPath ?? DEFAULTS.androidTestApkPath)
 
   const steps: Step[] = []
   const push = (step: Step) => steps.push(step)
@@ -47,7 +58,11 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     description: 'Generate Android project (expo prebuild)',
     action: {
       type: 'command',
-      command: npx(['expo', 'prebuild', '--platform', 'android', '--no-install']),
+      command: packageBin(
+        'expo',
+        ['prebuild', '--platform', 'android', '--no-install'],
+        projectCwd,
+      ),
     },
     skippable: true,
   })
@@ -57,7 +72,7 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     description: `Build app + androidTest APKs (${gradleTasks.join(' ')})`,
     action: {
       type: 'command',
-      command: { command: './gradlew', args: gradleTasks, cwd: 'android' },
+      command: { command: './gradlew', args: gradleTasks, cwd: projectPath(projectCwd, 'android') },
     },
     skippable: true,
   })
@@ -99,7 +114,7 @@ export function planAndroid(input: PlanAndroidInput): Plan {
   })
 
   // metro — start (or reuse) and wait.
-  push(metroStartStep(metro))
+  push(metroStartStep(metro, projectCwd))
   push({
     id: 'metro.ready',
     stage: 'metro',
@@ -276,8 +291,14 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     platform: 'android',
     steps,
     cleanup,
-    driverEnv: buildAndroidDriverEnv(resolved, metro, hermesDeviceName, timeoutMs),
-    playwright: playwrightCommand(playwright, specs, passthrough),
+    driverEnv: buildAndroidDriverEnv(
+      resolved,
+      metro,
+      hermesDeviceName,
+      timeoutMs,
+      android.packageName,
+    ),
+    playwright: playwrightCommand(playwright, specs, passthrough, projectCwd),
   }
 }
 

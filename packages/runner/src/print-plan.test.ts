@@ -11,7 +11,8 @@ describe('renderPlan', () => {
     expect(text).toContain('Driver env (handed to Playwright):')
     expect(text).toContain('RN_TOUCH_BACKEND=xctest')
     expect(text).toContain('Playwright:')
-    expect(text).toContain('npx playwright test')
+    expect(text).toContain('playwright test')
+    expect(text).toContain('[package-bin]')
     expect(text).toContain('Cleanup (defensive, idempotent):')
   })
 

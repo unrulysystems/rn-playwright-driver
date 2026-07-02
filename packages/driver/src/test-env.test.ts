@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { touchOptionsFromEnv } from './test-env'
+import { targetFromEnv, touchOptionsFromEnv } from './test-env'
 
 describe('touchOptionsFromEnv', () => {
   it('reads instrumentation auth from a token file when the token env var is unset', () => {
@@ -152,5 +152,60 @@ describe('touchOptionsFromEnv', () => {
       },
     })
     expect(readTextFile).toHaveBeenCalledWith('/tmp/rn-xctest-token')
+  })
+})
+
+describe('targetFromEnv', () => {
+  it('maps the iOS file-I/O contract into a target', () => {
+    expect(
+      targetFromEnv({
+        RN_APP_BUNDLE_ID: 'com.acme.app',
+        RN_SIM_UDID: 'UDID-1',
+        RN_IOS_TARGET_KIND: 'simulator',
+      }),
+    ).toEqual({ bundleId: 'com.acme.app', udid: 'UDID-1', iosKind: 'simulator' })
+  })
+
+  it('maps the Android contract, defaulting the serial from ANDROID_SERIAL', () => {
+    expect(
+      targetFromEnv({ RN_APP_PACKAGE: 'com.acme.app', ANDROID_SERIAL: 'emulator-5554' }),
+    ).toEqual({ packageName: 'com.acme.app', serial: 'emulator-5554' })
+  })
+
+  it('pins the serial to ANDROID_SERIAL over a stale RN_TOUCH_ADB_SERIAL, reusing the adb path', () => {
+    // ANDROID_SERIAL is the runner-launched device; a stale touch override must
+    // not point file I/O at a different device (REQ-TGT).
+    expect(
+      targetFromEnv({
+        RN_APP_PACKAGE: 'com.acme.app',
+        RN_TOUCH_ADB_SERIAL: 'stale',
+        ANDROID_SERIAL: 'emulator-5554',
+        RN_TOUCH_CLI_ADB_PATH: '/opt/adb',
+      }),
+    ).toMatchObject({ serial: 'emulator-5554', adbPath: '/opt/adb' })
+  })
+
+  it('does NOT fall back to RN_TOUCH_ADB_SERIAL — leaves serial unset (fail closed)', () => {
+    // A stale touch override must never become the file-I/O device; absent
+    // ANDROID_SERIAL, file ops fail closed UNAVAILABLE rather than route wrong.
+    const target = targetFromEnv({ RN_APP_PACKAGE: 'com.acme.app', RN_TOUCH_ADB_SERIAL: 'stale' })
+    expect(target?.serial).toBeUndefined()
+    expect(target).toMatchObject({ packageName: 'com.acme.app' })
+  })
+
+  it('throws on an invalid RN_IOS_TARGET_KIND (fail closed, not a silent simulator default)', () => {
+    expect(() => targetFromEnv({ RN_SIM_UDID: 'UDID-1', RN_IOS_TARGET_KIND: 'nonsense' })).toThrow(
+      /RN_IOS_TARGET_KIND must be one of/,
+    )
+  })
+
+  it('treats an empty RN_IOS_TARGET_KIND as unset (no throw)', () => {
+    expect(targetFromEnv({ RN_SIM_UDID: 'UDID-1', RN_IOS_TARGET_KIND: '' })).toEqual({
+      udid: 'UDID-1',
+    })
+  })
+
+  it('returns undefined when no targeting env is present', () => {
+    expect(targetFromEnv({ RN_METRO_URL: 'http://localhost:8081' })).toBeUndefined()
   })
 })

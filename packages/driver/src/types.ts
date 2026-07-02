@@ -31,6 +31,12 @@ export type DeviceOptions = {
    * via `device.on("pageerror")` regardless.
    */
   failOnUncaughtException?: boolean
+  /**
+   * Device/app targeting context for host-side file I/O (`device.files`).
+   * Defaulted from the runner env contract by the Playwright fixture. See
+   * {@link TargetContext} and SPEC.md REQ-TGT-*.
+   */
+  target?: TargetContext
 } & TargetSelectionOptions
 
 // --- Runtime events (console + uncaught exceptions) ---
@@ -350,6 +356,88 @@ export type TouchBackendConfig = {
   }
 }
 
+// --- Device file I/O (see packages/driver/SPEC.md REQ-FILES-* / REQ-XPORT-* / REQ-TGT-*) ---
+
+/**
+ * Named root a remote path resolves against. `document`/`cache` mirror
+ * `expo-file-system`'s `documentDirectory`/`cacheDirectory`, so one call points
+ * at the app-written file on both platforms; `data` is the app container root;
+ * `absolute` takes the path verbatim (Android only — unsupported on iOS, both
+ * simulator and device, since device.files is app-sandbox-scoped).
+ * See SPEC.md "Root resolution".
+ */
+export type FileRoot = 'document' | 'cache' | 'data' | 'absolute'
+
+/** iOS transport selector: `simulator` uses simctl, `device` uses devicectl. */
+export type IosTargetKind = 'simulator' | 'device'
+
+export type FilePullOptions = {
+  /** Root the remote path resolves against (default: `document`). */
+  root?: FileRoot
+  /**
+   * Max bytes to read, enforced on **every** transport. Android caps the stdout
+   * stream; iOS simulator stats before reading; iOS device stages through
+   * `devicectl` first because it exposes no remote stat. Overflow rejects with
+   * {@link FileIoError} `TOO_LARGE` — never a truncated Buffer. Must be a
+   * positive finite number. Default: 64 MiB.
+   */
+  maxBuffer?: number
+}
+
+export type FilePushOptions = {
+  /** Root the remote path resolves against (default: `document`). */
+  root?: FileRoot
+  /**
+   * Max bytes to move in one push. A host-file source larger than this rejects
+   * with {@link FileIoError} `TOO_LARGE` **before** it is read into memory (a
+   * Buffer source is checked by length), bounding worker memory. Default: 64 MiB.
+   */
+  maxBuffer?: number
+}
+
+/**
+ * Host-side access to the running app's sandbox. Reads/writes verify the real
+ * on-device artifact end to end, without driving any native chrome. Every
+ * failure is a typed {@link FileIoError} — never a silent empty Buffer.
+ * REQUIRES: targeting context (see {@link TargetContext}) and the platform's
+ * host tool (`simctl`/`devicectl`/`adb`). See SPEC.md REQ-FILES-*.
+ */
+export interface DeviceFiles {
+  /**
+   * Read a file from the app sandbox into a host Buffer. Rejects
+   * {@link FileIoError} `NOT_FOUND` for a missing path.
+   */
+  pull(remotePath: string, options?: FilePullOptions): Promise<Buffer>
+  /**
+   * Write bytes into the app sandbox. `source` is a host file path or a Buffer
+   * (generated fixtures). Rejects {@link FileIoError} on write failure.
+   */
+  push(source: string | Buffer, remotePath: string, options?: FilePushOptions): Promise<void>
+}
+
+/**
+ * Device/app targeting context the host-side transports need. Capability-neutral
+ * (file I/O today; reused by future native-OS-UI automation). Defaulted from the
+ * runner env contract by the Playwright fixture; set explicitly for a direct
+ * {@link createDevice} call. See SPEC.md REQ-TGT-*.
+ */
+export type TargetContext = {
+  /** iOS app bundle identifier (`simctl`/`devicectl`). */
+  bundleId?: string
+  /** Android app package name (`adb run-as`). */
+  packageName?: string
+  /** iOS simulator/device UDID. */
+  udid?: string
+  /** Android adb device serial. The Playwright fixture maps `ANDROID_SERIAL` into this field. */
+  serial?: string
+  /** iOS transport selector (default: `simulator`). */
+  iosKind?: IosTargetKind
+  /** Override the adb binary path (default: `adb`). */
+  adbPath?: string
+  /** Override the xcrun binary path (default: `xcrun`). */
+  xcrunPath?: string
+}
+
 /**
  * Locator for finding and interacting with RN views.
  *
@@ -544,6 +632,16 @@ export interface Device {
 
   // --- Screenshots (Phase 3 - require native module) ---
   screenshot(options?: { clip?: ElementBounds }): Promise<Buffer>
+
+  // --- Device file I/O (host-side; see SPEC.md REQ-FILES-*) ---
+  /**
+   * Host-side access to the running app's sandbox — read back files the app
+   * wrote (exports, caches, snapshots) and assert their bytes, or push fixtures.
+   * REQUIRES: {@link DeviceOptions.target} context (supplied by the runner env)
+   * and the platform's host tool (`simctl`/`devicectl`/`adb`). Available after
+   * {@link Device.connect}.
+   */
+  readonly files: DeviceFiles
 
   // --- Navigation/Lifecycle (Phase 3 - require native module) ---
   openURL(url: string): Promise<void>

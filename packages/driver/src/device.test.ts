@@ -4,7 +4,10 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as discovery from './cdp/discovery'
 import { RNDevice, TimeoutError, UncaughtExceptionError } from './device'
+import { createDeviceFiles } from './files/device-files'
+import { createTouchBackend } from './touch'
 import type { ConsoleMessage, PageError } from './types'
 
 type MockTarget = {
@@ -18,6 +21,7 @@ type MockTarget = {
 let mockEvaluateFn: ReturnType<typeof vi.fn>
 let mockOnEventFn: ReturnType<typeof vi.fn>
 let mockConnectFn: ReturnType<typeof vi.fn>
+let mockDisconnectFn: ReturnType<typeof vi.fn>
 let mockSelectedTarget: MockTarget
 
 function defaultTarget(): MockTarget {
@@ -55,9 +59,18 @@ vi.mock('./cdp/client', () => {
         mockEvaluateFn = this.evaluate
         mockOnEventFn = this.onEvent
         mockConnectFn = this.connect
+        mockDisconnectFn = this.disconnect
       }
     },
   }
+})
+
+// Wrap the REAL createDeviceFiles in a passthrough spy so a test can inspect the deps
+// (specifically the `target` connect() hands it) without changing behavior — the
+// lifecycle-token tests below still exercise the genuine implementation.
+vi.mock('./files/device-files', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./files/device-files')>()
+  return { ...actual, createDeviceFiles: vi.fn(actual.createDeviceFiles) }
 })
 
 /** Invoke the device's registered CDP forwarder for `method` with `params`. */
@@ -69,28 +82,45 @@ function fireCdpEvent(method: string, params: Record<string, unknown>): void {
   ;(call[1] as (p: Record<string, unknown>) => void)(params)
 }
 
-// Mock CDP discovery
-vi.mock('./cdp/discovery', () => ({
-  discoverTargets: vi.fn().mockImplementation(() => Promise.resolve([mockSelectedTarget])),
-  selectTarget: vi.fn().mockImplementation(() => mockSelectedTarget),
-}))
+// Mock CDP discovery. Spread the REAL module so pure helpers detectPlatform relies
+// on (titleParenthetical) stay authentic — only the network/selection entry points
+// are stubbed. A hand-reimplemented helper would silently drift from the source.
+vi.mock('./cdp/discovery', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./cdp/discovery')>()
+  return {
+    ...actual,
+    discoverTargets: vi.fn().mockImplementation(() => Promise.resolve([mockSelectedTarget])),
+    selectTarget: vi.fn().mockImplementation(() => mockSelectedTarget),
+    selectTargetForConnect: vi.fn().mockImplementation(() => mockSelectedTarget),
+  }
+})
 
-// Mock touch backend
-vi.mock('./touch', () => ({
-  createTouchBackend: vi.fn().mockResolvedValue({
-    backend: {
-      tap: vi.fn(),
-      down: vi.fn(),
-      move: vi.fn(),
-      up: vi.fn(),
-      dispose: vi.fn(),
-    },
-    selection: {
-      backend: 'native-module',
-      available: ['native-module'],
-    },
-  }),
-}))
+// Mock touch backend. Spread the REAL module so error classes the Pointer throws
+// (TouchBackendNotInitializedError) stay authentic — only createTouchBackend, the
+// spawn entry point, is stubbed. A hand-reimplemented error would drift from source.
+vi.mock('./touch', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./touch')>()
+  return {
+    ...actual,
+    // A FRESH backend per call so a reconnect's dispose can be attributed to the
+    // specific (old) backend it should tear down, not a shared singleton spy.
+    createTouchBackend: vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        backend: {
+          tap: vi.fn(),
+          down: vi.fn(),
+          move: vi.fn(),
+          up: vi.fn(),
+          dispose: vi.fn(),
+        },
+        selection: {
+          backend: 'native-module',
+          available: ['native-module'],
+        },
+      }),
+    ),
+  }
+})
 
 /** Route the mocked CDP evaluate so getWindowMetrics() resolves to `metrics`. */
 function mockWindowMetrics(metrics: unknown): void {
@@ -117,6 +147,27 @@ describe('RNDevice Core Primitives', () => {
     await device.connect()
   })
 
+  describe('connect() target selection wiring', () => {
+    it('routes target selection through selectTargetForConnect, forwarding the COMPLETE pinned target', async () => {
+      // The confused-deputy guard lives in selectTargetForConnect; connect() must hand it
+      // the WHOLE DeviceOptions.target so filePinned is derived from the complete identity
+      // (udid+bundleId). Forward a complete pin — a lone udid is not filePinned, so it
+      // would pass even if connect() dropped bundleId and left the guard inactive in real
+      // file-I/O runs. (Guard behavior itself is unit-tested in cdp/discovery.test.ts.)
+      vi.clearAllMocks()
+      // Construct FIRST so mockEvaluateFn points at this device's CDP client,
+      // THEN set the platform probe impl (mirrors connectWithPlatformProbe).
+      const target = { udid: 'UDID-42', bundleId: 'com.acme.app' }
+      const pinned = new RNDevice({ timeout: 1000, target })
+      mockDefaultPlatform('ios')
+      await pinned.connect()
+
+      expect(discovery.selectTargetForConnect).toHaveBeenCalledTimes(1)
+      const options = vi.mocked(discovery.selectTargetForConnect).mock.calls[0]?.[1]
+      expect(options?.target).toEqual(target)
+    })
+  })
+
   describe('platform detection', () => {
     async function connectWithPlatformProbe(
       target: MockTarget,
@@ -136,9 +187,9 @@ describe('RNDevice Core Primitives', () => {
       return platformDevice
     }
 
-    it('detects Android from target name metadata', async () => {
+    it('detects Android from a structured deviceName (fast-path, no probe)', async () => {
       const platformDevice = await connectWithPlatformProbe(
-        { ...defaultTarget(), title: 'Pixel_8_API_35' },
+        { ...defaultTarget(), deviceName: 'Pixel_8_API_35' },
         () => Promise.reject(new Error('probe should not run')),
       )
 
@@ -157,13 +208,43 @@ describe('RNDevice Core Primitives', () => {
       expect(platformDevice.platform).toBe('android')
     })
 
-    it('detects iOS from target name metadata', async () => {
+    it('detects iOS from a structured deviceName (fast-path, no probe)', async () => {
       const platformDevice = await connectWithPlatformProbe(
-        { ...defaultTarget(), title: 'iPhone 16 Pro' },
+        { ...defaultTarget(), deviceName: 'iPhone 16 Pro' },
         () => Promise.reject(new Error('probe should not run')),
       )
 
       expect(platformDevice.platform).toBe('ios')
+    })
+
+    it('reads the device from a title parenthetical, not the app id ahead of it', async () => {
+      // Metro titles are `appId (deviceName)`. Only the trailing `(…)` device is used
+      // for the fast-path, so `com.acme.iosapp` never wins the iOS check.
+      const platformDevice = await connectWithPlatformProbe(
+        { ...defaultTarget(), title: 'com.acme.iosapp (Pixel_8_API_35)' },
+        () => Promise.reject(new Error('probe should not run — parenthetical resolves Android')),
+      )
+
+      expect(platformDevice.platform).toBe('android')
+    })
+
+    it('defers a BARE app-id title to Platform.OS (never guesses platform from an app id)', async () => {
+      // No deviceName, no parenthetical — a bare `com.acme.iosapp` is ambiguous and
+      // must NOT be matched on the `ios` substring; the authoritative probe decides.
+      const platformDevice = await connectWithPlatformProbe(
+        { ...defaultTarget(), title: 'com.acme.iosapp' },
+        () => Promise.resolve('android'),
+      )
+
+      expect(platformDevice.platform).toBe('android')
+    })
+
+    it('fails closed when a bare title carries no device identity and the probe fails', async () => {
+      await expect(
+        connectWithPlatformProbe({ ...defaultTarget(), title: 'com.acme.iosapp' }, () =>
+          Promise.reject(new Error('runtime not ready')),
+        ),
+      ).rejects.toThrow(/Could not detect platform/)
     })
 
     it('uses Platform.OS when target name metadata is unknown', async () => {
@@ -186,8 +267,16 @@ describe('RNDevice Core Primitives', () => {
       })
 
       await expect(platformDevice.connect()).rejects.toThrow(
-        'Could not detect platform: CDP target name unrecognized and Platform.OS probe failed',
+        'Could not detect platform: CDP target carried no device identity and the Platform.OS probe failed',
       )
+      // connect() is atomic: the socket opened (cdp.connect resolved) but detectPlatform
+      // then rejected, so connect() must tear its OWN partial state down before rejecting
+      // — the caller never calls disconnect() on a rejected connect. cdp.disconnect() is
+      // called TWICE: once by the up-front teardown (idempotent no-op, no socket yet) and
+      // once by the catch after the socket opened. The second call is the proof the catch
+      // teardown fired — a count of 1 would mean only the up-front ran and the socket leaked.
+      expect(mockConnectFn).toHaveBeenCalledTimes(1)
+      expect(mockDisconnectFn).toHaveBeenCalledTimes(2)
     })
 
     it('throws when target name metadata is unknown and Platform.OS is unsupported', async () => {
@@ -202,7 +291,7 @@ describe('RNDevice Core Primitives', () => {
       })
 
       await expect(platformDevice.connect()).rejects.toThrow(
-        'Could not detect platform: CDP target name unrecognized and Platform.OS probe returned an unsupported value',
+        'Could not detect platform: CDP target carried no device identity and Platform.OS returned an unsupported value',
       )
     })
   })
@@ -619,5 +708,216 @@ describe('RNDevice failOnUncaughtException', () => {
     expect(buffer.length).toBeLessThanOrEqual(64)
     // The OLDEST is retained (first failure is the most diagnostic).
     expect(buffer[0]?.message).toBe('Error: storm 0')
+  })
+})
+
+describe('RNDevice connection lifecycle', () => {
+  it('device.files captured before disconnect() fails closed afterwards (lifecycle boundary)', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+
+    // Capture the host-side file I/O object BEFORE disconnect, then drop the
+    // connection. Host transports don't need the CDP socket, so without the
+    // lifecycle token this reference would keep working past the boundary.
+    const files = device.files
+    await device.disconnect()
+
+    await expect(files.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    // The shared teardown also fails the pointer + backend info closed after a clean
+    // disconnect, not only after a failed reconnect (connect() and disconnect() run the
+    // SAME teardown, so they can't drift).
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+  })
+
+  it('SNAPSHOTS the file-I/O target at connect() so a post-connect mutation cannot retarget device.files', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    // The caller keeps a reference to the SAME target object it passes in — the exact
+    // shape a direct createDevice({ target }) user controls and could mutate later.
+    const callerTarget = { udid: 'UDID-1', bundleId: 'com.acme.app' }
+    const device = new RNDevice({ timeout: 1000, target: callerTarget })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+
+    const passedTarget = vi.mocked(createDeviceFiles).mock.calls[0]?.[0].target
+    // device.files must get a CLONE, not the live caller reference…
+    expect(passedTarget).not.toBe(callerTarget)
+    expect(passedTarget).toEqual(callerTarget)
+    // …so mutating the caller's object AFTER connect() cannot make device.files operate
+    // on a different app/device than CDP attached to (the confused-deputy the snapshot
+    // closes on the programmatic path).
+    callerTarget.bundleId = 'com.evil.other'
+    expect(passedTarget?.bundleId).toBe('com.acme.app')
+  })
+
+  it('invalidates a device.files captured before a reconnect (no orphaned live token)', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+    const stale = device.files // captured against the FIRST connection's token
+    const firstTouch = await vi.mocked(createTouchBackend).mock.results[0]?.value
+
+    // Reconnect WITHOUT an intervening disconnect(). The new connection mints a
+    // fresh token; the old one must be invalidated now, not left live to survive
+    // the next disconnect (which only flips the newest token). The old touch backend
+    // must be disposed too, not orphaned (a companion process/port would leak).
+    await device.connect()
+
+    await expect(stale.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    // The current reference from the new connection still works.
+    expect(device.files).not.toBe(stale)
+    // The prior touch backend was disposed by the reconnect, not leaked.
+    expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it('fails a captured device.files closed when a RECONNECT rejects mid-connect', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+    const stale = device.files // captured against the FIRST connection's token
+    const firstTouch = await vi.mocked(createTouchBackend).mock.results[0]?.value
+
+    // The prior token/backend must be invalidated UP FRONT, not only after a fully
+    // successful reconnect: a reconnect that rejects in cdp.connect() (here) still has
+    // to fail the old connection closed. Otherwise the stale device.files keeps running
+    // host I/O against a half-torn-down device.
+    mockConnectFn.mockRejectedValueOnce(new Error('websocket closed'))
+    await expect(device.connect()).rejects.toThrow('websocket closed')
+
+    await expect(stale.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    // The old touch backend was torn down by the up-front teardown, not left running
+    // its companion process against a device that never reconnected.
+    expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
+    // And its info was cleared — getTouchBackendInfo() must not report a backend that
+    // no longer exists after a failed reconnect.
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+    // The pointer must fail closed too, not route to the disposed old backend.
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
+  })
+
+  it('fails the old connection closed when a reconnect rejects during DISCOVERY (before cdp.connect)', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+    const stale = device.files
+    const firstTouch = await vi.mocked(createTouchBackend).mock.results[0]?.value
+
+    // The up-front teardown must precede discoverTargets()/selectTargetForConnect(), so a
+    // reconnect that rejects THERE (network flake, or the confused-deputy guard throwing)
+    // still fails the prior connection closed — not just a post-discovery cdp.connect().
+    vi.mocked(discovery.discoverTargets).mockRejectedValueOnce(new Error('metro unreachable'))
+    await expect(device.connect()).rejects.toThrow('metro unreachable')
+
+    await expect(stale.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
+  })
+
+  it('fails closed when a FIRST connect rejects after the socket opens (partial-connect cleanup)', async () => {
+    // Complement of the reconnect cases: not replacing a prior connection, but cleaning
+    // up THIS attempt. cdp.connect() opens the socket, then createTouchBackend() rejects
+    // — connect()'s catch must tear the socket + forwarders back down (the caller does
+    // not call disconnect() on a rejected connect).
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({ timeout: 1000 })
+    mockDefaultPlatform('ios')
+    vi.mocked(createTouchBackend).mockRejectedValueOnce(new Error('no touch backend available'))
+
+    await expect(device.connect()).rejects.toThrow('no touch backend available')
+
+    // Socket opened then the attempt failed → teardown closed it (and cleared forwarders).
+    // cdp.disconnect() fires twice: up-front teardown (no-op, no socket) + the catch after
+    // the socket opened. The 2nd call proves the catch cleanup ran (1 would mean it leaked).
+    expect(mockConnectFn).toHaveBeenCalledTimes(1)
+    expect(mockDisconnectFn).toHaveBeenCalledTimes(2)
+    // No half-open state is observable.
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
+    expect(() => device.files).toThrow()
+  })
+
+  it('fails EVERYTHING closed even when the touch backend dispose rejects', async () => {
+    // A rejecting dispose must not abort the teardown before the CDP socket, pointer, and
+    // file I/O are failed closed. Synchronous resets run first; dispose + cdp.disconnect
+    // run under allSettled so one failing never skips the other.
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    vi.mocked(createTouchBackend).mockResolvedValueOnce({
+      backend: {
+        tap: vi.fn(),
+        down: vi.fn(),
+        move: vi.fn(),
+        up: vi.fn(),
+        dispose: vi.fn().mockRejectedValue(new Error('dispose failed')),
+      },
+      selection: { backend: 'native-module', available: ['native-module'] },
+    } as unknown as Awaited<ReturnType<typeof createTouchBackend>>)
+    await device.connect()
+    const files = device.files
+
+    // disconnect() surfaces the dispose failure (honest), but ALL other resources are
+    // still torn down and the CDP socket is still closed.
+    await expect(device.disconnect()).rejects.toThrow('dispose failed')
+
+    expect(mockDisconnectFn).toHaveBeenCalledTimes(2) // up-front (no-op) + this disconnect
+    await expect(files.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+    await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
   })
 })

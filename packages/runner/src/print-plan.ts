@@ -81,13 +81,14 @@ function renderCommand(command: CommandSpec): string {
         .map(([k, v]) => `${k}=${v}`)
         .join(' ')} `
     : ''
+  const packageBin = command.packageBin ? ' [package-bin]' : ''
   const stdin = command.stdinFromFile
     ? ` < ${command.stdinFromFile}`
     : command.stdinContents
       ? ' < <stdin>'
       : ''
   const cwd = command.cwd ? ` (cwd: ${command.cwd})` : ''
-  return `${env}${command.command} ${command.args.join(' ')}${stdin}${cwd}`.trim()
+  return `${env}${command.command} ${command.args.join(' ')}${packageBin}${stdin}${cwd}`.trim()
 }
 
 function renderProbe(probe: ReadinessProbe): string {

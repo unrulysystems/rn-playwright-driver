@@ -177,6 +177,10 @@ describe('planIos', () => {
     expect(plan.driverEnv).toMatchObject({
       RN_TOUCH_BACKEND: 'xctest',
       RN_TOUCH_XCTEST_TOKEN_FILE: '<token-file>',
+      // device.files targeting (REQ-TGT-*): iOS needs bundle id, sim udid, kind.
+      RN_APP_BUNDLE_ID: 'com.unrulyfall.example',
+      RN_SIM_UDID: '<sim-udid>',
+      RN_IOS_TARGET_KIND: 'simulator',
     })
     expect(plan.driverEnv).not.toHaveProperty('RN_TOUCH_XCTEST_TOKEN')
   })
@@ -204,6 +208,30 @@ describe('planIos', () => {
     expect(contents).not.toHaveProperty('authToken')
     // Token material only ever appears as a file path, never alongside a value key.
     expect(allCommandStrings(plan)).not.toContain('authToken')
+  })
+
+  it('resolves project-relative runtime config and project commands from projectCwd', () => {
+    const ios = iosConfigFixture()
+    const metro = resolveMetro({})
+    const plan = planIos(
+      inputFor('plain', {
+        projectCwd: '/app',
+        resolved: {
+          ...placeholderIos(ios, metro),
+          runtimeConfigFile: 'ios/exampleUITests/RNDriverTouchCompanionRuntimeConfig.json',
+        },
+      }),
+    )
+    const runtimeConfig = plan.steps.find((s) => s.id === 'ios.runtime-config')?.action
+    const companion = plan.steps.find((s) => s.id === 'ios.companion-start')?.action
+
+    expect(runtimeConfig?.type === 'write-file' && runtimeConfig.path).toBe(
+      '/app/ios/exampleUITests/RNDriverTouchCompanionRuntimeConfig.json',
+    )
+    expect(companion?.type === 'command' && companion.command.env).toMatchObject({
+      RN_TOUCH_XCTEST_CONFIG_FILE:
+        '/app/ios/exampleUITests/RNDriverTouchCompanionRuntimeConfig.json',
+    })
   })
 
   it('is pure: identical input yields a deep-equal plan', () => {

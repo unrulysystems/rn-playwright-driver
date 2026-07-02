@@ -52,8 +52,15 @@ export class Pointer {
     this.timeoutProvider = timeoutProvider
   }
 
-  setBackend(backend: TouchBackend): void {
+  // Nullable: connect()/disconnect() teardown clears the backend to null so a pointer
+  // call after disconnect (or a failed reconnect) fails closed via getBackend() rather
+  // than routing to a disposed backend.
+  setBackend(backend: TouchBackend | null): void {
     this.backend = backend
+    // A backend change is a new connection context — drop recorded positions so a
+    // stepped gesture after (re)connect never interpolates from a coordinate captured
+    // on a prior connection.
+    this.positions.clear()
   }
 
   /**
@@ -422,21 +429,23 @@ export class Pointer {
     options?: PointerEventOptions,
   ): Promise<void> {
     const pointerId = options?.pointerId ?? 0
-    this.positions.set(pointerId, { x, y })
+    // Resolve the backend and complete the gesture BEFORE recording the position.
+    // Recording first would let a disconnected call (getBackend() throws) or a failed
+    // backend call still write `positions`, so the next stepped move after a reconnect
+    // would interpolate from a phantom coordinate that was never actually reached.
     const backend = this.getBackend()
     if (options) {
       if (type === 'down') {
         await backend.down(x, y, options)
-        return
+      } else {
+        await backend.move(x, y, options)
       }
-      await backend.move(x, y, options)
-      return
-    }
-    if (type === 'down') {
+    } else if (type === 'down') {
       await backend.down(x, y)
-      return
+    } else {
+      await backend.move(x, y)
     }
-    await backend.move(x, y)
+    this.positions.set(pointerId, { x, y })
   }
 
   private buildInterpolationOptions(

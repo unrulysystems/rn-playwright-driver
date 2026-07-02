@@ -46,6 +46,7 @@ describe('run() --dry-run (REQ-CLI-002)', () => {
     // resolution / token minting did NOT happen.
     expect(stdout).toContain('<sim-udid>')
     expect(stdout).toContain('<token-file>')
+    expect(stdout).toContain(`(cwd: ${path.dirname(configPath)})`)
   })
 
   it('forwards passthrough flags while keeping config specs (REQ-CLI-005)', async () => {

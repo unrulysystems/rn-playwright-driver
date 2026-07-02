@@ -12,20 +12,26 @@ describe('buildIosDriverEnv', () => {
       simName: 'iPhone 17',
       touchPort: 9999,
     }
-    expect(buildIosDriverEnv(resolved, metro, undefined)).toEqual({
+    expect(
+      buildIosDriverEnv({ ...resolved, simUdid: 'UDID-1' }, metro, undefined, 'com.acme.app'),
+    ).toEqual({
       RN_TOUCH_BACKEND: 'xctest',
       RN_METRO_URL: 'http://127.0.0.1:8081',
       RN_DEVICE_NAME: 'iPhone 17',
       RN_TIMEOUT: '30000',
       RN_TOUCH_XCTEST_PORT: '9999',
       RN_TOUCH_XCTEST_TOKEN_FILE: '/run/tok',
+      // File-I/O targeting (REQ-TGT-002); runner is simulator-only.
+      RN_APP_BUNDLE_ID: 'com.acme.app',
+      RN_SIM_UDID: 'UDID-1',
+      RN_IOS_TARGET_KIND: 'simulator',
     })
   })
 
   it('uses the configured driver timeout', () => {
     const metro = resolveMetro(undefined)
     const resolved = placeholderIos(iosConfigFixture(), metro)
-    expect(buildIosDriverEnv(resolved, metro, 60_000).RN_TIMEOUT).toBe('60000')
+    expect(buildIosDriverEnv(resolved, metro, 60_000, 'com.acme.app').RN_TIMEOUT).toBe('60000')
   })
 })
 
@@ -38,7 +44,9 @@ describe('buildAndroidDriverEnv', () => {
       serial: 'emulator-5554',
       touchPort: 9999,
     }
-    expect(buildAndroidDriverEnv(resolved, metro, 'sdk_gphone64', undefined)).toEqual({
+    expect(
+      buildAndroidDriverEnv(resolved, metro, 'sdk_gphone64', undefined, 'com.acme.app'),
+    ).toEqual({
       RN_TOUCH_BACKEND: 'instrumentation',
       RN_METRO_URL: 'http://127.0.0.1:8081',
       RN_DEVICE_NAME: 'sdk_gphone64',
@@ -46,6 +54,21 @@ describe('buildAndroidDriverEnv', () => {
       RN_TIMEOUT: '30000',
       RN_TOUCH_INSTRUMENTATION_PORT: '9999',
       RN_TOUCH_INSTRUMENTATION_TOKEN_FILE: '/run/tok',
+      // File-I/O targeting (REQ-TGT-002); serial flows via ANDROID_SERIAL.
+      RN_APP_PACKAGE: 'com.acme.app',
     })
+  })
+
+  it('uses the configured driver timeout (RN_TIMEOUT bounds device.files host commands too)', () => {
+    const metro = resolveMetro({ url: 'http://127.0.0.1:8081' })
+    const resolved = {
+      ...placeholderAndroid(androidConfigFixture(), metro),
+      tokenFile: '/run/tok',
+      serial: 'emulator-5554',
+      touchPort: 9999,
+    }
+    expect(
+      buildAndroidDriverEnv(resolved, metro, 'sdk_gphone64', 60_000, 'com.acme.app').RN_TIMEOUT,
+    ).toBe('60000')
   })
 })

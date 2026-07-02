@@ -1,6 +1,9 @@
 import { CDPClient, type CDPClientOptions } from './cdp/client'
-import { discoverTargets, selectTarget } from './cdp/discovery'
+import { discoverTargets, selectTargetForConnect, titleParenthetical } from './cdp/discovery'
 import { parseConsoleEvent, parseExceptionEvent } from './cdp/runtime-events'
+import { createDeviceFiles } from './files/device-files'
+import { FileIoError } from './files/errors'
+import { createDefaultTransportFactory } from './files/transports'
 import { buildCapabilitiesExpression, buildHarnessCall } from './harness-expressions'
 import type { Locator } from './locator'
 import { buildRoleSelector, createLocator, LocatorError } from './locator'
@@ -12,6 +15,7 @@ import type {
   Capabilities,
   Device,
   DeviceEventMap,
+  DeviceFiles,
   DeviceOptions,
   DriverEvent,
   ElementBounds,
@@ -68,6 +72,12 @@ export class RNDevice implements Device {
   private _touchBackend: TouchBackend | null = null
   private _touchBackendInfo: TouchBackendInfo | null = null
   private _platform: 'ios' | 'android' = 'ios'
+  // Host-side file I/O, built in connect() once the platform is known. Null until
+  // connected — the `files` getter throws a clear error before then.
+  private _files: DeviceFiles | null = null
+  // Per-connection liveness token for device.files; flipped on disconnect so a
+  // captured reference fails closed (host-side file I/O outlives the CDP socket).
+  private _filesLifecycle: { connected: boolean } | null = null
   // Runtime-event listeners, keyed by event name. Function identity is the
   // unsubscribe key; payloads are cast at the typed on()/emit() boundary.
   private readonly _listeners = new Map<string, Set<(payload: unknown) => void>>()
@@ -95,43 +105,119 @@ export class RNDevice implements Device {
   // --- Connection ---
 
   async connect(): Promise<void> {
+    // Fully tear down any PRIOR connection UP FRONT — before ANYTHING that can reject
+    // (discoverTargets / selectTargetForConnect / cdp.connect / detectPlatform /
+    // createTouchBackend below). A reconnect without an intervening disconnect() that
+    // rejects at ANY of those must fail the old connection closed on EVERY resource, so
+    // connect() and disconnect() share ONE teardown — an incomplete copy is exactly what
+    // let the file token, touch backend, backend info, pointer, and CDP socket drift out
+    // of sync across earlier fixes. Fail the old state closed first; mint fresh state
+    // only once the new connection is established.
+    await this.teardownConnection()
+
     const metroUrl = this.options.metroUrl ?? DEFAULT_METRO_URL
     const targets = await discoverTargets(metroUrl)
-    const target = selectTarget(targets, this.options)
+    // selectTargetForConnect derives the file-pin from target.udid/serial and
+    // fails closed on the device.files confused-deputy (a pinned file target but
+    // ambiguous CDP selection among multiple runtimes).
+    const target = selectTargetForConnect(targets, this.options)
 
-    // Register the console + exception forwarders BEFORE connecting. cdp.connect()
-    // sends Runtime.enable internally, after which the runtime starts emitting
-    // events; subscribing afterwards drops anything fired in that window (a console
-    // log or an uncaught exception). onEvent only populates a handler map — no
-    // socket required — so registering first is always safe and closes the gap.
-    this.registerRuntimeEventForwarders()
+    // connect() is ATOMIC: once we start opening the socket, either the whole
+    // connection comes up or we tear our OWN partial state back down and reject. The
+    // up-front teardown above only clears a PRIOR connection; a first connect that
+    // opens the WebSocket and then fails in detectPlatform()/createTouchBackend() would
+    // otherwise leak the socket + forwarders, because the caller (e.g. the Playwright
+    // fixture) does not call disconnect() when connect() rejects.
+    try {
+      // Register the console + exception forwarders BEFORE connecting. cdp.connect()
+      // sends Runtime.enable internally, after which the runtime starts emitting
+      // events; subscribing afterwards drops anything fired in that window (a console
+      // log or an uncaught exception). onEvent only populates a handler map — no
+      // socket required — so registering first is always safe and closes the gap.
+      this.registerRuntimeEventForwarders()
 
-    await this.cdp.connect(target.webSocketDebuggerUrl)
+      await this.cdp.connect(target.webSocketDebuggerUrl)
 
-    // Detect platform from target info or via JS
-    this._platform = await this.detectPlatform(target)
+      // Detect platform from target info or via JS
+      this._platform = await this.detectPlatform(target)
 
-    const { backend, selection } = await createTouchBackend(
-      {
+      const { backend, selection } = await createTouchBackend(
+        {
+          platform: this._platform,
+          evaluate: this.evaluate.bind(this),
+          waitForTimeout: this.waitForTimeout.bind(this),
+        },
+        this.options.touch,
+      )
+      // The prior backend was already disposed up front (see the reconnect teardown at
+      // the top of connect()), so this only installs the new one.
+      this._touchBackend = backend
+      const backendInfo: TouchBackendInfo = {
+        selected: selection.backend,
+        available: selection.available,
+      }
+      if (selection.reason !== undefined) {
+        backendInfo.reason = selection.reason
+      }
+      this._touchBackendInfo = backendInfo
+      this._pointer.setBackend(backend)
+
+      // Host-side file I/O. Targeting is validated lazily (per op) so a device
+      // without file targeting only fails when device.files is actually used.
+      // A per-connection lifecycle token ties file I/O to this connection: a reference
+      // captured before disconnect() (or before a reconnect) fails closed afterwards. The
+      // prior token was already invalidated up front (see the reconnect teardown above),
+      // so here we only mint the fresh token this connection's device.files closes over.
+      const filesLifecycle = { connected: true }
+      this._filesLifecycle = filesLifecycle
+      this._files = createDeviceFiles({
         platform: this._platform,
-        evaluate: this.evaluate.bind(this),
-        waitForTimeout: this.waitForTimeout.bind(this),
-      },
-      this.options.touch,
-    )
-    this._touchBackend = backend
-    const backendInfo: TouchBackendInfo = {
-      selected: selection.backend,
-      available: selection.available,
+        // SNAPSHOT the target as it is at connect() time, not the live options ref.
+        // device-files resolves the target per operation, so passing the mutable
+        // `this.options.target` would let a direct `createDevice({ target })` caller
+        // mutate it AFTER connect() and make device.files operate on a different
+        // app/device than CDP attached to. TargetContext is flat primitives, so a
+        // shallow clone fully isolates it. Binds file I/O to the connected runtime.
+        target: this.options.target ? { ...this.options.target } : undefined,
+        // Bound host file ops by the device timeout so a hung CLI can't stall them.
+        selectTransport: createDefaultTransportFactory(this.options.timeout),
+        isLive: () => filesLifecycle.connected,
+      })
+    } catch (error) {
+      // Fail closed: tear down whatever this attempt brought up (socket, forwarders,
+      // any partially installed backend/token) before propagating, so a rejected
+      // connect never leaves a half-open connection behind. Swallow a teardown-level
+      // rejection so it can't MASK the original connect failure — teardown's synchronous
+      // fail-closed resets have already run, so the state is safe regardless.
+      await this.teardownConnection().catch(() => {})
+      throw error
     }
-    if (selection.reason !== undefined) {
-      backendInfo.reason = selection.reason
-    }
-    this._touchBackendInfo = backendInfo
-    this._pointer.setBackend(backend)
   }
 
   async disconnect(): Promise<void> {
+    await this.teardownConnection()
+  }
+
+  /**
+   * Tear down every resource a connection owns, failing each closed. Shared by
+   * disconnect() and by connect()'s up-front reconnect teardown so the two can never
+   * drift — a partial copy is what previously left the CDP socket, pointer, touch
+   * backend info, or file-I/O token live after a failed reconnect. Idempotent and safe
+   * to call when never connected (first connect): every step guards on a null/empty
+   * resource, and cdp.disconnect() no-ops without a socket.
+   *
+   * Resilient to a throwing teardown step: the SYNCHRONOUS fail-closed resets run first
+   * (they cannot throw), so the connection's observable capabilities — pointer, file I/O
+   * token, backend info — are always failed closed even if an AWAITED step (backend
+   * dispose or cdp.disconnect) rejects. The two awaited steps run under allSettled so a
+   * failed backend dispose can never skip closing the CDP socket; the first rejection is
+   * surfaced afterward.
+   */
+  private async teardownConnection(): Promise<void> {
+    // --- Synchronous fail-closed resets (cannot throw) ---
+    // Run the forwarder cleanups and clear the list so registerRuntimeEventForwarders()
+    // re-subscribes cleanly on the next connect (it early-returns while the list is
+    // non-empty).
     for (const cleanup of this._eventForwarderCleanups) {
       cleanup()
     }
@@ -139,12 +225,31 @@ export class RNDevice implements Device {
     // Drop buffered exceptions so a stale one can't poison a later reconnect of
     // this same device instance.
     this._uncaughtExceptions.length = 0
-    if (this._touchBackend) {
-      await this._touchBackend.dispose()
-      this._touchBackend = null
-    }
     this._touchBackendInfo = null
-    await this.cdp.disconnect()
+    // Clear the pointer's backend so a pointer call after teardown fails closed via
+    // getBackend() instead of routing to the disposed backend (symmetric with
+    // getTouchBackendInfo(), which throws once _touchBackendInfo is null).
+    this._pointer.setBackend(null)
+    // Dispose the file-I/O lifecycle token so any captured `device.files` reference
+    // fails closed after disconnect (host-side I/O would otherwise keep working).
+    if (this._filesLifecycle) {
+      this._filesLifecycle.connected = false
+      this._filesLifecycle = null
+    }
+    this._files = null
+
+    // --- Awaited teardowns (may reject) ---
+    // Null the backend field BEFORE awaiting dispose so a concurrent/re-entrant teardown
+    // never double-disposes it. Run dispose + cdp.disconnect under allSettled so a failed
+    // dispose still closes the CDP socket (a reconnect must never open a second WebSocket
+    // over a live one). Surface the first rejection once both have settled.
+    const backend = this._touchBackend
+    this._touchBackend = null
+    const results = await Promise.allSettled([backend?.dispose(), this.cdp.disconnect()])
+    const rejected = results.find((r) => r.status === 'rejected')
+    if (rejected?.status === 'rejected') {
+      throw rejected.reason
+    }
   }
 
   async ping(): Promise<boolean> {
@@ -449,6 +554,15 @@ export class RNDevice implements Device {
     return this.evaluate<{ events: DriverEvent[] }>(buildHarnessCall('stopTracing'))
   }
 
+  // --- Device file I/O ---
+
+  get files(): DeviceFiles {
+    if (!this._files) {
+      throw new FileIoError('UNAVAILABLE', 'device.files is available after connect()')
+    }
+    return this._files
+  }
+
   // --- Platform Info ---
 
   get platform(): 'ios' | 'android' {
@@ -461,41 +575,60 @@ export class RNDevice implements Device {
     deviceName?: string
     title?: string
   }): Promise<'ios' | 'android'> {
-    // Try to detect from target metadata first
-    const name = target.deviceName?.toLowerCase() ?? target.title?.toLowerCase() ?? ''
-    if (name.includes('iphone') || name.includes('ipad') || name.includes('ios')) {
-      return 'ios'
-    }
-    if (
-      name.includes('android') ||
-      name.includes('pixel') ||
-      name.includes('samsung') ||
-      name.includes('gphone')
-    ) {
-      return 'android'
+    // Fast-path ONLY from a STRUCTURED device identity — the deviceName field or a
+    // title's trailing `(…)`. A Metro title is often `appId (deviceName)`, so a BARE
+    // title is ambiguous: an app id like `com.acme.iosapp` contains `ios` and would
+    // misclassify an Android runtime, routing touch + device.files through the wrong
+    // platform. A bare title is therefore NOT used for detection — it defers to the
+    // authoritative Platform.OS probe below, so an app id can never decide the platform.
+    const fromName = matchPlatformName(target.deviceName ?? titleParenthetical(target.title))
+    if (fromName) {
+      return fromName
     }
 
-    // Fall back to the app runtime as the authoritative source. If the probe
-    // cannot produce a supported RN platform, fail loudly so Android never
-    // accidentally takes the iOS backend path.
+    // Authoritative source: ask the runtime itself. It decides for any bare/ambiguous
+    // title. If it cannot answer, fail loudly rather than guess a platform from a
+    // string that might be an app id — evaluate() is core to the driver, so a probe
+    // that cannot run means the connection is unusable anyway.
+    let platform: unknown
     try {
-      const platform = await this.evaluate<unknown>(
+      platform = await this.evaluate<unknown>(
         "(() => { const { Platform } = require('react-native'); return Platform?.OS })()",
       )
-      if (platform === 'ios' || platform === 'android') {
-        return platform
-      }
     } catch (error) {
       throw new Error(
-        `Could not detect platform: CDP target name unrecognized and Platform.OS probe failed (${error instanceof Error ? error.message : String(error)})`,
+        `Could not detect platform: CDP target carried no device identity and the Platform.OS probe failed (${error instanceof Error ? error.message : String(error)})`,
         { cause: error },
       )
     }
-
+    if (platform === 'ios' || platform === 'android') {
+      return platform
+    }
     throw new Error(
-      'Could not detect platform: CDP target name unrecognized and Platform.OS probe returned an unsupported value',
+      'Could not detect platform: CDP target carried no device identity and Platform.OS returned an unsupported value',
     )
   }
+}
+
+/**
+ * Match a platform from a DEVICE NAME (never an app id) via case-insensitive markers.
+ * Returns undefined when nothing matches, so the caller can defer to the authoritative
+ * Platform.OS probe rather than guess from an ambiguous string.
+ */
+function matchPlatformName(name: string | undefined): 'ios' | 'android' | undefined {
+  const n = name?.toLowerCase() ?? ''
+  if (n.includes('iphone') || n.includes('ipad') || n.includes('ios')) {
+    return 'ios'
+  }
+  if (
+    n.includes('android') ||
+    n.includes('pixel') ||
+    n.includes('samsung') ||
+    n.includes('gphone')
+  ) {
+    return 'android'
+  }
+  return undefined
 }
 
 /**

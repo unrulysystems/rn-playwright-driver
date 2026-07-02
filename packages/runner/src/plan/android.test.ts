@@ -105,6 +105,8 @@ describe('planAndroid', () => {
       RN_TOUCH_BACKEND: 'instrumentation',
       RN_TOUCH_INSTRUMENTATION_TOKEN_FILE: '<token-file>',
       ANDROID_SERIAL: '<android-serial>',
+      // device.files targeting (REQ-TGT-*): Android run-as needs the package name.
+      RN_APP_PACKAGE: 'com.unrulyfall.example',
     })
     expect(plan.driverEnv).not.toHaveProperty('RN_TOUCH_INSTRUMENTATION_TOKEN')
   })
@@ -169,6 +171,18 @@ describe('planAndroid', () => {
       '-n',
       'com.unrulyfall.example/.MainActivity',
     ])
+  })
+
+  it('resolves project-relative build and APK paths from projectCwd', () => {
+    const plan = planAndroid(inputFor({ projectCwd: '/app' }))
+
+    expect(commandFor(plan, 'android.gradle').cwd).toBe('/app/android')
+    expect(commandFor(plan, 'android.install-app').args).toContain(
+      '/app/android/app/build/outputs/apk/debug/app-debug.apk',
+    )
+    expect(commandFor(plan, 'android.install-test').args).toContain(
+      '/app/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
+    )
   })
 
   it('dev-client launch uses one adb shell arg with a literally single-quoted URL', () => {

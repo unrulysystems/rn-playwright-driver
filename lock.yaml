@@ -52,6 +52,9 @@ importers:
       expo:
         specifier: ~56.0.12
         version: 56.0.12(@babel/core@7.28.5)(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)
+      expo-file-system:
+        specifier: ~56.0.8
+        version: 56.0.8(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))
       expo-status-bar:
         specifier: ~56.0.4
         version: 56.0.4(@babel/core@7.28.5)(expo@56.0.12(@expo/dom-webview@56.0.5)(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3)))(react@19.2.3)(react-native@0.85.3(@types/react@19.2.17)(react@19.2.3))(typescript@6.0.3)

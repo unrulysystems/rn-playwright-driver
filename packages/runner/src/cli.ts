@@ -61,6 +61,7 @@ export async function run(argv: string[]): Promise<number> {
   }
 
   let config: RnDriverConfig
+  let projectCwd = process.cwd()
   try {
     const loaded = await loadConfig({
       cwd: process.cwd(),
@@ -68,6 +69,7 @@ export async function run(argv: string[]): Promise<number> {
     })
     assertValid(loaded.config, platforms)
     config = loaded.config
+    projectCwd = path.dirname(loaded.path)
   } catch (error) {
     if (error instanceof ConfigValidationError || error instanceof ConfigNotFoundError) {
       process.stderr.write(`${error.message}\n`)
@@ -79,7 +81,7 @@ export async function run(argv: string[]): Promise<number> {
   if (flags.dryRun) {
     for (const platform of platforms) {
       process.stdout.write(
-        `${renderPlan(buildDryRunPlan(config, platform, { specs, passthrough }))}\n\n`,
+        `${renderPlan(buildDryRunPlan(config, platform, { projectCwd, specs, passthrough }))}\n\n`,
       )
     }
     return 0
@@ -108,6 +110,7 @@ export async function run(argv: string[]): Promise<number> {
         runner,
         logDir,
         flags,
+        projectCwd,
         specs,
         passthrough,
       })
@@ -124,6 +127,7 @@ interface RunContext {
   readonly runner: NodeProcessRunner
   readonly logDir: string
   readonly flags: CliFlags
+  readonly projectCwd: string
   readonly specs: readonly string[]
   readonly passthrough: readonly string[]
 }
@@ -204,13 +208,17 @@ async function buildPlatformPlan(
 ): Promise<Plan> {
   if (platform === 'ios') {
     if (!config.ios) throw new Error('config.ios is required for the ios platform')
-    const resolved = await resolveIosTarget(config.ios, metro, deviceOpt(ctx.flags.device))
+    const resolved = await resolveIosTarget(config.ios, metro, {
+      ...deviceOpt(ctx.flags.device),
+      projectCwd: ctx.projectCwd,
+    })
     return planIos({
       ios: config.ios,
       metro,
       resolved,
       playwright: config.playwright,
       timeoutMs: config.timeoutMs,
+      projectCwd: ctx.projectCwd,
       specs: ctx.specs,
       passthrough: ctx.passthrough,
     })
@@ -227,6 +235,7 @@ async function buildPlatformPlan(
     resolved,
     playwright: config.playwright,
     timeoutMs: config.timeoutMs,
+    projectCwd: ctx.projectCwd,
     specs: ctx.specs,
     passthrough: ctx.passthrough,
     hermesDeviceName: deviceName,

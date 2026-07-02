@@ -1,4 +1,6 @@
-import type { TouchBackendConfig, TouchBackendType } from './types'
+import type { IosTargetKind, TargetContext, TouchBackendConfig, TouchBackendType } from './types'
+
+const IOS_TARGET_KINDS = ['simulator', 'device'] as const satisfies readonly IosTargetKind[]
 
 const DEFAULT_TOUCH_INSTRUMENTATION_PORT = 9999
 const DEFAULT_TOUCH_XCTEST_PORT = 9999
@@ -106,6 +108,51 @@ function xctestOptionsFromEnv(
     port: parsePort(env.RN_TOUCH_XCTEST_PORT) ?? DEFAULT_TOUCH_XCTEST_PORT,
     ...(authToken === undefined ? {} : { authToken }),
   }
+}
+
+function parseIosTargetKind(value: string | undefined): IosTargetKind | undefined {
+  if (value === undefined || value === '') return undefined
+  // A set-but-invalid value is a config typo. Fail closed rather than silently
+  // defaulting to 'simulator', which would misroute file I/O (simctl vs devicectl).
+  if (!(IOS_TARGET_KINDS as readonly string[]).includes(value)) {
+    throw new Error(
+      `RN_IOS_TARGET_KIND must be one of ${IOS_TARGET_KINDS.join(', ')} (got ${JSON.stringify(value)})`,
+    )
+  }
+  return value as IosTargetKind
+}
+
+/**
+ * Resolve the device/app targeting context for host-side file I/O (`device.files`)
+ * from the runner's env contract. Returns undefined when no targeting env is set,
+ * so a bare Playwright run without the runner simply has no `target`. The
+ * fail-closed check for whether the ACTIVE platform has the fields it needs lives
+ * in `resolveFileTarget` (thrown at file-op time). See SPEC.md REQ-TGT-002/003.
+ */
+export function targetFromEnv(env: TestEnvironment): TargetContext | undefined {
+  const target: TargetContext = {}
+  if (env.RN_APP_BUNDLE_ID) target.bundleId = env.RN_APP_BUNDLE_ID
+  if (env.RN_APP_PACKAGE) target.packageName = env.RN_APP_PACKAGE
+  // RN_SIM_UDID carries the iOS UDID → the capability-neutral `target.udid`. Named for
+  // the simulator because the runner's iOS lifecycle is simulator-only (simctl); the
+  // driver reuses the same UDID for the PROVISIONAL devicectl (physical-device) path,
+  // selected by RN_IOS_TARGET_KIND. See the rationale in runner `constants.ts` (ENV.simUdid).
+  if (env.RN_SIM_UDID) target.udid = env.RN_SIM_UDID
+  // Pin the adb serial to ANDROID_SERIAL ONLY — the capability-neutral device
+  // the runner launched and the driver env contract emits (SPEC.md REQ-TGT).
+  // Do NOT fall back to the touch-specific RN_TOUCH_ADB_SERIAL: a stale value
+  // would silently route file I/O to a different device than the app/CDP target;
+  // absent ANDROID_SERIAL, leave serial unset so file ops fail closed UNAVAILABLE.
+  if (env.ANDROID_SERIAL) target.serial = env.ANDROID_SERIAL
+  const iosKind = parseIosTargetKind(env.RN_IOS_TARGET_KIND)
+  if (iosKind) target.iosKind = iosKind
+  // Reuse RN_TOUCH_CLI_ADB_PATH as the adb BINARY location — deliberately, unlike
+  // the serial above. The path names which `adb` executable to run; it is
+  // device-NEUTRAL, so sharing it with touch cannot misroute file I/O to the wrong
+  // device (that risk is the serial's, pinned to ANDROID_SERIAL only). Absent it,
+  // the transport falls back to DEFAULT_ADB_PATH. One adb binary serves both.
+  if (env.RN_TOUCH_CLI_ADB_PATH) target.adbPath = env.RN_TOUCH_CLI_ADB_PATH
+  return Object.keys(target).length > 0 ? target : undefined
 }
 
 export function touchOptionsFromEnv(

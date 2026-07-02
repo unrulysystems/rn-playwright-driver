@@ -30,6 +30,7 @@
     "@unrulysystems/rn-playwright-driver-runner": "workspace:*",
     "@unrulysystems/rn-playwright-driver-xctest-companion": "workspace:*",
     "expo": "~56.0.12",
+    "expo-file-system": "~56.0.8",
     "expo-status-bar": "~56.0.4",
     "react": "19.2.3",
     "react-native": "0.85.3"

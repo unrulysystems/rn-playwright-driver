@@ -366,4 +366,42 @@ describe('Pointer Path Methods', () => {
       expect(mockTimeoutProvider.waitForTimeout).not.toHaveBeenCalled()
     })
   })
+
+  describe('position state hygiene (reconnect / failed calls)', () => {
+    it('does not record a position when the backend call FAILS (no phantom interpolation origin)', async () => {
+      await pointer.down(0, 0) // last SUCCESSFUL position → (0,0)
+      mockBackend.move.mockRejectedValueOnce(new Error('backend move failed'))
+      await expect(pointer.move(100, 100)).rejects.toThrow('backend move failed')
+
+      // The failed move must NOT have overwritten the origin: a subsequent stepped move
+      // interpolates from the last reached (0,0), not the never-reached (100,100).
+      mockBackend.move.mockClear()
+      await pointer.move(10, 0, { steps: 2 })
+      expect(mockBackend.move).toHaveBeenNthCalledWith(1, 5, 0)
+      expect(mockBackend.move).toHaveBeenNthCalledWith(2, 10, 0)
+    })
+
+    it('does not record a position when the backend is absent (fails closed, no phantom)', async () => {
+      pointer.setBackend(null)
+      await expect(pointer.move(50, 50)).rejects.toThrow('Touch backend not initialized')
+
+      // Reconnect: a stepped move must not interpolate from the never-reached (50,50).
+      pointer.setBackend(mockBackend)
+      await pointer.move(10, 0, { steps: 2 })
+      expect(mockBackend.move).toHaveBeenCalledTimes(1) // no origin → single move, not 2 steps
+      expect(mockBackend.move).toHaveBeenCalledWith(10, 0)
+    })
+
+    it('clears recorded positions on (re)connect so a stepped move has no stale origin', async () => {
+      await pointer.down(100, 100) // positions[0] = (100,100)
+      pointer.setBackend(mockBackend) // reconnect must clear positions
+      mockBackend.move.mockClear()
+
+      await pointer.move(200, 200, { steps: 4 })
+      // With positions cleared, `from` is undefined → a single move to the target, not
+      // 4 steps interpolated from the stale (100,100).
+      expect(mockBackend.move).toHaveBeenCalledTimes(1)
+      expect(mockBackend.move).toHaveBeenCalledWith(200, 200)
+    })
+  })
 })

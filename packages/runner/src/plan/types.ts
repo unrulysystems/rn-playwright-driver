@@ -10,6 +10,8 @@ export interface CommandSpec {
   readonly args: readonly string[]
   readonly env?: Readonly<Record<string, string>>
   readonly cwd?: string
+  /** Resolve `command` from node_modules/.bin at execution time, relative to cwd. */
+  readonly packageBin?: boolean
   /** Pipe this file's bytes to stdin (keeps secret values out of argv). */
   readonly stdinFromFile?: string
   /** Pipe this literal (non-secret) content to stdin (e.g. generated config XML). */

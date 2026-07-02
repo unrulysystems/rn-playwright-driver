@@ -1,3 +1,4 @@
+import { File, Paths } from 'expo-file-system'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
@@ -21,10 +22,32 @@ export default function App() {
 
   useEffect(() => {
     const globals = globalThis as typeof globalThis & {
-      __RN_DRIVER_EXAMPLE__?: { scrollToTop: () => void }
+      __RN_DRIVER_EXAMPLE__?: {
+        scrollToTop: () => void
+        writeDocumentFile: (name: string, content: string) => string
+        writeCacheFile: (name: string, content: string) => string
+        readDocumentFile: (name: string) => string | Promise<string>
+      }
+    }
+    // e2e affordance for device.files: the app writes a file via
+    // expo-file-system so the driver can assert that its named roots resolve to
+    // the same on-device location (not just that a host push/pull round-trips).
+    // Returns the uri so the caller can confirm. Covers both `document` and
+    // `cache` roots — a mis-mapped cache root would otherwise pass silently.
+    const writeVia = (base: (typeof Paths)['document'], fileName: string, content: string) => {
+      const file = new File(base, fileName)
+      file.create({ overwrite: true })
+      file.write(content)
+      return file.uri
     }
     globals.__RN_DRIVER_EXAMPLE__ = {
       scrollToTop: () => scrollRef.current?.scrollTo({ y: 0, animated: false }),
+      writeDocumentFile: (fileName, content) => writeVia(Paths.document, fileName, content),
+      writeCacheFile: (fileName, content) => writeVia(Paths.cache, fileName, content),
+      // Read back through Expo's document root so a host `push` can be verified
+      // independently (proves the pushed file lands where the app sees it, not
+      // just that host push/pull round-trips through the same transport).
+      readDocumentFile: (fileName) => new File(Paths.document, fileName).text(),
     }
     return () => {
       delete globals.__RN_DRIVER_EXAMPLE__

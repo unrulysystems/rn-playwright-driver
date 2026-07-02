@@ -12,6 +12,8 @@ export interface MetroOverrides {
 
 export interface BuildPlanOptions {
   readonly metroOverrides?: MetroOverrides
+  /** Project/config directory for commands that run relative to the app workspace. */
+  readonly projectCwd?: string
   /** Positional spec paths; override the config spec list when non-empty. */
   readonly specs?: readonly string[]
   /** Args after `--`; always appended to the Playwright invocation. */
@@ -41,6 +43,7 @@ export function buildDryRunPlan(
       resolved: placeholderIos(ios, metro),
       playwright: config.playwright,
       timeoutMs: config.timeoutMs,
+      ...(opts.projectCwd ? { projectCwd: opts.projectCwd } : {}),
       specs,
       passthrough,
     })
@@ -54,6 +57,7 @@ export function buildDryRunPlan(
     resolved: placeholderAndroid(android, metro),
     playwright: config.playwright,
     timeoutMs: config.timeoutMs,
+    ...(opts.projectCwd ? { projectCwd: opts.projectCwd } : {}),
     specs,
     passthrough,
     hermesDeviceName: '<android-device>',

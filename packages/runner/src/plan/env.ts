@@ -10,6 +10,7 @@ export function buildIosDriverEnv(
   resolved: ResolvedIosTarget,
   metro: ResolvedMetro,
   timeoutMs: number | undefined,
+  bundleId: string,
 ): Record<string, string> {
   return {
     [ENV.touchBackend]: TOUCH_BACKEND.ios,
@@ -18,6 +19,12 @@ export function buildIosDriverEnv(
     [ENV.timeout]: String(timeoutMs ?? DEFAULTS.driverTimeoutMs),
     [ENV.xctestPort]: String(resolved.touchPort),
     [ENV.xctestTokenFile]: resolved.tokenFile,
+    // File-I/O targeting (device.files). The runner orchestrates simulators only,
+    // so the transport kind is always `simulator` here (physical-iOS run
+    // orchestration is a separate effort — see driver SPEC non-goals).
+    [ENV.appBundleId]: bundleId,
+    [ENV.simUdid]: resolved.simUdid,
+    [ENV.iosTargetKind]: 'simulator',
   }
 }
 
@@ -30,6 +37,7 @@ export function buildAndroidDriverEnv(
   metro: ResolvedMetro,
   deviceName: string,
   timeoutMs: number | undefined,
+  packageName: string,
 ): Record<string, string> {
   return {
     [ENV.touchBackend]: TOUCH_BACKEND.android,
@@ -39,5 +47,8 @@ export function buildAndroidDriverEnv(
     [ENV.timeout]: String(timeoutMs ?? DEFAULTS.driverTimeoutMs),
     [ENV.instrumentationPort]: String(resolved.touchPort),
     [ENV.instrumentationTokenFile]: resolved.tokenFile,
+    // File-I/O targeting (device.files) — the adb serial already flows via
+    // ANDROID_SERIAL above; add the app package for `run-as`.
+    [ENV.appPackage]: packageName,
   }
 }

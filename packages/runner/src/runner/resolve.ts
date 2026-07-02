@@ -20,6 +20,8 @@ const run = promisify(execFile)
 export interface ResolveOptions {
   /** Explicit device id/serial/destination override from the CLI. */
   readonly device?: string
+  /** Project/config directory for package resolution that belongs to the app workspace. */
+  readonly projectCwd?: string
 }
 
 /**
@@ -32,16 +34,15 @@ export async function resolveIosTarget(
   metro: ResolvedMetro,
   opts: ResolveOptions,
 ): Promise<ResolvedIosTarget> {
-  const { udid, name } = await selectSimulator(ios, opts.device)
-  await terminateStaleOnOtherSims(udid, ios.bundleId)
-
   const scheme = uitestScheme(ios)
   // Resolve the scaffold bin from the project cwd (same one the runner executes
   // under) so a hoisted monorepo finds the repo-root-installed companion. This can
-  // throw (companion not installed / no bin entry) — do it BEFORE minting the token
-  // file so a resolution failure never orphans a `0600` secret on disk (the plan's
-  // remove-file cleanup only runs once the plan is built and executed).
-  const scaffoldBin = resolveScaffoldBin(process.cwd())
+  // throw (companion not installed / no bin entry) — do it BEFORE simulator or
+  // token-file side effects so a missing build dependency fails without touching
+  // devices or orphaning a `0600` secret on disk.
+  const scaffoldBin = resolveScaffoldBin(opts.projectCwd ?? process.cwd())
+  const { udid, name } = await selectSimulator(ios, opts.device)
+  await terminateStaleOnOtherSims(udid, ios.bundleId)
   const tokenFile = await mintTokenFile()
 
   return {
