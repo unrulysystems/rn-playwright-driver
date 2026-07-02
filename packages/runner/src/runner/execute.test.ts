@@ -95,6 +95,16 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(playwrightAt).toBeGreaterThan(companionReadyAt)
   })
 
+  it('forwards driverEnv into the Playwright process env', async () => {
+    const { runner, calls } = makeRunner()
+    await executePlan(plan, runner, { logDir: '/tmp/logs' })
+
+    const playwright = calls.find(
+      (c) => c.type === 'exec' && (c.spec?.args.includes('playwright') ?? false),
+    )
+    expect(playwright?.spec?.env).toMatchObject(plan.driverEnv)
+  })
+
   it('gates: a background process is spawned before its readiness probe', async () => {
     const { runner, calls } = makeRunner()
     await executePlan(plan, runner, { logDir: '/tmp/logs' })

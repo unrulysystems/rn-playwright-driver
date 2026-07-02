@@ -20,6 +20,7 @@ SPECS=(
   e2e/pointer
   e2e/scroll/scroll.spec.ts
   e2e/primitives/touch-backend.spec.ts
+  e2e/files/device-files.spec.ts
 )
 
 METRO_PID=""
@@ -425,10 +426,15 @@ open_host_launch_url
 wait_for_hermes_target
 
 echo "Running iOS e2e with RN_TOUCH_BACKEND=xctest"
+SIM_UDID="${DEVICE_DESTINATION##*,id=}"
+[[ "$SIM_UDID" != "$DEVICE_DESTINATION" ]] || fail "IOS_DESTINATION must include ',id=<simulator-udid>' for device.files targeting"
 if RN_TOUCH_BACKEND=xctest \
   RN_TOUCH_XCTEST_PORT="$TOUCH_PORT" \
   RN_TOUCH_XCTEST_TOKEN_FILE="$TOUCH_AUTH_TOKEN_FILE" \
   RN_METRO_URL="$METRO_URL" \
+  RN_APP_BUNDLE_ID="$APP_BUNDLE_ID" \
+  RN_SIM_UDID="$SIM_UDID" \
+  RN_IOS_TARGET_KIND=simulator \
   npx playwright test "${SPECS[@]}" --reporter=line; then
   STATUS="pass"
 else

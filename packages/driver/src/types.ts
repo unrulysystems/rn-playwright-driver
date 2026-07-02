@@ -375,10 +375,11 @@ export type FilePullOptions = {
   /** Root the remote path resolves against (default: `document`). */
   root?: FileRoot
   /**
-   * Max bytes to read, enforced on **every** transport: Android caps the stdout
-   * stream; the iOS transports `stat` the file/staged payload and reject before
-   * reading. Overflow rejects with {@link FileIoError} `TOO_LARGE` — never a
-   * truncated Buffer. Must be a positive finite number. Default: 64 MiB.
+   * Max bytes to read, enforced on **every** transport. Android caps the stdout
+   * stream; iOS simulator stats before reading; iOS device stages through
+   * `devicectl` first because it exposes no remote stat. Overflow rejects with
+   * {@link FileIoError} `TOO_LARGE` — never a truncated Buffer. Must be a
+   * positive finite number. Default: 64 MiB.
    */
   maxBuffer?: number
 }
@@ -427,7 +428,7 @@ export type TargetContext = {
   packageName?: string
   /** iOS simulator/device UDID. */
   udid?: string
-  /** Android adb device serial (defaults from `ANDROID_SERIAL`). */
+  /** Android adb device serial. The Playwright fixture maps `ANDROID_SERIAL` into this field. */
   serial?: string
   /** iOS transport selector (default: `simulator`). */
   iosKind?: IosTargetKind

@@ -18,6 +18,7 @@ SPECS=(
   e2e/pointer
   e2e/scroll/scroll.spec.ts
   e2e/primitives/touch-backend.spec.ts
+  e2e/files/device-files.spec.ts
 )
 
 METRO_PID=""
@@ -395,6 +396,7 @@ if RN_TOUCH_BACKEND=instrumentation \
   RN_TOUCH_INSTRUMENTATION_TOKEN_FILE="$TOUCH_AUTH_TOKEN_FILE" \
   RN_METRO_URL="$METRO_URL" \
   RN_DEVICE_NAME="$TARGET_DEVICE_NAME" \
+  RN_APP_PACKAGE="$APP_ID" \
   ANDROID_SERIAL="$SERIAL" \
   npx playwright test "${SPECS[@]}" --reporter=line; then
   STATUS="pass"
