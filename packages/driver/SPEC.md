@@ -187,7 +187,14 @@ Promise<Buffer>` and `push(source, remotePath, options?) → Promise<void>`,
     `maxBuffer + 1` (no chunk-list `concat`, so no ~2x), and a file that **grows or
     is swapped between the probe and the read** (a racing/compromised or merely
     concurrently-written app) triggers a one-time reallocation to the cap and still
-    rejects `TOO_LARGE` past it — never exhausting the worker.
+    rejects `TOO_LARGE` past it — never exhausting the worker. simctl `stat`s the
+    container file **in place** (a simulator container is host-mounted). devicectl
+    cannot: a **physical device** container is not host-mounted, so `copy from` stages
+    the **whole** remote file to host temp over USB _before_ the size fast-fail — peak
+    worker MEMORY is still bounded (`maxBuffer + 1`), but an oversized file costs the
+    full USB transfer + temp disk before `TOO_LARGE`. There is no documented devicectl
+    remote-stat to fail-fast pre-copy; this is a provisional physical-device
+    characteristic (iOS-device ships **provisional**), not a memory-bound violation.
     `push` is bounded symmetrically by the **same** bounded read: a host-file source
     rejects `TOO_LARGE` on the size fast-fail, then the bounded read holds the cap
     even if the file grows past the probe; a `Buffer` source (never probed) is caught

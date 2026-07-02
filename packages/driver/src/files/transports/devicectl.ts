@@ -108,6 +108,14 @@ export function createDevicectlTransport(
       const dest = join(dir, 'payload')
       const jsonOut = join(dir, 'result.json')
       try {
+        // A physical device's app container is NOT host-mounted (unlike a simulator,
+        // which simctl size-probes in place), so `devicectl copy from` — a full-file
+        // USB transfer to host temp — is the ONLY way to read any bytes. maxBuffer is
+        // therefore enforced on the STAGED payload below, AFTER the copy: peak worker
+        // MEMORY still stays at maxBuffer+1 (readFileBounded, REQ-FILES-008), but an
+        // oversized remote file does cost the full USB transfer + temp disk before the
+        // TOO_LARGE check. This is a provisional physical-device characteristic; there is
+        // no documented devicectl remote-stat to fail-fast on before copying.
         const result = await runCopy(copy('from', remote, dest, jsonOut))
         await assertOk(result, remote, jsonOut)
         try {
