@@ -1,5 +1,11 @@
 # @unrulysystems/rn-playwright-driver
 
+## 0.8.0
+
+### Minor Changes
+
+- [#35](https://github.com/unrulysystems/rn-playwright-driver/pull/35) [`6956c1c`](https://github.com/unrulysystems/rn-playwright-driver/commit/6956c1c2bc2231761bb2a3d94d3d87a1d4360bfe) Thanks [@alleneubank](https://github.com/alleneubank)! - Add the `device.files` API for host-side push and pull of files to and from app containers.
+
 ## 0.7.3
 
 ### Patch Changes
