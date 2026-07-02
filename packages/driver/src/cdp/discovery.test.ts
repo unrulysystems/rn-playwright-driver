@@ -168,62 +168,44 @@ describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
     ).toBe(t)
   })
 
-  it('breaks a SAME-DEVICE tie by appId when deviceName matches multiple apps on one device', () => {
-    // Two RN apps on the ONE device the caller named 'Pixel' — deviceName matches both
-    // (exact via title parenthetical), so without appId this throws Ambiguous. The file
-    // pin's packageName uniquely picks its app on that device.
-    const wanted = target({ id: 'b', title: 'com.acme.app (Pixel)', appId: 'com.acme.app' })
-    const targets = [
-      target({ id: 'a', title: 'com.acme.other (Pixel)', appId: 'com.acme.other' }),
-      wanted,
-    ]
+  it('resolves a file-pinned Android target by SUBSTRING when Metro suffixes the name', () => {
+    // The real runner flow: RN_DEVICE_NAME='sdk_gphone64_arm64' but Metro reports
+    // 'sdk_gphone64_arm64 - 15 - API 35' (suffixed), with an iOS runtime also connected.
+    // Substring fallback is REQUIRED and uniquely resolves the Android target — exact-only
+    // was tried and reverted because it broke this. (See SPEC "App-identity facet".)
+    const android = target({ id: 'b', deviceName: 'sdk_gphone64_arm64 - 15 - API 35' })
+    const targets = [target({ id: 'a', deviceName: 'iPhone 17' }), android]
     expect(
       selectTargetForConnect(targets, {
         target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
-        deviceName: 'Pixel',
+        deviceName: 'sdk_gphone64_arm64',
+      }),
+    ).toBe(android)
+  })
+
+  it('under a file pin, honors an EXACT deviceName match (preferred over a substring superset)', () => {
+    const wanted = target({ id: 'b', deviceName: 'iPhone 17' })
+    const targets = [target({ id: 'a', deviceName: 'iPhone 17 Pro' }), wanted]
+    expect(
+      selectTargetForConnect(targets, {
+        target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+        deviceName: 'iPhone 17',
       }),
     ).toBe(wanted)
   })
 
-  it('still fails closed when the SAME-DEVICE tie is not uniquely resolved by appId', () => {
-    // Two runtimes of the SAME app on the one named device — appId can't disambiguate.
+  it('fails closed on DUPLICATE exact device names even under a file pin (name ≠ device identity)', () => {
+    // Two devices can share an exact name; Metro exposes no UDID (and app id can't prove
+    // the device either), so this must stay Ambiguous — never silently pick one.
     const targets = [
-      target({ id: 'a', title: 'com.acme.app (Pixel)', appId: 'com.acme.app' }),
-      target({ id: 'b', title: 'com.acme.app (Pixel)', appId: 'com.acme.app' }),
+      target({ id: 'a', deviceName: 'iPhone 17' }),
+      target({ id: 'b', deviceName: 'iPhone 17' }),
     ]
     expect(() =>
       selectTargetForConnect(targets, {
-        target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
-        deviceName: 'Pixel',
+        target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+        deviceName: 'iPhone 17',
       }),
     ).toThrow(/Ambiguous device target/)
-  })
-
-  it('does NOT appId-tie-break SUBSTRING deviceName matches (they may span different devices)', () => {
-    // `Pixel` substring-matches `Pixel 8` and `Pixel 9` — DIFFERENT devices. appId must
-    // not pick one, or it could bind to the wrong device; fail closed instead.
-    const targets = [
-      target({ id: 'a', deviceName: 'Pixel 8', appId: 'com.acme.app' }),
-      target({ id: 'b', deviceName: 'Pixel 9', appId: 'com.acme.other' }),
-    ]
-    expect(() =>
-      selectTargetForConnect(targets, {
-        target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
-        deviceName: 'Pixel',
-      }),
-    ).toThrow(/Ambiguous device target/)
-  })
-
-  it('does NOT use appId as a global selector without an explicit deviceName (round-40 regression guard)', () => {
-    // No deviceName → the multi-runtime guard must fail closed. appId must NEVER pick a
-    // target here — a cross-platform bundleId/package collision would mis-bind. This is
-    // the exact unsound path that was reverted; keep it fail-closed.
-    const targets = [
-      target({ id: 'a', deviceName: 'iPhone 17', appId: 'com.acme.other' }),
-      target({ id: 'b', deviceName: 'Pixel 8', appId: 'com.acme.app' }),
-    ]
-    expect(() =>
-      selectTargetForConnect(targets, { target: { udid: 'UDID-1', bundleId: 'com.acme.app' } }),
-    ).toThrow(/Ambiguous CDP target/)
   })
 })

@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as discovery from './cdp/discovery'
 import { RNDevice, TimeoutError, UncaughtExceptionError } from './device'
+import { createDeviceFiles } from './files/device-files'
 import { createTouchBackend } from './touch'
 import type { ConsoleMessage, PageError } from './types'
 
@@ -62,6 +63,14 @@ vi.mock('./cdp/client', () => {
       }
     },
   }
+})
+
+// Wrap the REAL createDeviceFiles in a passthrough spy so a test can inspect the deps
+// (specifically the `target` connect() hands it) without changing behavior — the
+// lifecycle-token tests below still exercise the genuine implementation.
+vi.mock('./files/device-files', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./files/device-files')>()
+  return { ...actual, createDeviceFiles: vi.fn(actual.createDeviceFiles) }
 })
 
 /** Invoke the device's registered CDP forwarder for `method` with `params`. */
@@ -730,6 +739,29 @@ describe('RNDevice connection lifecycle', () => {
     // SAME teardown, so they can't drift).
     await expect(device.pointer.tap(1, 2)).rejects.toThrow('Touch backend not initialized')
     await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+  })
+
+  it('SNAPSHOTS the file-I/O target at connect() so a post-connect mutation cannot retarget device.files', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    // The caller keeps a reference to the SAME target object it passes in — the exact
+    // shape a direct createDevice({ target }) user controls and could mutate later.
+    const callerTarget = { udid: 'UDID-1', bundleId: 'com.acme.app' }
+    const device = new RNDevice({ timeout: 1000, target: callerTarget })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+
+    const passedTarget = vi.mocked(createDeviceFiles).mock.calls[0]?.[0].target
+    // device.files must get a CLONE, not the live caller reference…
+    expect(passedTarget).not.toBe(callerTarget)
+    expect(passedTarget).toEqual(callerTarget)
+    // …so mutating the caller's object AFTER connect() cannot make device.files operate
+    // on a different app/device than CDP attached to (the confused-deputy the snapshot
+    // closes on the programmatic path).
+    callerTarget.bundleId = 'com.evil.other'
+    expect(passedTarget?.bundleId).toBe('com.acme.app')
   })
 
   it('invalidates a device.files captured before a reconnect (no orphaned live token)', async () => {

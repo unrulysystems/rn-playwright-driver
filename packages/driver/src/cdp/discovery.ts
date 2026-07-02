@@ -6,11 +6,6 @@ export type DebugTarget = {
   deviceId?: string
   deviceName?: string
   description?: string
-  // The app identity Metro attaches to a Hermes target — the iOS bundleId / Android
-  // package. Used ONLY as a SAME-DEVICE tie-breaker (see selectTarget): it disambiguates
-  // multiple apps on ONE explicitly-named device, never as a cross-device/-platform
-  // selector (that use is unsound — bundleId and packageName collide; see SPEC).
-  appId?: string
 }
 
 export type TargetSelectionOptions = {
@@ -20,12 +15,6 @@ export type TargetSelectionOptions = {
   deviceName?: string
   /** Select target by page index (default: 0 = first Hermes target) */
   pageIndex?: number
-  /**
-   * The pinned app's identity (iOS bundleId / Android package), used ONLY to break a
-   * tie among EXACT `deviceName` matches — multiple RN apps on the one named device.
-   * Set internally by selectTargetForConnect from the file pin; not a public selector.
-   */
-  pinnedAppId?: string
 }
 
 /**
@@ -104,6 +93,12 @@ export function selectTarget(
         t.title?.toLowerCase() === needle ||
         titleParenthetical(t.title)?.toLowerCase() === needle,
     )
+    // Substring fallback is REQUIRED, not just a convenience: Metro reports Android
+    // device names with a suffix (RN_DEVICE_NAME `sdk_gphone64_arm64` vs the Metro target
+    // `sdk_gphone64_arm64 - 15 - API 35`), so the runner's pinned Android target only
+    // resolves by substring. Exact is still PREFERRED, and a substring match must be
+    // UNIQUE (multiple → Ambiguous below), which is the safety bound — see SPEC
+    // "App-identity facet" for why exact-only was tried and reverted.
     const matches =
       exact.length > 0
         ? exact
@@ -116,28 +111,14 @@ export function selectTarget(
       const available = targets.map((t) => t.deviceName ?? t.title ?? 'unknown').join(', ')
       throw new Error(`No target matching "${options.deviceName}". Available: ${available}`)
     }
-    // Fail closed on genuine ambiguity (multiple exact, or multiple substring with
-    // no exact). Metro's CDP targets expose no device UDID (only a name/title), so
-    // two truly same-named simulators cannot be told apart here. Silently taking the
-    // first match could attach to the wrong runtime — a loud error beats that; use a
-    // unique name or an explicit pageIndex.
+    // Fail closed on genuine ambiguity (multiple exact, or multiple substring with no
+    // exact). Metro's CDP targets expose no device UDID (only a name/title), so two truly
+    // same-named simulators CANNOT be told apart here — not by name, and not by app id
+    // either (exact-name equality does not prove same device; an app-id match could be a
+    // different same-named device than the pinned udid/serial). Silently taking the first
+    // match could attach to the wrong runtime — a loud error beats that; use a unique
+    // name or an explicit pageIndex.
     if (matches.length > 1) {
-      // SAME-DEVICE app tie-break: when the tie is among EXACT deviceName matches, every
-      // tied target shares the identical device name — i.e. multiple RN apps on the ONE
-      // device the caller explicitly named. A file pin's appId uniquely identifies which
-      // app, so we can pick it WITHOUT ever crossing to another device or platform. This
-      // is the ONLY sound appId use: it is gated behind an explicit deviceName and only
-      // disambiguates within it. It is NOT a global selector — that form is unsound
-      // (iOS bundleId and Android packageName collide; see SPEC "App-identity facet").
-      // Substring matches are deliberately EXCLUDED: `Pixel` substring-matches both
-      // `Pixel 8` and `Pixel 9` (different devices), where appId could pick the wrong
-      // device — only exact matches are guaranteed one device.
-      if (exact.length > 1 && options.pinnedAppId) {
-        const appMatches = exact.filter((t) => t.appId === options.pinnedAppId)
-        if (appMatches.length === 1) {
-          return appMatches[0] as DebugTarget
-        }
-      }
       const available = matches.map((t) => t.title ?? t.deviceName ?? 'unknown').join(', ')
       throw new Error(
         `Ambiguous device target: ${matches.length} runtimes match "${options.deviceName}" (${available}). ` +
@@ -172,8 +153,11 @@ export type ConnectSelectionOptions = TargetSelectionOptions & {
  * one runtime is connected, defaulting to the first target would evaluate against a
  * different app than file I/O reads/writes — fail closed instead of guessing. A lone
  * serial/udid is NOT a pin (device.files would be UNAVAILABLE without the app id), so
- * it never blocks a plain touch/evaluate connect. An explicit pageIndex is the
- * caller's deliberate choice and is honored.
+ * it never blocks a plain touch/evaluate connect. An explicit deviceName/pageIndex is
+ * the caller's deliberate choice and is honored as-is: nothing Metro exposes maps to the
+ * pinned udid/serial, so CDP selection under a pin cannot be auto-cross-checked against
+ * the file target. Two shortcuts to do so were tried and reverted (app-id tie-break;
+ * exact-only deviceName) — see SPEC "App-identity facet".
  *
  * SINGLE-RUNTIME RESIDUAL (accepted; see SPEC "Open items"): with exactly one
  * connected runtime we connect CDP to it, even under a file pin, because it is the
@@ -220,10 +204,12 @@ export function selectTargetForConnect(
         `to match them — pass deviceName or pageIndex so evaluate() and device.files use the same runtime.`,
     )
   }
-  // Forward the pin's app identity so selectTarget can break a SAME-DEVICE tie: when an
-  // explicit deviceName matches multiple RN apps on that one device, appId picks the
-  // pinned app. Only when file-pinned — otherwise there is no app identity to match, and
-  // appId must never act as a standalone (cross-device/-platform) selector.
-  const pinnedAppId = filePinned ? (t?.bundleId ?? t?.packageName) : undefined
-  return selectTarget(targets, pinnedAppId ? { ...options, pinnedAppId } : options)
+  // Delegate to the generic selector. Nothing Metro exposes (device name or app id)
+  // proves the pinned udid/serial device identity, so CDP selection under a pin is NOT
+  // auto-cross-checked against the file target — an explicit deviceName/pageIndex is the
+  // operator's deliberate choice, honored as-is. Two disambiguation shortcuts were tried
+  // and reverted (both unsound / incompatible with reality): an app-id tie-break (app id
+  // ≠ device; bundleId/package collide) and exact-only deviceName (broke the runner's
+  // required substring match — Metro suffixes Android names). See SPEC "App-identity facet".
+  return selectTarget(targets, options)
 }

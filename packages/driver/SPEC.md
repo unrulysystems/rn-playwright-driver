@@ -381,27 +381,35 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   device among several booted ones must pass an explicit `deviceName` to bind both
   identities. Revisit (fail closed even for one runtime, at that UX cost) only if
   `device.files` is ever pointed at an untrusted multi-device host.
-  **App-identity facet (same residual):** CDP selects by device name while
-  `device.files` carries the app bundle/package, so two RN apps on one Metro could
-  in principle diverge (evaluate app A, file I/O app B). In practice a **usable**
-  file target always carries a device pin — iOS requires `udid`+`bundleId`, Android
-  `serial`+`package` (`resolveFileTarget`) — so `filePinned` is set and the
-  multi-runtime ambiguity guard above already fails closed.
-  **`appId` — sound as a same-device tie-break, unsound as a global selector.** Metro
-  exposes `appId` on each Hermes target (the iOS bundleId / Android package — the
-  runner's hermes-target probe waits on it). It proves APP identity, NOT the pinned
-  DEVICE, so it must never be a standalone selector: (1) iOS `bundleId` and Android
-  `packageName` are routinely the SAME string (`com.acme.app`), so a global match would
-  bind an iOS pin to an Android runtime cross-platform; (2) the same app on two devices
-  shares one `appId`, and Metro exposes no UDID to tell them apart. Therefore `appId` is
-  used in exactly ONE place — `selectTarget` breaks a tie among **EXACT `deviceName`
-  matches** with the file pin's `appId`. That is safe because every tied target shares
-  the operator-supplied device name (one device ⇒ one platform), so appId only chooses
-  which app on that device, never which device/platform. This resolves "two RN apps on
-  the one named device" (previously a fail-closed `Ambiguous device target`). Substring
-  `deviceName` matches (which may span `Pixel 8`/`Pixel 9`) are EXCLUDED from the
-  tie-break, and with no `deviceName` at all the multi-runtime guard still fails closed;
-  the remaining divergence path is a deliberate operator `pageIndex`.
+  **App-identity facet — accepted residual; auto-disambiguation is UNSOUND (do not
+  reintroduce).** CDP selects by device name / pageIndex while `device.files` carries the
+  app bundle/package pinned to a specific `udid`/`serial`, so on a shared multi-runtime
+  Metro the two could in principle diverge (evaluate app A, file I/O app B). The root
+  cause is structural: **nothing Metro exposes on a Hermes target maps to the pinned
+  `udid`/`serial`.** The available fields are `deviceName`, `title`, and `appId` (the iOS
+  bundleId / Android package) — none is a device identity. Two "clever"
+  auto-disambiguation shortcuts were tried and BOTH reverted:
+  - **`appId` as a selector/tie-break (reverted, unsound):** `appId` proves APP identity,
+    not the pinned DEVICE. iOS `bundleId` and Android `packageName` are routinely the SAME
+    string (`com.acme.app`) → cross-platform mis-bind; and exact `deviceName` equality
+    does NOT prove same device (two simulators can share a name), so an `appId` tie-break
+    among same-named targets can pick a runtime on a DIFFERENT device than the pin.
+  - **exact-only `deviceName` under a pin (reverted, breaks reality):** rejecting the
+    substring fallback broke the real runner flow — Metro reports Android names with a
+    suffix (`RN_DEVICE_NAME=sdk_gphone64_arm64` vs Metro `sdk_gphone64_arm64 - 15 - API
+35`), so the pinned Android target ONLY resolves by substring. Substring is therefore
+    REQUIRED; the safety bound is that exact is PREFERRED and a substring match must be
+    UNIQUE (multiple → `Ambiguous device target`).
+
+  So CDP selection under a pin is **operator-directed, not auto-cross-checked**: an
+  explicit `deviceName` (exact preferred, else unique substring) or `pageIndex` is honored
+  as the caller's deliberate choice; with no selector and >1 runtime it FAILS CLOSED
+  (`Ambiguous CDP target`). Duplicate exact names also fail closed. The residual — a
+  fuzzy/stale name uniquely substring-matching a different device than the pin, or two RN
+  apps on one named device — is left to the operator (`pageIndex`), because no Metro field
+  can prove the pinned device identity. The confused deputy is further bounded because a
+  usable file target always carries the pin and the no-selector guard fails closed.
+
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 - **iOS-simulator containment TOCTOU (accepted residual).** `resolveInsideContainer`
