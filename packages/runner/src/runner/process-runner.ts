@@ -281,19 +281,30 @@ function titleParenthetical(title: string | undefined): string | undefined {
   return title?.match(/\(([^)]+)\)\s*$/)?.[1]
 }
 
+function normalizedDeviceName(value: string | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+}
+
+function isIosSimulatorName(value: string): boolean {
+  return /^(iphone|ipad)(\s|$)/.test(value)
+}
+
 export function metroTargetMatchesDeviceName(
   target: MetroTarget,
   deviceNameMatch: string,
 ): boolean {
-  const needle = deviceNameMatch.toLowerCase()
-  return (
-    String(target.deviceName ?? '')
-      .toLowerCase()
-      .includes(needle) ||
-    String(titleParenthetical(target.title) ?? '')
-      .toLowerCase()
-      .includes(needle)
-  )
+  const needle = normalizedDeviceName(deviceNameMatch)
+  const names = [
+    normalizedDeviceName(target.deviceName),
+    normalizedDeviceName(titleParenthetical(target.title)),
+  ].filter((name) => name.length > 0)
+  if (names.some((name) => name === needle)) return true
+  // Android Metro targets append platform/API details to the model reported by
+  // `getprop ro.product.model`; iOS simulator names are exact and must not let
+  // `iPhone 17` satisfy a stale `iPhone 17 Pro` target.
+  return !isIosSimulatorName(needle) && names.some((name) => name.includes(needle))
 }
 
 async function hermesTargetPresent(

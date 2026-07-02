@@ -98,6 +98,30 @@ describe('metroTargetMatchesDeviceName', () => {
     ).toBe(true)
   })
 
+  it('does not let an iOS simulator name match a longer simulator name', () => {
+    expect(
+      metroTargetMatchesDeviceName(
+        { appId: 'com.acme.app', deviceName: 'iPhone 17 Pro' },
+        'iPhone 17',
+      ),
+    ).toBe(false)
+    expect(
+      metroTargetMatchesDeviceName(
+        { appId: 'com.acme.app', title: 'com.acme.app (iPhone 17 Pro)' },
+        'iPhone 17',
+      ),
+    ).toBe(false)
+  })
+
+  it('keeps Android substring matching for Metro model suffixes', () => {
+    expect(
+      metroTargetMatchesDeviceName(
+        { appId: 'com.acme.app', deviceName: 'sdk_gphone64_arm64 - 15 - API 35' },
+        'sdk_gphone64_arm64',
+      ),
+    ).toBe(true)
+  })
+
   it('does not match arbitrary title text outside the trailing parenthetical', () => {
     expect(
       metroTargetMatchesDeviceName(

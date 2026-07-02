@@ -12,6 +12,7 @@ describe('renderPlan', () => {
     expect(text).toContain('RN_TOUCH_BACKEND=xctest')
     expect(text).toContain('Playwright:')
     expect(text).toContain('playwright test')
+    expect(text).toContain('[package-bin]')
     expect(text).toContain('Cleanup (defensive, idempotent):')
   })
 

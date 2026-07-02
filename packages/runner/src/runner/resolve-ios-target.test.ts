@@ -67,6 +67,21 @@ describe('resolveIosTarget', () => {
     )
     await rm(path.dirname(resolved.tokenFile), { recursive: true, force: true })
   })
+
+  it('resolves the scaffold dependency before touching simulators', async () => {
+    const projectCwd = await projectWithoutCompanion()
+    const ios: IosConfig = {
+      bundleId: 'com.example.app',
+      workspace: 'ios/App.xcworkspace',
+      appScheme: 'App',
+      launch: { mode: 'launch', kind: 'plain' },
+    }
+
+    await expect(resolveIosTarget(ios, resolveMetro({}), { projectCwd })).rejects.toThrow(
+      /Cannot find module/,
+    )
+    expect(execFileMock).not.toHaveBeenCalled()
+  })
 })
 
 async function hoistedProjectWithCompanion(): Promise<string> {
@@ -87,6 +102,15 @@ async function hoistedProjectWithCompanion(): Promise<string> {
 
   const projectCwd = path.join(root, 'packages', 'app')
   await mkdir(path.join(projectCwd, 'node_modules', '.bin'), { recursive: true })
+  await writeFile(path.join(projectCwd, 'package.json'), JSON.stringify({ name: 'app' }))
+  return projectCwd
+}
+
+async function projectWithoutCompanion(): Promise<string> {
+  const root = await mkdtemp(path.join(tmpdir(), 'rn-resolve-ios-missing-'))
+  roots.push(root)
+  const projectCwd = path.join(root, 'packages', 'app')
+  await mkdir(projectCwd, { recursive: true })
   await writeFile(path.join(projectCwd, 'package.json'), JSON.stringify({ name: 'app' }))
   return projectCwd
 }
