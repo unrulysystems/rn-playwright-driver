@@ -112,6 +112,24 @@ export class RNDevice implements Device {
     // ambiguous CDP selection among multiple runtimes).
     const target = selectTargetForConnect(targets, this.options)
 
+    // Tear the PRIOR connection's resources down UP FRONT — before the first await that
+    // can reject (cdp.connect / detectPlatform / createTouchBackend below). A reconnect
+    // without an intervening disconnect() that rejects in any of those would otherwise
+    // leave the old file-I/O lifecycle token `connected` (an older captured device.files
+    // keeps running host I/O against a half-torn-down device) and the old touch backend's
+    // companion process/port alive. Fail the old state closed first; mint fresh state
+    // only once the new connection is established. The captured device.files closes over
+    // the OLD token, so flipping it here is what makes the stale reference fail closed on
+    // BOTH a clean disconnect and a failed reconnect. registerRuntimeEventForwarders is
+    // idempotent, so the forwarders need no reset here. (Symmetric with disconnect().)
+    if (this._filesLifecycle) {
+      this._filesLifecycle.connected = false
+    }
+    if (this._touchBackend) {
+      await this._touchBackend.dispose()
+      this._touchBackend = null
+    }
+
     // Register the console + exception forwarders BEFORE connecting. cdp.connect()
     // sends Runtime.enable internally, after which the runtime starts emitting
     // events; subscribing afterwards drops anything fired in that window (a console
@@ -132,14 +150,8 @@ export class RNDevice implements Device {
       },
       this.options.touch,
     )
-    // A reconnect without an intervening disconnect() must not orphan the prior touch
-    // backend — a companion process/port would stay alive and only the newest backend
-    // would be disposed later. Dispose it before replacing (symmetric with the
-    // file-I/O lifecycle-token invalidation below; the event forwarders are already
-    // idempotent, so the touch backend is the last reconnect-leaked resource).
-    if (this._touchBackend) {
-      await this._touchBackend.dispose()
-    }
+    // The prior backend was already disposed up front (see the reconnect teardown at
+    // the top of connect()), so this only installs the new one.
     this._touchBackend = backend
     const backendInfo: TouchBackendInfo = {
       selected: selection.backend,
@@ -153,15 +165,10 @@ export class RNDevice implements Device {
 
     // Host-side file I/O. Targeting is validated lazily (per op) so a device
     // without file targeting only fails when device.files is actually used.
-    // A per-connection lifecycle token ties file I/O to this connection: a
-    // reference captured before disconnect() fails closed afterwards, and a later
-    // reconnect gets a fresh token so the stale object stays disposed. Invalidate any
-    // prior token FIRST: a second connect() without an intervening disconnect() would
-    // otherwise orphan the old token (still `connected`) and leave an older captured
-    // device.files live past the next disconnect (which only flips the newest token).
-    if (this._filesLifecycle) {
-      this._filesLifecycle.connected = false
-    }
+    // A per-connection lifecycle token ties file I/O to this connection: a reference
+    // captured before disconnect() (or before a reconnect) fails closed afterwards. The
+    // prior token was already invalidated up front (see the reconnect teardown above),
+    // so here we only mint the fresh token this connection's device.files closes over.
     const filesLifecycle = { connected: true }
     this._filesLifecycle = filesLifecycle
     this._files = createDeviceFiles({

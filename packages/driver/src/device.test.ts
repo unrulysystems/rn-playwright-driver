@@ -710,6 +710,36 @@ describe('RNDevice failOnUncaughtException', () => {
     expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
   })
 
+  it('fails a captured device.files closed when a RECONNECT rejects mid-connect', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+    const stale = device.files // captured against the FIRST connection's token
+    const firstTouch = await vi.mocked(createTouchBackend).mock.results[0]?.value
+
+    // The prior token/backend must be invalidated UP FRONT, not only after a fully
+    // successful reconnect: a reconnect that rejects in cdp.connect() (here) still has
+    // to fail the old connection closed. Otherwise the stale device.files keeps running
+    // host I/O against a half-torn-down device.
+    mockConnectFn.mockRejectedValueOnce(new Error('websocket closed'))
+    await expect(device.connect()).rejects.toThrow('websocket closed')
+
+    await expect(stale.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    // The old touch backend was torn down by the up-front teardown, not left running
+    // its companion process against a device that never reconnected.
+    expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
+  })
+
   it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {
     vi.clearAllMocks()
     mockSelectedTarget = defaultTarget()
