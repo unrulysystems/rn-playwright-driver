@@ -175,6 +175,22 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
     ).rejects.toMatchObject({ code: 'TOO_LARGE' })
   })
 
+  it('maps a spawn-level adb rejection (not maxBuffer) to TRANSPORT_FAILED', async () => {
+    // execOut's catch has two branches: HostExecMaxBufferError→TOO_LARGE (covered
+    // above) and everything else→TRANSPORT_FAILED. Exercise the else branch with a
+    // generic spawn failure (adb missing / killed) so REQ-FILES-007's typed-error
+    // contract stays guarded, not just the TOO_LARGE path.
+    const { exec } = fakeExec(() => {
+      throw Object.assign(new Error('spawn adb ENOENT'), { code: 'ENOENT' })
+    })
+    await expect(
+      createAdbTransport(CONFIG, exec).pull(
+        { absolute: false, subpath: 'files/x' },
+        { maxBuffer: 1 },
+      ),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+  })
+
   // Every shell-breaking character UNSAFE_PATH guards must be rejected before any
   // spawn — dropping one from the class would silently reopen device-side
   // `run-as … sh -c` injection. Cover the FULL set on pull, not a sample.

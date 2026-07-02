@@ -12,6 +12,13 @@ const boundedFrom = (fs: Pick<HostFs, 'readFile'>) => async (path: string, maxBy
 
 const CONFIG = { udid: 'UDID-1', bundleId: 'com.acme.app', xcrunPath: 'xcrun' }
 
+// A HostFileExec that REJECTS (spawn failure / timeout — xcrun missing/killed),
+// distinct from a nonzero-exit HostExecResult. Shared by the pull/push typed-error
+// tests (REQ-FILES-007).
+const spawnRejectExec: HostFileExec = async () => {
+  throw Object.assign(new Error('spawn xcrun ENOENT'), { code: 'ENOENT' })
+}
+
 type Call = { command: string; args: string[] }
 
 function fakeExec(impl: (call: Call) => HostExecResult) {
@@ -150,6 +157,27 @@ describe('devicectl transport (provisional, REQ-XPORT-003)', () => {
         { maxBuffer: 1 },
       ),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('maps a spawn-level devicectl rejection (pull) to TRANSPORT_FAILED', async () => {
+    // runCopy must surface a FileIoError, not leak a raw Node error (REQ-FILES-007).
+    const { fs } = fakeFs()
+    await expect(
+      createDevicectlTransport(CONFIG, spawnRejectExec, fs).pull(
+        { absolute: false, subpath: 'Documents/x' },
+        { maxBuffer: 1 },
+      ),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+  })
+
+  it('maps a spawn-level devicectl rejection (push) to TRANSPORT_FAILED', async () => {
+    const { fs } = fakeFs()
+    await expect(
+      createDevicectlTransport(CONFIG, spawnRejectExec, fs).push(
+        { absolute: false, subpath: 'Documents/seed.json' },
+        Buffer.from('x'),
+      ),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
   })
 
   it('rejects the absolute root as UNSUPPORTED (container-scoped)', async () => {
