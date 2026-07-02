@@ -11,9 +11,13 @@
  * - `UNAVAILABLE` — required targeting context (udid/bundleId/serial/package) is
  *   missing OR present-but-unusable (e.g. a malformed package name that fails the
  *   shell-safety check) for the active platform, so no transport can run.
- * - `UNSUPPORTED` — the requested root/transport combination is not supported
- *   (e.g. the `absolute` root on a physical iOS device: devicectl is
- *   domain-scoped and cannot reach outside the app container).
+ * - `UNSUPPORTED` — the caller asked for something this surface will not do,
+ *   independent of whether the device is reachable. Covers: an unknown/unsupported
+ *   root (roots.ts), a root/transport combination the platform can't serve (e.g. the
+ *   `absolute` root on a physical iOS device — devicectl is domain-scoped and cannot
+ *   reach outside the app container), an invalid `target.iosKind`, and an invalid
+ *   `maxBuffer` (non-positive / non-finite). Distinct from `UNAVAILABLE`, which is a
+ *   well-formed request the current context can't satisfy.
  * - `TRANSPORT_FAILED` — the underlying tool (simctl/devicectl/adb) exited
  *   non-zero or produced output that could not be parsed.
  * - `TOO_LARGE` — the transferred bytes exceeded the configured `maxBuffer` cap:

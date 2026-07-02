@@ -738,6 +738,37 @@ describe('RNDevice failOnUncaughtException', () => {
     // The old touch backend was torn down by the up-front teardown, not left running
     // its companion process against a device that never reconnected.
     expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
+    // And its info was cleared — getTouchBackendInfo() must not report a backend that
+    // no longer exists after a failed reconnect.
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
+  })
+
+  it('fails the old connection closed when a reconnect rejects during DISCOVERY (before cdp.connect)', async () => {
+    vi.clearAllMocks()
+    mockSelectedTarget = defaultTarget()
+    const device = new RNDevice({
+      timeout: 1000,
+      target: { udid: 'UDID-1', bundleId: 'com.acme.app' },
+    })
+    mockEvaluateFn.mockImplementation((expr: string) =>
+      Promise.resolve(isPlatformProbe(expr) ? 'ios' : 'ok'),
+    )
+    await device.connect()
+    const stale = device.files
+    const firstTouch = await vi.mocked(createTouchBackend).mock.results[0]?.value
+
+    // The up-front teardown must precede discoverTargets()/selectTargetForConnect(), so a
+    // reconnect that rejects THERE (network flake, or the confused-deputy guard throwing)
+    // still fails the prior connection closed — not just a post-discovery cdp.connect().
+    vi.mocked(discovery.discoverTargets).mockRejectedValueOnce(new Error('metro unreachable'))
+    await expect(device.connect()).rejects.toThrow('metro unreachable')
+
+    await expect(stale.pull('obs.csv')).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+      message: expect.stringContaining('disconnected'),
+    })
+    expect(firstTouch.backend.dispose).toHaveBeenCalledTimes(1)
+    await expect(device.getTouchBackendInfo()).rejects.toThrow('Device not connected')
   })
 
   it('caps the exception buffer under a storm (no unbounded growth when enabled)', async () => {

@@ -105,19 +105,14 @@ export class RNDevice implements Device {
   // --- Connection ---
 
   async connect(): Promise<void> {
-    const metroUrl = this.options.metroUrl ?? DEFAULT_METRO_URL
-    const targets = await discoverTargets(metroUrl)
-    // selectTargetForConnect derives the file-pin from target.udid/serial and
-    // fails closed on the device.files confused-deputy (a pinned file target but
-    // ambiguous CDP selection among multiple runtimes).
-    const target = selectTargetForConnect(targets, this.options)
-
-    // Tear the PRIOR connection's resources down UP FRONT — before the first await that
-    // can reject (cdp.connect / detectPlatform / createTouchBackend below). A reconnect
-    // without an intervening disconnect() that rejects in any of those would otherwise
-    // leave the old file-I/O lifecycle token `connected` (an older captured device.files
-    // keeps running host I/O against a half-torn-down device) and the old touch backend's
-    // companion process/port alive. Fail the old state closed first; mint fresh state
+    // Tear the PRIOR connection's resources down UP FRONT — before ANYTHING that can
+    // reject (discoverTargets / selectTargetForConnect / cdp.connect / detectPlatform /
+    // createTouchBackend below). A reconnect without an intervening disconnect() that
+    // rejects at ANY of those must fail the old connection closed: otherwise the old
+    // file-I/O lifecycle token stays `connected` (an older captured device.files keeps
+    // running host I/O against a half-torn-down device), the old touch backend's
+    // companion process/port stays alive, and getTouchBackendInfo() keeps reporting a
+    // backend that is already gone. Fail the old state closed first; mint fresh state
     // only once the new connection is established. The captured device.files closes over
     // the OLD token, so flipping it here is what makes the stale reference fail closed on
     // BOTH a clean disconnect and a failed reconnect. registerRuntimeEventForwarders is
@@ -129,6 +124,14 @@ export class RNDevice implements Device {
       await this._touchBackend.dispose()
       this._touchBackend = null
     }
+    this._touchBackendInfo = null
+
+    const metroUrl = this.options.metroUrl ?? DEFAULT_METRO_URL
+    const targets = await discoverTargets(metroUrl)
+    // selectTargetForConnect derives the file-pin from target.udid/serial and
+    // fails closed on the device.files confused-deputy (a pinned file target but
+    // ambiguous CDP selection among multiple runtimes).
+    const target = selectTargetForConnect(targets, this.options)
 
     // Register the console + exception forwarders BEFORE connecting. cdp.connect()
     // sends Runtime.enable internally, after which the runtime starts emitting
