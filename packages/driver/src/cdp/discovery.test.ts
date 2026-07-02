@@ -114,6 +114,50 @@ describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
     expect(selectTargetForConnect(two, {})).toBe(two[0])
   })
 
+  it('binds to the runtime whose Metro appId matches the pin, even among multiple runtimes', () => {
+    // Metro exposes the app identity as `appId`. A pinned bundleId that uniquely matches
+    // one target's appId is proof — attach to it without needing a deviceName/pageIndex,
+    // and do NOT fail closed just because >1 runtime is connected.
+    const appTargets = [
+      target({ id: 'a', deviceName: 'iPhone 17', appId: 'com.acme.other' }),
+      target({ id: 'b', deviceName: 'Pixel 8', appId: 'com.acme.app' }),
+    ]
+    expect(
+      selectTargetForConnect(appTargets, { target: { udid: 'UDID-1', bundleId: 'com.acme.app' } }),
+    ).toBe(appTargets[1])
+  })
+
+  it('matches an Android package name against appId too', () => {
+    const appTargets = [
+      target({ id: 'a', deviceName: 'Pixel 8', appId: 'com.acme.other' }),
+      target({ id: 'b', deviceName: 'Pixel 9', appId: 'com.acme.app' }),
+    ]
+    expect(
+      selectTargetForConnect(appTargets, {
+        target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
+      }),
+    ).toBe(appTargets[1])
+  })
+
+  it('still fails closed when the SAME app runs on multiple devices (appId not unique)', () => {
+    // Two runtimes of the same app on two devices — appId can't disambiguate, and Metro
+    // exposes no UDID, so a deviceName is still required.
+    const sameApp = [
+      target({ id: 'a', deviceName: 'iPhone 17', appId: 'com.acme.app' }),
+      target({ id: 'b', deviceName: 'iPhone 17 Pro', appId: 'com.acme.app' }),
+    ]
+    expect(() =>
+      selectTargetForConnect(sameApp, { target: { udid: 'UDID-1', bundleId: 'com.acme.app' } }),
+    ).toThrow(/Ambiguous CDP target/)
+  })
+
+  it('falls back to the device-ambiguity guard when Metro omits appId (older Metro)', () => {
+    // `two` carries no appId → 0 app matches → the existing guard still fails closed.
+    expect(() =>
+      selectTargetForConnect(two, { target: { udid: 'UDID-1', bundleId: 'com.acme.app' } }),
+    ).toThrow(/Ambiguous CDP target/)
+  })
+
   it('does NOT guard on an EMPTY-string file identity (device.files would be UNAVAILABLE)', () => {
     // resolveFileTarget rejects a falsy udid/bundleId/serial/packageName as missing, so
     // an empty-string identity is not a usable pin; it must not trip the multi-runtime
