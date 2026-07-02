@@ -56,6 +56,9 @@ export class NodeProcessRunner implements ProcessRunner {
       detached: true,
       stdio: ['ignore', fd, fd],
     })
+    child.on('error', () => {
+      this.children.delete(opts.key)
+    })
     child.unref()
     this.children.set(opts.key, child)
     return { key: opts.key, pid: child.pid }

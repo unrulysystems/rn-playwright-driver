@@ -71,6 +71,22 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
+resolve_package_bin() {
+  local bin="$1"
+  local dir="$PWD"
+  local candidate
+  while true; do
+    candidate="${dir}/node_modules/.bin/${bin}"
+    if [[ -f "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+    [[ "$dir" == "/" ]] && break
+    dir="$(dirname "$dir")"
+  done
+  fail "installed package binary not found: ${bin}"
+}
+
 port_is_open() {
   nc -z "$METRO_HOST" "$1" >/dev/null 2>&1
 }
@@ -343,10 +359,12 @@ SERIAL="$(pick_emulator_serial)"
 export SERIAL
 export ANDROID_SERIAL="$SERIAL"
 require_booted_device
+EXPO_BIN="$(resolve_package_bin expo)"
+PLAYWRIGHT_BIN="$(resolve_package_bin playwright)"
 
 echo "Using Android device ${SERIAL}"
 echo "Generating Android project with Expo prebuild"
-./node_modules/.bin/expo prebuild --platform android --no-install
+"$EXPO_BIN" prebuild --platform android --no-install
 
 echo "Building app and androidTest APKs"
 configure_jdk
@@ -365,7 +383,7 @@ adb -s "$SERIAL" install -r -t "$TEST_APK"
 install_device_touch_auth_token
 
 echo "Starting Metro at ${METRO_URL}"
-CI=1 EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo start --localhost --port "$METRO_PORT" >"$METRO_LOG" 2>&1 &
+CI=1 EXPO_NO_TELEMETRY=1 "$EXPO_BIN" start --localhost --port "$METRO_PORT" >"$METRO_LOG" 2>&1 &
 METRO_PID="$!"
 wait_for_metro
 
@@ -397,7 +415,7 @@ if RN_TOUCH_BACKEND=instrumentation \
   RN_DEVICE_NAME="$TARGET_DEVICE_NAME" \
   RN_APP_PACKAGE="$APP_ID" \
   ANDROID_SERIAL="$SERIAL" \
-  ./node_modules/.bin/playwright test "${SPECS[@]}" --reporter=line; then
+  "$PLAYWRIGHT_BIN" test "${SPECS[@]}" --reporter=line; then
   STATUS="pass"
 else
   STATUS="fail"

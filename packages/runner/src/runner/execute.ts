@@ -98,9 +98,9 @@ async function runStep(
   if (opts.verbose) runner.log(`→ ${step.id}: ${step.description}`)
   const action = step.action
 
-  switch (action.type) {
-    case 'command': {
-      try {
+  try {
+    switch (action.type) {
+      case 'command': {
         if (action.background) {
           const key = action.processKey ?? step.id
           const handle = runner.spawn(action.command, {
@@ -114,32 +114,27 @@ async function runStep(
         if (result.code !== 0 && !action.allowFailure) {
           throw new StageError(step.stage, step.id, `command exited ${result.code}`)
         }
-      } catch (error) {
-        if (error instanceof StageError) throw error
-        throw new StageError(step.stage, step.id, commandErrorMessage(error))
+        return
       }
-      return
-    }
-    case 'write-file': {
-      await runner.writeFile(action.path, action.contents, action.mode)
-      return
-    }
-    case 'free-port': {
-      await runner.freePort(action.port)
-      return
-    }
-    case 'probe': {
-      const key = processKeyForProbe(action.probe)
-      const aliveFn = key === null ? () => true : () => isAlive(key)
-      // Watch the backing process's captured log for terminal build/test failure markers so a
-      // doomed companion (e.g. `xcodebuild test` printed `** BUILD FAILED **`) fails fast via
-      // ProbeFailure instead of burning the full readiness budget. Only for a process-backed probe
-      // whose step declares markers (the companion-ready steps).
-      const watch =
-        key !== null && action.failureMarkers && action.failureMarkers.length > 0
-          ? { logPath: logPathFor(opts.logDir, key), failureMarkers: action.failureMarkers }
-          : undefined
-      try {
+      case 'write-file': {
+        await runner.writeFile(action.path, action.contents, action.mode)
+        return
+      }
+      case 'free-port': {
+        await runner.freePort(action.port)
+        return
+      }
+      case 'probe': {
+        const key = processKeyForProbe(action.probe)
+        const aliveFn = key === null ? () => true : () => isAlive(key)
+        // Watch the backing process's captured log for terminal build/test failure markers so a
+        // doomed companion (e.g. `xcodebuild test` printed `** BUILD FAILED **`) fails fast via
+        // ProbeFailure instead of burning the full readiness budget. Only for a process-backed probe
+        // whose step declares markers (the companion-ready steps).
+        const watch =
+          key !== null && action.failureMarkers && action.failureMarkers.length > 0
+            ? { logPath: logPathFor(opts.logDir, key), failureMarkers: action.failureMarkers }
+            : undefined
         let ready = await runner.probe(action.probe, aliveFn, watch)
         // Bounded retry (REQ-AND-005): re-run the retry command (e.g. re-issue
         // `am start`) and probe again, up to `max` extra attempts.
@@ -159,20 +154,17 @@ async function runStep(
             `readiness timed out after ${action.probe.timeoutMs}ms`,
           )
         }
-      } catch (error) {
-        // A terminal build/test failure detected in the companion log: surface the real error,
-        // attributed to this stage, instead of the opaque readiness timeout.
-        if (error instanceof ProbeFailure) {
-          throw new StageError(step.stage, step.id, error.message)
-        }
-        throw error
+        return
       }
-      return
+      default: {
+        const _exhaustive: never = action
+        throw new Error(`unhandled action: ${JSON.stringify(_exhaustive)}`)
+      }
     }
-    default: {
-      const _exhaustive: never = action
-      throw new Error(`unhandled action: ${JSON.stringify(_exhaustive)}`)
-    }
+  } catch (error) {
+    if (error instanceof StageError) throw error
+    if (error instanceof ProbeFailure) throw new StageError(step.stage, step.id, error.message)
+    throw new StageError(step.stage, step.id, commandErrorMessage(error))
   }
 }
 

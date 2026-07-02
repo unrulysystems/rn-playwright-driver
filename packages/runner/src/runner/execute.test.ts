@@ -16,6 +16,9 @@ interface Recorded {
 function makeRunner(
   opts: {
     execCode?: (spec: CommandSpec) => number
+    spawnError?: (spec: CommandSpec) => Error | null
+    writeFileError?: (path: string) => Error | null
+    freePortError?: (port: number) => Error | null
     probeResult?: (probe: ReadinessProbe) => boolean
     /** Simulate the real probe's fast-fail: return a marker for a probe to throw ProbeFailure. */
     probeFailure?: (probe: ReadinessProbe) => string | null
@@ -30,6 +33,8 @@ function makeRunner(
     },
     spawn(spec, o) {
       calls.push({ type: 'spawn', label: o.key, spec })
+      const error = opts.spawnError?.(spec)
+      if (error) throw error
       alive.set(o.key, true)
       return { key: o.key, pid: 4242 }
     },
@@ -43,6 +48,8 @@ function makeRunner(
     },
     writeFile(path) {
       calls.push({ type: 'write', label: path })
+      const error = opts.writeFileError?.(path)
+      if (error) return Promise.reject(error)
       return Promise.resolve()
     },
     removeFile(path) {
@@ -51,6 +58,8 @@ function makeRunner(
     },
     freePort(port) {
       calls.push({ type: 'free', label: String(port) })
+      const error = opts.freePortError?.(port)
+      if (error) return Promise.reject(error)
       return Promise.resolve()
     },
     probe(probe, isAlive, watch) {
@@ -145,6 +154,36 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     // Cleanup still runs defensively; Playwright never does.
     expect(labels(calls, 'kill')).toEqual(expect.arrayContaining(['companion', 'metro']))
     expect(calls.some(isPlaywrightExec)).toBe(false)
+  })
+
+  it('attributes write-file and free-port failures to their lifecycle stage', async () => {
+    const writeFailure = await executePlan(
+      plan,
+      makeRunner({ writeFileError: () => new Error('EACCES') }).runner,
+      { logDir: '/tmp/logs' },
+    ).catch((e: unknown) => e)
+    expect(writeFailure).toBeInstanceOf(StageError)
+    expect(writeFailure).toMatchObject({ stage: 'build', stepId: 'ios.runtime-config' })
+
+    const freePortFailure = await executePlan(
+      plan,
+      makeRunner({ freePortError: () => new Error('lsof failed') }).runner,
+      { logDir: '/tmp/logs' },
+    ).catch((e: unknown) => e)
+    expect(freePortFailure).toBeInstanceOf(StageError)
+    expect(freePortFailure).toMatchObject({ stage: 'companion', stepId: 'ios.free-port' })
+  })
+
+  it('attributes synchronous background spawn failures to their lifecycle stage', async () => {
+    const error = await executePlan(
+      plan,
+      makeRunner({ spawnError: (spec) => (spec.command === 'sh' ? new Error('ENOENT') : null) })
+        .runner,
+      { logDir: '/tmp/logs' },
+    ).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(StageError)
+    expect(error).toMatchObject({ stage: 'metro', stepId: 'metro.start' })
   })
 
   it('skip-build skips skippable steps but keeps the token/config refresh', async () => {

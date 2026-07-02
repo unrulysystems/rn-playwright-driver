@@ -68,6 +68,22 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
+resolve_package_bin() {
+  local bin="$1"
+  local dir="$PWD"
+  local candidate
+  while true; do
+    candidate="${dir}/node_modules/.bin/${bin}"
+    if [[ -f "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+    [[ "$dir" == "/" ]] && break
+    dir="$(dirname "$dir")"
+  done
+  fail "installed package binary not found: ${bin}"
+}
+
 xcodebuild_clean() {
   # Generic Unix build environments often export LD=ld. Xcode treats LD as a
   # build setting and then passes clang-style -Xlinker flags to ld directly.
@@ -366,6 +382,8 @@ require_command nc
 require_command pod
 require_command xcrun
 require_command xcodebuild
+EXPO_BIN="$(resolve_package_bin expo)"
+PLAYWRIGHT_BIN="$(resolve_package_bin playwright)"
 select_metro_port
 if [[ -z "$DEVICE_DESTINATION" ]]; then
   DEVICE_DESTINATION="$(select_ios_destination)"
@@ -404,7 +422,7 @@ fs.chmodSync(configFile, 0o600)
 NODE
 
 echo "Generating iOS project with Expo prebuild"
-./node_modules/.bin/expo prebuild --platform ios --no-install
+"$EXPO_BIN" prebuild --platform ios --no-install
 node ../../packages/xctest-companion/bin/scaffold.js --ios-dir ios --project-name "$APP_SCHEME"
 cp "$TOUCH_CONFIG_FILE" "ios/${UITEST_SCHEME}/RNDriverTouchCompanionRuntimeConfig.json"
 chmod 600 "ios/${UITEST_SCHEME}/RNDriverTouchCompanionRuntimeConfig.json"
@@ -417,7 +435,7 @@ if ! xcodebuild_clean -list -workspace "ios/${APP_SCHEME}.xcworkspace" 2>/dev/nu
 fi
 
 echo "Starting Metro at ${METRO_URL}"
-CI=1 EXPO_NO_TELEMETRY=1 ./node_modules/.bin/expo start --localhost --port "$METRO_PORT" >"$METRO_LOG" 2>&1 &
+CI=1 EXPO_NO_TELEMETRY=1 "$EXPO_BIN" start --localhost --port "$METRO_PORT" >"$METRO_LOG" 2>&1 &
 METRO_PID="$!"
 wait_for_metro
 configure_ios_packager_host
@@ -456,7 +474,7 @@ if RN_TOUCH_BACKEND=xctest \
   RN_APP_BUNDLE_ID="$APP_BUNDLE_ID" \
   RN_SIM_UDID="$SIM_UDID" \
   RN_IOS_TARGET_KIND=simulator \
-  ./node_modules/.bin/playwright test "${SPECS[@]}" --reporter=line; then
+  "$PLAYWRIGHT_BIN" test "${SPECS[@]}" --reporter=line; then
   STATUS="pass"
 else
   STATUS="fail"
