@@ -171,9 +171,12 @@ export function selectTargetForConnect(
   // app identity is missing, resolveFileTarget fails device.files closed as
   // UNAVAILABLE anyway, so there is no evaluate()-vs-files confused deputy to guard —
   // firing here would wrongly block a plain multi-runtime touch/evaluate connect.
+  // Truthiness, not `!== undefined`: resolveFileTarget rejects a falsy udid/bundleId/
+  // serial/packageName as missing (UNAVAILABLE), so an empty-string identity is NOT a
+  // usable file pin and must not trip the guard (it would throw Ambiguous for a target
+  // device.files can't even use). Mirrors that falsy check.
   const filePinned =
-    (t?.udid !== undefined && t?.bundleId !== undefined) ||
-    (t?.serial !== undefined && t?.packageName !== undefined)
+    (Boolean(t?.udid) && Boolean(t?.bundleId)) || (Boolean(t?.serial) && Boolean(t?.packageName))
   // Mirror selectTarget's OWN truthiness: it enters the deviceId/deviceName branches
   // only for non-empty strings, so an empty string is not a usable selector. Testing
   // `!== undefined` here would let `{ target: { udid }, deviceName: '' }` slip past the

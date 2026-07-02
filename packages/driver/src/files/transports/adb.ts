@@ -124,19 +124,22 @@ export function createAdbTransport(config: AdbTransportConfig, exec: HostFileExe
         )
       }
       const body = result.stdout.subarray(0, split)
-      const exit = Number.parseInt(
-        result.stdout
-          .subarray(split + marker.length)
-          .toString('utf8')
-          .trim(),
-        10,
-      )
-      if (!Number.isInteger(exit)) {
+      const status = result.stdout
+        .subarray(split + marker.length)
+        .toString('utf8')
+        .trim()
+      // The suffix is `printf "…%d" $?`, so a well-formed status is ONLY digits.
+      // Require an exact digit match — `Number.parseInt` would accept `0garbage`
+      // (it stops at the first non-digit and returns 0), silently treating a
+      // corrupted/injected stream as a successful `cat` and returning wrong bytes.
+      // Fail closed on anything that is not a clean integer (REQ-FILES-005/007).
+      if (!/^\d+$/.test(status)) {
         throw new FileIoError(
           'TRANSPORT_FAILED',
-          `device.files: adb run-as cat returned an unparseable status for ${remote}`,
+          `device.files: adb run-as cat returned an unparseable status ${JSON.stringify(status)} for ${remote}`,
         )
       }
+      const exit = Number.parseInt(status, 10)
       if (exit !== 0) {
         // cat failed → `body` holds its (folded) error text, not file bytes.
         // Classify it and fail closed; never return the diagnostic as a Buffer.

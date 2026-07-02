@@ -106,6 +106,23 @@ describe('adb transport — pull (REQ-XPORT-004)', () => {
     expect(bytes.toString()).toBe('A__RN_PW_READ__9B')
   })
 
+  it('fails closed on a malformed status suffix (numeric prefix + garbage), not a false success', async () => {
+    // A corrupted/injected stream can yield `…__RN_PW_READ__0garbage`. Number.parseInt
+    // would return 0 and treat it as a successful cat, returning wrong bytes; the exact
+    // digit check must reject it (REQ-FILES-005/007).
+    const { exec } = fakeExec(() => ({
+      stdout: Buffer.from('data__RN_PW_READ__0garbage'),
+      stderr: '',
+      code: 0,
+    }))
+    await expect(
+      createAdbTransport(CONFIG, exec).pull(
+        { absolute: false, subpath: 'files/x' },
+        { maxBuffer: 64 },
+      ),
+    ).rejects.toMatchObject({ code: 'TRANSPORT_FAILED' })
+  })
+
   it('uses an absolute path verbatim', async () => {
     const { exec, calls } = fakeExec(() => readOk(''))
     await createAdbTransport(CONFIG, exec).pull(

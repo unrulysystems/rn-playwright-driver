@@ -519,53 +519,60 @@ export class RNDevice implements Device {
     deviceName?: string
     title?: string
   }): Promise<'ios' | 'android'> {
-    // Try to detect from target metadata first, reading the DEVICE identity, not
-    // an app id. A Metro title is often `appId (deviceName)`; matching the full
-    // string lets an app id containing `ios` (e.g. `com.acme.iosapp (Pixel_8)`)
-    // misclassify an Android runtime as iOS and route touch + device.files through
-    // the wrong platform. Prefer the deviceName field; else the title's trailing
-    // `(…)` (the device, NOT the app id ahead of it); else — a bare title with no
-    // parenthetical is itself the device name, so fall back to it. Anything
-    // unmatched drops to the authoritative Platform.OS probe below.
-    const name = (
-      target.deviceName ??
-      titleParenthetical(target.title) ??
-      target.title ??
-      ''
-    ).toLowerCase()
-    if (name.includes('iphone') || name.includes('ipad') || name.includes('ios')) {
-      return 'ios'
-    }
-    if (
-      name.includes('android') ||
-      name.includes('pixel') ||
-      name.includes('samsung') ||
-      name.includes('gphone')
-    ) {
-      return 'android'
+    // Fast-path ONLY from a STRUCTURED device identity — the deviceName field or a
+    // title's trailing `(…)`. A Metro title is often `appId (deviceName)`, so a BARE
+    // title is ambiguous: an app id like `com.acme.iosapp` contains `ios` and would
+    // misclassify an Android runtime, routing touch + device.files through the wrong
+    // platform. A bare title is therefore NOT used for detection — it defers to the
+    // authoritative Platform.OS probe below, so an app id can never decide the platform.
+    const fromName = matchPlatformName(target.deviceName ?? titleParenthetical(target.title))
+    if (fromName) {
+      return fromName
     }
 
-    // Fall back to the app runtime as the authoritative source. If the probe
-    // cannot produce a supported RN platform, fail loudly so Android never
-    // accidentally takes the iOS backend path.
+    // Authoritative source: ask the runtime itself. It decides for any bare/ambiguous
+    // title. If it cannot answer, fail loudly rather than guess a platform from a
+    // string that might be an app id — evaluate() is core to the driver, so a probe
+    // that cannot run means the connection is unusable anyway.
+    let platform: unknown
     try {
-      const platform = await this.evaluate<unknown>(
+      platform = await this.evaluate<unknown>(
         "(() => { const { Platform } = require('react-native'); return Platform?.OS })()",
       )
-      if (platform === 'ios' || platform === 'android') {
-        return platform
-      }
     } catch (error) {
       throw new Error(
-        `Could not detect platform: CDP target name unrecognized and Platform.OS probe failed (${error instanceof Error ? error.message : String(error)})`,
+        `Could not detect platform: CDP target carried no device identity and the Platform.OS probe failed (${error instanceof Error ? error.message : String(error)})`,
         { cause: error },
       )
     }
-
+    if (platform === 'ios' || platform === 'android') {
+      return platform
+    }
     throw new Error(
-      'Could not detect platform: CDP target name unrecognized and Platform.OS probe returned an unsupported value',
+      'Could not detect platform: CDP target carried no device identity and Platform.OS returned an unsupported value',
     )
   }
+}
+
+/**
+ * Match a platform from a DEVICE NAME (never an app id) via case-insensitive markers.
+ * Returns undefined when nothing matches, so the caller can defer to the authoritative
+ * Platform.OS probe rather than guess from an ambiguous string.
+ */
+function matchPlatformName(name: string | undefined): 'ios' | 'android' | undefined {
+  const n = name?.toLowerCase() ?? ''
+  if (n.includes('iphone') || n.includes('ipad') || n.includes('ios')) {
+    return 'ios'
+  }
+  if (
+    n.includes('android') ||
+    n.includes('pixel') ||
+    n.includes('samsung') ||
+    n.includes('gphone')
+  ) {
+    return 'android'
+  }
+  return undefined
 }
 
 /**

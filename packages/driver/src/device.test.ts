@@ -167,9 +167,9 @@ describe('RNDevice Core Primitives', () => {
       return platformDevice
     }
 
-    it('detects Android from target name metadata', async () => {
+    it('detects Android from a structured deviceName (fast-path, no probe)', async () => {
       const platformDevice = await connectWithPlatformProbe(
-        { ...defaultTarget(), title: 'Pixel_8_API_35' },
+        { ...defaultTarget(), deviceName: 'Pixel_8_API_35' },
         () => Promise.reject(new Error('probe should not run')),
       )
 
@@ -188,25 +188,43 @@ describe('RNDevice Core Primitives', () => {
       expect(platformDevice.platform).toBe('android')
     })
 
-    it('detects iOS from target name metadata', async () => {
+    it('detects iOS from a structured deviceName (fast-path, no probe)', async () => {
       const platformDevice = await connectWithPlatformProbe(
-        { ...defaultTarget(), title: 'iPhone 16 Pro' },
+        { ...defaultTarget(), deviceName: 'iPhone 16 Pro' },
         () => Promise.reject(new Error('probe should not run')),
       )
 
       expect(platformDevice.platform).toBe('ios')
     })
 
-    it('does not let an app id containing "ios" misclassify an Android runtime', async () => {
-      // Metro titles are `appId (deviceName)`. Matching the whole title would let
-      // `com.acme.iosapp` win the iOS check before the Android device markers; the
-      // heuristic must read only the device identity (the trailing parenthetical).
+    it('reads the device from a title parenthetical, not the app id ahead of it', async () => {
+      // Metro titles are `appId (deviceName)`. Only the trailing `(…)` device is used
+      // for the fast-path, so `com.acme.iosapp` never wins the iOS check.
       const platformDevice = await connectWithPlatformProbe(
         { ...defaultTarget(), title: 'com.acme.iosapp (Pixel_8_API_35)' },
         () => Promise.reject(new Error('probe should not run — parenthetical resolves Android')),
       )
 
       expect(platformDevice.platform).toBe('android')
+    })
+
+    it('defers a BARE app-id title to Platform.OS (never guesses platform from an app id)', async () => {
+      // No deviceName, no parenthetical — a bare `com.acme.iosapp` is ambiguous and
+      // must NOT be matched on the `ios` substring; the authoritative probe decides.
+      const platformDevice = await connectWithPlatformProbe(
+        { ...defaultTarget(), title: 'com.acme.iosapp' },
+        () => Promise.resolve('android'),
+      )
+
+      expect(platformDevice.platform).toBe('android')
+    })
+
+    it('fails closed when a bare title carries no device identity and the probe fails', async () => {
+      await expect(
+        connectWithPlatformProbe({ ...defaultTarget(), title: 'com.acme.iosapp' }, () =>
+          Promise.reject(new Error('runtime not ready')),
+        ),
+      ).rejects.toThrow(/Could not detect platform/)
     })
 
     it('uses Platform.OS when target name metadata is unknown', async () => {
@@ -229,7 +247,7 @@ describe('RNDevice Core Primitives', () => {
       })
 
       await expect(platformDevice.connect()).rejects.toThrow(
-        'Could not detect platform: CDP target name unrecognized and Platform.OS probe failed',
+        'Could not detect platform: CDP target carried no device identity and the Platform.OS probe failed',
       )
     })
 
@@ -245,7 +263,7 @@ describe('RNDevice Core Primitives', () => {
       })
 
       await expect(platformDevice.connect()).rejects.toThrow(
-        'Could not detect platform: CDP target name unrecognized and Platform.OS probe returned an unsupported value',
+        'Could not detect platform: CDP target carried no device identity and Platform.OS returned an unsupported value',
       )
     })
   })

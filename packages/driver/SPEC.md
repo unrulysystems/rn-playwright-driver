@@ -96,17 +96,18 @@ same `device.files` call on both platforms. \*`absolute` is **unsupported on
 iOS** (both kinds) and rejects `UNSUPPORTED`: `device.files` is app-sandbox-scoped,
 and on the simulator an absolute path would resolve to a raw HOST path — a
 sandbox escape with the runner's privileges. On Android `absolute` is an
-intentional escape hatch **bounded by the app UID via `run-as`** — not confined
-to `/data/data/<pkg>`. `run-as` drops to the app UID but in the app's
-**internal-storage** mount namespace, so `absolute` reaches the app-private tree
-(`/data/data/<pkg>/…`) and nothing another app or the system owns. **External
-storage is NOT reachable via `run-as`**: `/sdcard/…`, including the app-scoped
-`/sdcard/Android/data/<pkg>/…`, returns Permission denied and fails closed as
-`TRANSPORT_FAILED`. `..` is rejected (REQ-XPORT-004) so the touched path stays
-legible. Input is test-author-controlled, so this is a capability, not an injection
-surface. E2E coverage round-trips an app-private `absolute` path AND asserts an
-external-storage path fails closed (the run-as reach boundary is verified, not just
-asserted in prose).
+intentional escape hatch: the path is passed to `run-as <pkg>` **verbatim** (no
+path-prefix restriction), so its reach is exactly **whatever the app UID can
+access** — the app-private tree (`/data/data/<pkg>/…`) **plus** UID-accessible paths
+such as the app's own `/proc/self/…`. It **cannot** reach another app's sandbox or
+root/privileged files (the kernel enforces the UID boundary), and — because `run-as`
+uses the app's **internal-storage** mount namespace — **external storage is NOT
+reachable**: `/sdcard/…`, including the app-scoped `/sdcard/Android/data/<pkg>/…`,
+returns Permission denied and fails closed as `TRANSPORT_FAILED`. `..` is rejected
+(REQ-XPORT-004) so the touched path stays legible. Input is test-author-controlled,
+so this is a deliberate capability, not an injection surface. E2E coverage
+round-trips an app-private `absolute` path AND asserts an external-storage path fails
+closed (the run-as reach boundary is verified, not just asserted in prose).
 
 ### Transport selection
 

@@ -114,6 +114,15 @@ describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
     expect(selectTargetForConnect(two, {})).toBe(two[0])
   })
 
+  it('does NOT guard on an EMPTY-string file identity (device.files would be UNAVAILABLE)', () => {
+    // resolveFileTarget rejects a falsy udid/bundleId/serial/packageName as missing, so
+    // an empty-string identity is not a usable pin; it must not trip the multi-runtime
+    // guard (same empty-string class as the CDP-selector bypass).
+    expect(selectTargetForConnect(two, { target: { udid: '', bundleId: '' } })).toBe(two[0])
+    expect(selectTargetForConnect(two, { target: { serial: '', packageName: '' } })).toBe(two[0])
+    expect(selectTargetForConnect(two, { target: { udid: 'UDID-1', bundleId: '' } })).toBe(two[0])
+  })
+
   it('allows a pinned single runtime (no ambiguity to guard)', () => {
     const only = target({ id: 'only', deviceName: 'iPhone 17' })
     expect(
