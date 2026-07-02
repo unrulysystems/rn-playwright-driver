@@ -172,7 +172,13 @@ export class RNDevice implements Device {
       this._filesLifecycle = filesLifecycle
       this._files = createDeviceFiles({
         platform: this._platform,
-        target: this.options.target,
+        // SNAPSHOT the target as it is at connect() time, not the live options ref.
+        // device-files resolves the target per operation, so passing the mutable
+        // `this.options.target` would let a direct `createDevice({ target })` caller
+        // mutate it AFTER connect() and make device.files operate on a different
+        // app/device than CDP attached to. TargetContext is flat primitives, so a
+        // shallow clone fully isolates it. Binds file I/O to the connected runtime.
+        target: this.options.target ? { ...this.options.target } : undefined,
         // Bound host file ops by the device timeout so a hung CLI can't stall them.
         selectTransport: createDefaultTransportFactory(this.options.timeout),
         isLive: () => filesLifecycle.connected,

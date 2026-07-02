@@ -386,18 +386,22 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
   in principle diverge (evaluate app A, file I/O app B). In practice a **usable**
   file target always carries a device pin — iOS requires `udid`+`bundleId`, Android
   `serial`+`package` (`resolveFileTarget`) — so `filePinned` is set and the
-  multi-runtime ambiguity guard above already fails closed; the only path to a
-  divergent attach is an explicit operator `pageIndex` picking a specific runtime,
-  which is a deliberate caller choice. **`appId` was evaluated as a cross-check and
-  REJECTED as unsound (do not reintroduce):** Metro _does_ expose `appId` on a Hermes
-  target (the iOS bundleId / Android package — the runner's hermes-target probe waits
-  on it), but it proves APP identity, not the pinned DEVICE. Selecting on it mis-binds
-  two ways — (1) iOS `bundleId` and Android `packageName` are routinely the SAME string
-  (`com.acme.app`), so an iOS pin would match an Android runtime cross-platform; (2) the
-  same app on two devices shares one `appId`, and Metro exposes no UDID to tell them
-  apart — so a lone `appId` match cannot prove it is the pinned device. app identity ≠
-  device identity, so the guard fails closed rather than select on `appId`; an operator
-  disambiguates with `deviceName`/`pageIndex`.
+  multi-runtime ambiguity guard above already fails closed.
+  **`appId` — sound as a same-device tie-break, unsound as a global selector.** Metro
+  exposes `appId` on each Hermes target (the iOS bundleId / Android package — the
+  runner's hermes-target probe waits on it). It proves APP identity, NOT the pinned
+  DEVICE, so it must never be a standalone selector: (1) iOS `bundleId` and Android
+  `packageName` are routinely the SAME string (`com.acme.app`), so a global match would
+  bind an iOS pin to an Android runtime cross-platform; (2) the same app on two devices
+  shares one `appId`, and Metro exposes no UDID to tell them apart. Therefore `appId` is
+  used in exactly ONE place — `selectTarget` breaks a tie among **EXACT `deviceName`
+  matches** with the file pin's `appId`. That is safe because every tied target shares
+  the operator-supplied device name (one device ⇒ one platform), so appId only chooses
+  which app on that device, never which device/platform. This resolves "two RN apps on
+  the one named device" (previously a fail-closed `Ambiguous device target`). Substring
+  `deviceName` matches (which may span `Pixel 8`/`Pixel 9`) are EXCLUDED from the
+  tie-break, and with no `deviceName` at all the multi-runtime guard still fails closed;
+  the remaining divergence path is a deliberate operator `pageIndex`.
 - Wireless adb (`ip:port` serials) is assumed handled transparently by
   `ANDROID_SERIAL`; confirm during TDD.
 - **iOS-simulator containment TOCTOU (accepted residual).** `resolveInsideContainer`

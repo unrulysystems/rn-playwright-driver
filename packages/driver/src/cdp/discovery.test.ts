@@ -167,4 +167,63 @@ describe('selectTargetForConnect (device.files confused-deputy guard)', () => {
       }),
     ).toBe(t)
   })
+
+  it('breaks a SAME-DEVICE tie by appId when deviceName matches multiple apps on one device', () => {
+    // Two RN apps on the ONE device the caller named 'Pixel' — deviceName matches both
+    // (exact via title parenthetical), so without appId this throws Ambiguous. The file
+    // pin's packageName uniquely picks its app on that device.
+    const wanted = target({ id: 'b', title: 'com.acme.app (Pixel)', appId: 'com.acme.app' })
+    const targets = [
+      target({ id: 'a', title: 'com.acme.other (Pixel)', appId: 'com.acme.other' }),
+      wanted,
+    ]
+    expect(
+      selectTargetForConnect(targets, {
+        target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
+        deviceName: 'Pixel',
+      }),
+    ).toBe(wanted)
+  })
+
+  it('still fails closed when the SAME-DEVICE tie is not uniquely resolved by appId', () => {
+    // Two runtimes of the SAME app on the one named device — appId can't disambiguate.
+    const targets = [
+      target({ id: 'a', title: 'com.acme.app (Pixel)', appId: 'com.acme.app' }),
+      target({ id: 'b', title: 'com.acme.app (Pixel)', appId: 'com.acme.app' }),
+    ]
+    expect(() =>
+      selectTargetForConnect(targets, {
+        target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
+        deviceName: 'Pixel',
+      }),
+    ).toThrow(/Ambiguous device target/)
+  })
+
+  it('does NOT appId-tie-break SUBSTRING deviceName matches (they may span different devices)', () => {
+    // `Pixel` substring-matches `Pixel 8` and `Pixel 9` — DIFFERENT devices. appId must
+    // not pick one, or it could bind to the wrong device; fail closed instead.
+    const targets = [
+      target({ id: 'a', deviceName: 'Pixel 8', appId: 'com.acme.app' }),
+      target({ id: 'b', deviceName: 'Pixel 9', appId: 'com.acme.other' }),
+    ]
+    expect(() =>
+      selectTargetForConnect(targets, {
+        target: { serial: 'emulator-5554', packageName: 'com.acme.app' },
+        deviceName: 'Pixel',
+      }),
+    ).toThrow(/Ambiguous device target/)
+  })
+
+  it('does NOT use appId as a global selector without an explicit deviceName (round-40 regression guard)', () => {
+    // No deviceName → the multi-runtime guard must fail closed. appId must NEVER pick a
+    // target here — a cross-platform bundleId/package collision would mis-bind. This is
+    // the exact unsound path that was reverted; keep it fail-closed.
+    const targets = [
+      target({ id: 'a', deviceName: 'iPhone 17', appId: 'com.acme.other' }),
+      target({ id: 'b', deviceName: 'Pixel 8', appId: 'com.acme.app' }),
+    ]
+    expect(() =>
+      selectTargetForConnect(targets, { target: { udid: 'UDID-1', bundleId: 'com.acme.app' } }),
+    ).toThrow(/Ambiguous CDP target/)
+  })
 })
