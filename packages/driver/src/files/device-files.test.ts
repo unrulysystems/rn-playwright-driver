@@ -113,6 +113,29 @@ describe('createDeviceFiles — lifecycle', () => {
     })
     await expectFileIoError(files.push(Buffer.from('x'), 'seed.bin'), 'UNAVAILABLE')
   })
+
+  it('PREVENTS the device write when disconnect races host-source materialization', async () => {
+    // A string source is stat/read on the host BEFORE the device write. If disconnect
+    // lands during that (awaited) window, the pre-write liveness check must stop the write
+    // from ever starting — not merely report failure after the bytes already landed.
+    let live = true
+    const { pushes, select } = fakeTransport()
+    const localFileSize = vi.fn(async () => {
+      live = false // disconnect races the host stat, before the transport write
+      return 4
+    })
+    const readLocalFileBounded = vi.fn(async () => Buffer.from('data'))
+    const files = createDeviceFiles({
+      platform: 'ios',
+      target: IOS_TARGET,
+      selectTransport: select,
+      isLive: () => live,
+      localFileSize,
+      readLocalFileBounded,
+    })
+    await expectFileIoError(files.push('./src.bin', 'seed.bin'), 'UNAVAILABLE')
+    expect(pushes).toEqual([]) // the write was PREVENTED, not just reported failed after
+  })
 })
 
 describe('createDeviceFiles — pull', () => {

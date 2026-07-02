@@ -159,8 +159,14 @@ export function createDeviceFiles(deps: DeviceFilesDeps): DeviceFiles {
           `device.files: push payload is ${data.length} bytes, exceeds maxBuffer ${maxBuffer}`,
         )
       }
+      // Re-check BEFORE the write: a string source is materialized above via awaited host
+      // stat/read, so a disconnect could have landed DURING that window. Checking here
+      // PREVENTS the device write from starting at all — strictly better than only
+      // catching it after (the post-write check below can't un-write). pull has no such
+      // gap: its prepare() is synchronous, so its entry check sits right before the read.
+      assertLive()
       await transportFor(target).push(path, data)
-      // Re-check AFTER the await (see pull): if the connection dropped during the write,
+      // Re-check AFTER the await too: if the connection dropped DURING the write itself,
       // fail closed rather than report success. The host transport may have landed the
       // bytes (it runs by udid/serial, independent of CDP), but the caller must not TRUST
       // a push that raced a disconnect — treat it as failed and re-verify on a fresh
