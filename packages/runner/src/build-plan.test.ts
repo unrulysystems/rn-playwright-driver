@@ -23,4 +23,26 @@ describe('buildDryRunPlan', () => {
       cwd: '/app',
     })
   })
+
+  it('uses the default Expo package-bin Metro start when no custom command is configured', () => {
+    const plan = buildDryRunPlan(
+      configFixture({ metro: { host: 'localhost', port: 8083 } }),
+      'ios',
+      {
+        projectCwd: '/app',
+      },
+    )
+
+    const metro = plan.steps.find((step) => step.id === 'metro.start')
+    expect(metro?.action).toMatchObject({
+      type: 'command',
+      command: {
+        command: 'expo',
+        args: ['start', '--localhost', '--port', '8083'],
+        packageBin: true,
+        cwd: '/app',
+        env: { CI: '1', EXPO_NO_TELEMETRY: '1' },
+      },
+    })
+  })
 })

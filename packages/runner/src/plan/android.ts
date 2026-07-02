@@ -2,7 +2,7 @@ import type { AndroidConfig, PlaywrightConfig } from '../config'
 import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
 import { buildAndroidDriverEnv } from './env'
 import type { ResolvedAndroidTarget, ResolvedMetro } from './resolved'
-import { metroStartStep, packageBin, playwrightCommand } from './shared'
+import { metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
 import type { CleanupAction, CommandSpec, Plan, Step } from './types'
 
 export interface PlanAndroidInput {
@@ -45,8 +45,8 @@ export function planAndroid(input: PlanAndroidInput): Plan {
   } = input
   const serial = resolved.serial
   const gradleTasks = android.gradleTasks ?? [...DEFAULTS.androidGradleTasks]
-  const appApk = android.appApkPath ?? DEFAULTS.androidAppApkPath
-  const testApk = android.testApkPath ?? DEFAULTS.androidTestApkPath
+  const appApk = projectPath(projectCwd, android.appApkPath ?? DEFAULTS.androidAppApkPath)
+  const testApk = projectPath(projectCwd, android.testApkPath ?? DEFAULTS.androidTestApkPath)
 
   const steps: Step[] = []
   const push = (step: Step) => steps.push(step)
@@ -300,10 +300,6 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     ),
     playwright: playwrightCommand(playwright, specs, passthrough, projectCwd),
   }
-}
-
-function projectPath(projectCwd: string | undefined, relativePath: string): string {
-  return projectCwd ? `${projectCwd}/${relativePath}` : relativePath
 }
 
 function launchCommandFor(

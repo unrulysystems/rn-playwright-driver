@@ -208,7 +208,10 @@ async function buildPlatformPlan(
 ): Promise<Plan> {
   if (platform === 'ios') {
     if (!config.ios) throw new Error('config.ios is required for the ios platform')
-    const resolved = await resolveIosTarget(config.ios, metro, deviceOpt(ctx.flags.device))
+    const resolved = await resolveIosTarget(config.ios, metro, {
+      ...deviceOpt(ctx.flags.device),
+      projectCwd: ctx.projectCwd,
+    })
     return planIos({
       ios: config.ios,
       metro,

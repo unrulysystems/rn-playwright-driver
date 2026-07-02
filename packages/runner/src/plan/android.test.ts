@@ -173,6 +173,18 @@ describe('planAndroid', () => {
     ])
   })
 
+  it('resolves project-relative build and APK paths from projectCwd', () => {
+    const plan = planAndroid(inputFor({ projectCwd: '/app' }))
+
+    expect(commandFor(plan, 'android.gradle').cwd).toBe('/app/android')
+    expect(commandFor(plan, 'android.install-app').args).toContain(
+      '/app/android/app/build/outputs/apk/debug/app-debug.apk',
+    )
+    expect(commandFor(plan, 'android.install-test').args).toContain(
+      '/app/android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
+    )
+  })
+
   it('dev-client launch uses one adb shell arg with a literally single-quoted URL', () => {
     const android = androidDevClientConfigFixture()
     const plan = planAndroid(

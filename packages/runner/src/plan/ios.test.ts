@@ -210,6 +210,30 @@ describe('planIos', () => {
     expect(allCommandStrings(plan)).not.toContain('authToken')
   })
 
+  it('resolves project-relative runtime config and project commands from projectCwd', () => {
+    const ios = iosConfigFixture()
+    const metro = resolveMetro({})
+    const plan = planIos(
+      inputFor('plain', {
+        projectCwd: '/app',
+        resolved: {
+          ...placeholderIos(ios, metro),
+          runtimeConfigFile: 'ios/exampleUITests/RNDriverTouchCompanionRuntimeConfig.json',
+        },
+      }),
+    )
+    const runtimeConfig = plan.steps.find((s) => s.id === 'ios.runtime-config')?.action
+    const companion = plan.steps.find((s) => s.id === 'ios.companion-start')?.action
+
+    expect(runtimeConfig?.type === 'write-file' && runtimeConfig.path).toBe(
+      '/app/ios/exampleUITests/RNDriverTouchCompanionRuntimeConfig.json',
+    )
+    expect(companion?.type === 'command' && companion.command.env).toMatchObject({
+      RN_TOUCH_XCTEST_CONFIG_FILE:
+        '/app/ios/exampleUITests/RNDriverTouchCompanionRuntimeConfig.json',
+    })
+  })
+
   it('is pure: identical input yields a deep-equal plan', () => {
     expect(planIos(inputFor('expo-dev-client'))).toEqual(planIos(inputFor('expo-dev-client')))
   })

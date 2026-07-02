@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { packageBin, playwrightCommand } from './shared'
+import { metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
 
 const PW = { config: 'playwright.config.ts', specs: ['e2e/a.spec.ts', 'e2e/b'] }
 
@@ -10,6 +10,38 @@ describe('packageBin', () => {
       args: ['start'],
       cwd: '/app',
       packageBin: true,
+    })
+  })
+})
+
+describe('projectPath', () => {
+  it('resolves project-relative paths and leaves absolute/placeholders untouched', () => {
+    expect(projectPath('/app', 'android/app.apk')).toBe('/app/android/app.apk')
+    expect(projectPath('/app', '/tmp/app.apk')).toBe('/tmp/app.apk')
+    expect(projectPath('/app', '<token-file>')).toBe('<token-file>')
+    expect(projectPath(undefined, 'android/app.apk')).toBe('android/app.apk')
+  })
+})
+
+describe('metroStartStep', () => {
+  it('uses a hoist-safe Expo package bin with non-interactive env when no custom command is set', () => {
+    expect(
+      metroStartStep({
+        url: 'http://localhost:8083',
+        host: 'localhost',
+        port: 8083,
+        command: undefined,
+        reuseExisting: false,
+        readyTimeoutMs: 90_000,
+      }).action,
+    ).toMatchObject({
+      type: 'command',
+      command: {
+        command: 'expo',
+        args: ['start', '--localhost', '--port', '8083'],
+        packageBin: true,
+        env: { CI: '1', EXPO_NO_TELEMETRY: '1' },
+      },
     })
   })
 })

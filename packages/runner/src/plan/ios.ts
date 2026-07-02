@@ -2,7 +2,7 @@ import type { IosConfig, PlaywrightConfig } from '../config'
 import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
 import { buildIosDriverEnv } from './env'
 import type { ResolvedIosTarget, ResolvedMetro } from './resolved'
-import { cmd, metroStartStep, packageBin, playwrightCommand } from './shared'
+import { cmd, metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
 import type { CleanupAction, CommandSpec, Plan, Step } from './types'
 
 export interface PlanIosInput {
@@ -32,10 +32,7 @@ export interface PlanIosInput {
 export function planIos(input: PlanIosInput): Plan {
   const { ios, metro, resolved, playwright, timeoutMs, projectCwd, specs, passthrough } = input
   const isDevClient = ios.launch.kind === 'expo-dev-client'
-  const runtimeConfigFile =
-    projectCwd && !resolved.runtimeConfigFile.startsWith('<')
-      ? `${projectCwd}/${resolved.runtimeConfigFile}`
-      : resolved.runtimeConfigFile
+  const runtimeConfigFile = projectPath(projectCwd, resolved.runtimeConfigFile)
 
   const steps: Step[] = []
   const push = (step: Step) => steps.push(step)

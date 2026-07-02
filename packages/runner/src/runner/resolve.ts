@@ -20,6 +20,8 @@ const run = promisify(execFile)
 export interface ResolveOptions {
   /** Explicit device id/serial/destination override from the CLI. */
   readonly device?: string
+  /** Project/config directory for package resolution that belongs to the app workspace. */
+  readonly projectCwd?: string
 }
 
 /**
@@ -41,7 +43,7 @@ export async function resolveIosTarget(
   // throw (companion not installed / no bin entry) — do it BEFORE minting the token
   // file so a resolution failure never orphans a `0600` secret on disk (the plan's
   // remove-file cleanup only runs once the plan is built and executed).
-  const scaffoldBin = resolveScaffoldBin(process.cwd())
+  const scaffoldBin = resolveScaffoldBin(opts.projectCwd ?? process.cwd())
   const tokenFile = await mintTokenFile()
 
   return {
