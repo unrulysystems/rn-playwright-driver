@@ -18,6 +18,28 @@ describe('classifyCliFailure', () => {
     ).toBe('NOT_FOUND')
   })
 
+  it('maps a devicectl missing FILE "couldn\'t be found" to NOT_FOUND', () => {
+    // devicectl's missing-file wording — no device/app keyword, so it is a genuine
+    // remote-file NOT_FOUND.
+    expect(
+      classifyCliFailure('devicectl', 'Documents/x', "The requested file couldn't be found.", 1)
+        .code,
+    ).toBe('NOT_FOUND')
+  })
+
+  it('does NOT misreport a devicectl missing DEVICE/app "couldn\'t be found" as NOT_FOUND', () => {
+    // devicectl reuses "couldn't be found" for an unreachable DEVICE or an app container
+    // that is not installed. Those are reach/availability failures, never a missing
+    // remote file (REQ-XPORT-005) — the device/app-context variant must not hit NOT_FOUND.
+    expect(
+      classifyCliFailure('devicectl', 'Documents/x', 'The specified device couldn’t be found.', 1)
+        .code,
+    ).toBe('TRANSPORT_FAILED')
+    expect(
+      classifyCliFailure('devicectl', 'Documents/x', "The application couldn't be found.", 1).code,
+    ).toBe('TRANSPORT_FAILED')
+  })
+
   it('does NOT misreport a device-not-found as a missing remote file (REQ-FILES-005/007)', () => {
     // `adb: device 'X' not found` is a transport failure, not a missing file —
     // the bare "not found" must not fall into the NOT_FOUND bucket.

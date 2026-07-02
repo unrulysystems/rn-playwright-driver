@@ -31,8 +31,12 @@ export function mapNodeFsError(error: unknown, displayPath: string): FileIoError
 
 // File-specific NOT_FOUND markers only — a bare `not found` is intentionally
 // EXCLUDED so a device/tool-availability failure (see below) is not misread as a
-// missing remote file (REQ-FILES-005/007).
-const NOT_FOUND_MARKERS = [/no such file/i, /does not exist/i, /couldn't be found/i]
+// missing remote file (REQ-FILES-005/007). `couldn't be found` is devicectl's
+// missing-FILE wording, but devicectl uses the SAME phrase for a missing DEVICE or
+// app container; those device/container-context variants are caught by
+// DEVICE_UNAVAILABLE_MARKERS below (checked first), so only a file-context
+// `couldn't be found` reaches here.
+const NOT_FOUND_MARKERS = [/no such file/i, /does not exist/i, /couldn['’]?t be found/i]
 const UNSUPPORTED_MARKERS = [
   /run-as:.*(not debuggable|package not (debuggable|found)|is unknown)/i,
   /not an application/i,
@@ -54,6 +58,11 @@ const DEVICE_UNAVAILABLE_MARKERS = [
   new RegExp(`${DEVICE_ERROR_PREFIX}no devices?/emulators? found`, 'i'),
   /unable to (?:find|locate) (?:device|utility)/i,
   /: command not found/i,
+  // devicectl reuses "couldn't be found" for a missing DEVICE / app container, not just
+  // a missing file. Catch the device/app-context variant HERE (before NOT_FOUND) so it
+  // fails as a transport/reach failure, never a remote-file NOT_FOUND (REQ-XPORT-005).
+  // The remote path is already masked, so a filename can't smuggle these keywords in.
+  /\b(?:device|application|app bundle|bundle identifier)\b[^\n]*couldn['’]?t be found/i,
 ]
 
 /**
