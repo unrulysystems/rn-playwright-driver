@@ -87,6 +87,7 @@ describe('touchOptionsFromEnv', () => {
         RN_TOUCH_BACKEND: 'xctest',
         RN_TOUCH_XCTEST_HOST: '127.0.0.2',
         RN_TOUCH_XCTEST_PORT: '7777',
+        RN_TOUCH_XCTEST_REQUEST_TIMEOUT: '30000',
         RN_TOUCH_XCTEST_TOKEN_FILE: '/tmp/rn-xctest-token',
       },
       readTextFile,
@@ -99,6 +100,7 @@ describe('touchOptionsFromEnv', () => {
       xctest: {
         host: '127.0.0.2',
         port: 7777,
+        requestTimeoutMs: 30000,
         authToken: 'xctest-token',
       },
     })

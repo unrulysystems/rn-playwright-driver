@@ -5,6 +5,7 @@ const xcode = require('xcode')
 const SERVER_FILE = 'RNDriverTouchCompanion.swift'
 const TEST_FILE = 'RNDriverTouchCompanionTests.swift'
 const RUNTIME_CONFIG_FILE = 'RNDriverTouchCompanionRuntimeConfig.json'
+const TOKEN_RESOURCE_FILE = 'RNDriverTouchCompanionToken'
 const GENERATED_README = 'RNDriverTouchCompanion.README.md'
 const UI_TEST_PRODUCT_TYPE = 'com.apple.product-type.bundle.ui-testing'
 
@@ -48,6 +49,7 @@ function copyCompanionFiles(testsDir) {
     path.join(sourceDir, RUNTIME_CONFIG_FILE),
     path.join(testsDir, RUNTIME_CONFIG_FILE),
   )
+  fs.writeFileSync(path.join(testsDir, TOKEN_RESOURCE_FILE), '')
   fs.writeFileSync(
     path.join(testsDir, GENERATED_README),
     [
@@ -94,12 +96,14 @@ function ensureUiTestTarget({ projectPath, projectName, uiTestTargetName }) {
     }
     normalizeGroupedFile(project, file, relativePath)
   }
-  const runtimeConfigRelativePath = `${uiTestTargetName}/${RUNTIME_CONFIG_FILE}`
-  if (!hasSourceFile(project, RUNTIME_CONFIG_FILE, runtimeConfigRelativePath)) {
-    ensureGroup(project, 'Resources')
-    project.addResourceFile(RUNTIME_CONFIG_FILE, { target: targetUuid }, groupKey)
+  for (const resourceFile of [RUNTIME_CONFIG_FILE, TOKEN_RESOURCE_FILE]) {
+    const relativePath = `${uiTestTargetName}/${resourceFile}`
+    if (!hasSourceFile(project, resourceFile, relativePath)) {
+      ensureGroup(project, 'Resources')
+      project.addResourceFile(resourceFile, { target: targetUuid }, groupKey)
+    }
+    normalizeGroupedFile(project, resourceFile, relativePath)
   }
-  normalizeGroupedFile(project, RUNTIME_CONFIG_FILE, runtimeConfigRelativePath)
 
   fs.writeFileSync(projectPath, project.writeSync())
   return {

@@ -88,6 +88,95 @@ describe('planIos', () => {
     expect(args).toContain('--initialUrl')
   })
 
+  it('plans physical iOS dev-client launch through devicectl without simulator-only steps', () => {
+    const ios = iosDevClientConfigFixture({
+      target: 'device',
+      launch: {
+        mode: 'attach',
+        kind: 'expo-dev-client',
+        initialUrl: 'http://192.168.1.10:8081',
+      },
+    })
+    const metro = resolveMetro({ url: 'http://127.0.0.1:8081' })
+    const resolved = placeholderIos(ios, metro)
+    if (resolved.kind !== 'device') throw new Error('expected physical iOS placeholder')
+    const plan = planIos(
+      inputFor('expo-dev-client', {
+        ios,
+        metro,
+        resolved: {
+          ...resolved,
+          id: '00008130-0012493614E8001C',
+          deviceName: 'Roman Crystal',
+          coreDeviceIdentifier: '5F926583-22CF-51A7-A3D8-4C9C660C31CA',
+        },
+      }),
+    )
+
+    const ids = stepIds(plan)
+    expect(ids).not.toContain('ios.boot')
+    expect(ids).not.toContain('ios.boot-wait')
+    expect(ids).not.toContain('ios.packager-host-location')
+    expect(ids).not.toContain('ios.packager-host-scheme')
+    expect(ids).not.toContain('ios.terminate-before-launch')
+    expect(ids).toContain('ios.runtime-token')
+    expect(ids).toContain('ios.port-forward')
+    expect(ids).toContain('ios.launch')
+
+    const launch = plan.steps.find((s) => s.id === 'ios.launch')?.action
+    expect(launch?.type).toBe('command')
+    if (launch?.type !== 'command') throw new Error('expected command')
+    expect(launch.command).toMatchObject({
+      command: 'xcrun',
+      args: [
+        'devicectl',
+        'device',
+        'process',
+        'launch',
+        '--device',
+        '5F926583-22CF-51A7-A3D8-4C9C660C31CA',
+        '--terminate-existing',
+        '--payload-url',
+        'exp+example://expo-development-client/?url=http%3A%2F%2F192.168.1.10%3A8081',
+        'com.unrulyfall.example',
+      ],
+    })
+    expect(plan.driverEnv).toMatchObject({
+      RN_SIM_UDID: '00008130-0012493614E8001C',
+      RN_IOS_TARGET_KIND: 'device',
+    })
+    expect(plan.driverEnv).not.toHaveProperty('RN_DEVICE_NAME')
+    const hermes = plan.steps.find((s) => s.id === 'ios.hermes')?.action
+    expect(hermes?.type).toBe('probe')
+    if (hermes?.type !== 'probe' || hermes.probe.kind !== 'hermes-target') {
+      throw new Error('expected Hermes probe')
+    }
+    expect(hermes.probe).not.toHaveProperty('deviceNameMatch')
+    const forward = plan.steps.find((s) => s.id === 'ios.port-forward')?.action
+    expect(forward?.type).toBe('command')
+    if (forward?.type !== 'command') throw new Error('expected command')
+    expect(forward).toMatchObject({
+      background: true,
+      processKey: 'ios-port-forward',
+      command: {
+        command: 'pymobiledevice3',
+        args: ['usbmux', 'forward', '--serial', '00008130-0012493614E8001C', '9999', '9999'],
+      },
+    })
+    expect(plan.cleanup).toContainEqual(
+      expect.objectContaining({
+        type: 'kill-process',
+        processKey: 'ios-port-forward',
+      }),
+    )
+    expect(plan.cleanup).toContainEqual(
+      expect.objectContaining({
+        type: 'remove-file',
+        path: '<runtime-token>',
+      }),
+    )
+  })
+
   it('FU-2: companion readiness defaults to 300s and is configurable', () => {
     const plan = planIos(inputFor('plain'))
     const ready = plan.steps.find((s) => s.id === 'ios.companion-ready')?.action
@@ -132,6 +221,38 @@ describe('planIos', () => {
       'LD',
       'xcodebuild',
     ])
+  })
+
+  it('passes -allowProvisioningUpdates to xcodebuild only when explicitly enabled', () => {
+    const defaultPlan = planIos(inputFor('plain'))
+    const defaultBuild = defaultPlan.steps.find((s) => s.id === 'ios.build-app')?.action
+    const defaultCompanion = defaultPlan.steps.find((s) => s.id === 'ios.companion-start')?.action
+    expect(defaultBuild?.type === 'command' && defaultBuild.command.args).not.toContain(
+      '-allowProvisioningUpdates',
+    )
+    expect(defaultCompanion?.type === 'command' && defaultCompanion.command.args).not.toContain(
+      '-allowProvisioningUpdates',
+    )
+
+    const ios = iosDevClientConfigFixture({
+      target: 'device',
+      allowProvisioningUpdates: true,
+      launch: {
+        mode: 'attach',
+        kind: 'expo-dev-client',
+        initialUrl: 'http://192.168.1.10:8081',
+      },
+    })
+    const metro = resolveMetro({ url: 'http://127.0.0.1:8081' })
+    const resolved = placeholderIos(ios, metro)
+    if (resolved.kind !== 'device') throw new Error('expected physical iOS placeholder')
+    const plan = planIos(inputFor('expo-dev-client', { ios, metro, resolved }))
+    const build = plan.steps.find((s) => s.id === 'ios.build-app')?.action
+    const companion = plan.steps.find((s) => s.id === 'ios.companion-start')?.action
+    expect(build?.type === 'command' && build.command.args).toContain('-allowProvisioningUpdates')
+    expect(companion?.type === 'command' && companion.command.args).toContain(
+      '-allowProvisioningUpdates',
+    )
   })
 
   it('marks project-mutating build steps skippable, but not the token/config refresh', () => {
@@ -208,6 +329,39 @@ describe('planIos', () => {
     expect(contents).not.toHaveProperty('authToken')
     // Token material only ever appears as a file path, never alongside a value key.
     expect(allCommandStrings(plan)).not.toContain('authToken')
+  })
+
+  it('secret-safety: physical iOS bundles a token resource reference, not an inline token', () => {
+    const ios = iosDevClientConfigFixture({
+      target: 'device',
+      launch: {
+        mode: 'attach',
+        kind: 'expo-dev-client',
+        initialUrl: 'http://192.168.1.10:8081',
+      },
+    })
+    const metro = resolveMetro({ url: 'http://127.0.0.1:8081' })
+    const resolved = {
+      ...placeholderIos(ios, metro),
+      tokenFile: '/run/rn-XXXX.token',
+      runtimeTokenFile: 'ios/exampleUITests/RNDriverTouchCompanionToken',
+    }
+    if (resolved.kind !== 'device') throw new Error('expected physical iOS placeholder')
+    const plan = planIos(inputFor('expo-dev-client', { ios, metro, resolved }))
+
+    const configWrite = plan.steps.find((s) => s.id === 'ios.runtime-config')?.action
+    const contents = configWrite?.type === 'write-file' ? JSON.parse(configWrite.contents) : {}
+    expect(contents.authTokenResource).toBe('RNDriverTouchCompanionToken')
+    expect(contents).not.toHaveProperty('authToken')
+    expect(contents).not.toHaveProperty('authTokenFile')
+
+    const tokenCopy = plan.steps.find((s) => s.id === 'ios.runtime-token')?.action
+    expect(tokenCopy).toMatchObject({
+      type: 'copy-file',
+      from: '/run/rn-XXXX.token',
+      to: 'ios/exampleUITests/RNDriverTouchCompanionToken',
+      mode: 0o600,
+    })
   })
 
   it('resolves project-relative runtime config and project commands from projectCwd', () => {

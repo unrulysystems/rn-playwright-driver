@@ -2,6 +2,7 @@
   "expo": {
     "name": "example",
     "slug": "example",
+    "scheme": "exp+example",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,6 +24,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "@unrulysystems/rn-playwright-driver-instrumentation-companion",
       "@unrulysystems/rn-playwright-driver-xctest-companion"
     ]

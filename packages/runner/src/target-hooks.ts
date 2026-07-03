@@ -45,18 +45,14 @@ export class TargetHookError extends Error {
   }
 }
 
-export function iosRunnerTarget(
-  ios: IosConfig,
-  resolved: ResolvedIosTarget,
-  metro: ResolvedMetro,
-): RunnerTarget {
+export function iosRunnerTarget(ios: IosConfig, resolved: ResolvedIosTarget): RunnerTarget {
   return {
     platform: 'ios',
-    kind: 'simulator',
-    id: resolved.simUdid,
-    deviceName: resolved.simName,
+    kind: resolved.kind,
+    id: resolved.id,
+    deviceName: resolved.deviceName,
     appId: ios.bundleId,
-    metroUrl: metro.url,
+    metroUrl: resolved.initialUrl,
   }
 }
 

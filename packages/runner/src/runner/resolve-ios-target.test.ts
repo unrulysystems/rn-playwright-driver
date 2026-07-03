@@ -39,7 +39,8 @@ const execFileMock = vi.hoisted(() => {
 
 vi.mock('node:child_process', () => ({ execFile: execFileMock }))
 
-const { resolveIosTarget } = await import('./resolve')
+const { physicalDeviceFromDevicectl, pickPhysicalIosDevice, resolveIosTarget } =
+  await import('./resolve')
 
 const COMPANION_PACKAGE = '@unrulysystems/rn-playwright-driver-xctest-companion'
 const roots: string[] = []
@@ -81,6 +82,74 @@ describe('resolveIosTarget', () => {
       /Cannot find module/,
     )
     expect(execFileMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('pickPhysicalIosDevice', () => {
+  const devices = [
+    {
+      identifier: '40182233-00C8-51ED-8C68-174E14E4B4C9',
+      udid: '00008101-001E05A41144001E',
+      name: 'Heart Happy iPhone',
+      model: 'iPhone 12',
+    },
+    {
+      identifier: '5F926583-22CF-51A7-A3D8-4C9C660C31CA',
+      udid: '00008130-0012493614E8001C',
+      name: 'Roman Crystal',
+      model: 'iPhone 15 Pro Max',
+    },
+  ]
+
+  it('selects a physical iOS device by UDID, CoreDevice identifier, exact name, or model', () => {
+    expect(pickPhysicalIosDevice(devices, '00008130-0012493614E8001C').name).toBe('Roman Crystal')
+    expect(pickPhysicalIosDevice(devices, '40182233-00C8-51ED-8C68-174E14E4B4C9').name).toBe(
+      'Heart Happy iPhone',
+    )
+    expect(pickPhysicalIosDevice(devices, 'Roman Crystal').udid).toBe('00008130-0012493614E8001C')
+    expect(pickPhysicalIosDevice(devices, 'iPhone 12').name).toBe('Heart Happy iPhone')
+  })
+
+  it('requires an explicit selector when multiple physical iOS devices are available', () => {
+    expect(() => pickPhysicalIosDevice(devices, undefined)).toThrow(
+      /multiple physical iOS devices available/,
+    )
+  })
+
+  it('fails clearly when a physical iOS selector is missing or ambiguous', () => {
+    expect(() => pickPhysicalIosDevice(devices, 'missing')).toThrow(
+      /requested iOS device not found/,
+    )
+    expect(() => pickPhysicalIosDevice(devices, 'iPhone')).toThrow(
+      /requested iOS device name is ambiguous/,
+    )
+  })
+})
+
+describe('physicalDeviceFromDevicectl', () => {
+  it('accepts paired physical iOS devices that can launch applications', () => {
+    const device = physicalDeviceFromDevicectl({
+      identifier: '40182233-00C8-51ED-8C68-174E14E4B4C9',
+      capabilities: [
+        { featureIdentifier: 'com.apple.coredevice.feature.applicationcontrol' },
+        { featureIdentifier: 'com.apple.coredevice.feature.launchapplication' },
+      ],
+      connectionProperties: { pairingState: 'paired' },
+      deviceProperties: { name: 'Heart Happy iPhone' },
+      hardwareProperties: {
+        marketingName: 'iPhone 12',
+        platform: 'iOS',
+        reality: 'physical',
+        udid: '00008101-001E05A41144001E',
+      },
+    })
+
+    expect(device).toEqual({
+      identifier: '40182233-00C8-51ED-8C68-174E14E4B4C9',
+      udid: '00008101-001E05A41144001E',
+      name: 'Heart Happy iPhone',
+      model: 'iPhone 12',
+    })
   })
 })
 

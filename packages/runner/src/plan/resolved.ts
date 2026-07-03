@@ -18,9 +18,10 @@ export interface ResolvedMetro {
   readonly readyTimeoutMs: number
 }
 
-export interface ResolvedIosTarget {
-  readonly simUdid: string
-  readonly simName: string
+interface ResolvedIosTargetBase {
+  readonly kind: 'simulator' | 'device'
+  readonly id: string
+  readonly deviceName: string
   readonly destination: string
   readonly uitestScheme: string
   readonly touchPort: number
@@ -39,6 +40,22 @@ export interface ResolvedIosTarget {
   /** Metro URL handed to the dev launcher (`simctl launch --initialUrl`). */
   readonly initialUrl: string
 }
+
+interface ResolvedIosSimulatorTarget extends ResolvedIosTargetBase {
+  readonly kind: 'simulator'
+  readonly simUdid: string
+  readonly simName: string
+}
+
+interface ResolvedIosDeviceTarget extends ResolvedIosTargetBase {
+  readonly kind: 'device'
+  /** CoreDevice identifier accepted by `xcrun devicectl --device`. */
+  readonly coreDeviceIdentifier: string
+  /** UI-test resource path receiving a copy of the per-run token for device-side XCTest. */
+  readonly runtimeTokenFile: string
+}
+
+export type ResolvedIosTarget = ResolvedIosSimulatorTarget | ResolvedIosDeviceTarget
 
 export interface ResolvedAndroidTarget {
   readonly serial: string
@@ -98,10 +115,13 @@ export function instrumentationTarget(android: AndroidConfig): string {
 
 /** Dry-run resolver: same fields, inert placeholders, no I/O. */
 export function placeholderIos(ios: IosConfig, metro: ResolvedMetro): ResolvedIosTarget {
-  return {
-    simUdid: '<sim-udid>',
-    simName: '<sim-name>',
-    destination: ios.destination ?? 'platform=iOS Simulator,id=<sim-udid>',
+  const kind = ios.target ?? 'simulator'
+  const common = {
+    destination:
+      ios.destination ??
+      (kind === 'device'
+        ? 'platform=iOS,id=<ios-device-udid>'
+        : 'platform=iOS Simulator,id=<sim-udid>'),
     uitestScheme: uitestScheme(ios),
     touchPort: ios.companion?.port ?? DEFAULTS.companionPort,
     companionReadyTimeoutMs: ios.companion?.readyTimeoutMs ?? DEFAULTS.iosCompanionReadyTimeoutMs,
@@ -110,6 +130,24 @@ export function placeholderIos(ios: IosConfig, metro: ResolvedMetro): ResolvedIo
     runtimeConfigFile: '<runtime-config>',
     scaffoldBin: '<scaffold-bin>',
     initialUrl: ios.launch.initialUrl ?? metro.url,
+  }
+  if (kind === 'device') {
+    return {
+      ...common,
+      kind,
+      id: '<ios-device-udid>',
+      deviceName: '<ios-device-name>',
+      coreDeviceIdentifier: '<ios-coredevice-id>',
+      runtimeTokenFile: '<runtime-token>',
+    }
+  }
+  return {
+    ...common,
+    kind,
+    id: '<sim-udid>',
+    deviceName: '<sim-name>',
+    simUdid: '<sim-udid>',
+    simName: '<sim-name>',
   }
 }
 

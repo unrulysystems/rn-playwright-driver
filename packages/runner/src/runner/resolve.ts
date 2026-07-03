@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { execFile } from 'node:child_process'
-import { chmod, mkdtemp, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -25,9 +25,9 @@ export interface ResolveOptions {
 }
 
 /**
- * Effectful iOS resolution: pick the simulator, terminate stale instances on
- * other booted sims (REQ-IOS-002), and mint a per-run `0600` token file. This is
- * the device-bound layer; it is exercised by the live e2e oracle.
+ * Effectful iOS resolution: pick the requested simulator or physical device,
+ * perform target-specific pre-run cleanup, and mint a per-run `0600` token file.
+ * This is the device-bound layer; it is exercised by the live e2e oracle.
  */
 export async function resolveIosTarget(
   ios: IosConfig,
@@ -41,11 +41,35 @@ export async function resolveIosTarget(
   // token-file side effects so a missing build dependency fails without touching
   // devices or orphaning a `0600` secret on disk.
   const scaffoldBin = resolveScaffoldBin(opts.projectCwd ?? process.cwd())
+  if (ios.target === 'device') {
+    const device = await selectPhysicalIosDevice(opts.device)
+    const tokenFile = await mintTokenFile()
+
+    return {
+      kind: 'device',
+      id: device.udid,
+      deviceName: device.name,
+      coreDeviceIdentifier: device.identifier,
+      destination: ios.destination ?? `platform=iOS,id=${device.udid}`,
+      uitestScheme: scheme,
+      touchPort: ios.companion?.port ?? DEFAULTS.companionPort,
+      companionReadyTimeoutMs: ios.companion?.readyTimeoutMs ?? DEFAULTS.iosCompanionReadyTimeoutMs,
+      hermesTimeoutMs: DEFAULTS.hermesTargetTimeoutMs,
+      tokenFile,
+      runtimeConfigFile: path.join('ios', scheme, 'RNDriverTouchCompanionRuntimeConfig.json'),
+      runtimeTokenFile: path.join('ios', scheme, DEFAULTS.xctestTokenResourceName),
+      scaffoldBin,
+      initialUrl: ios.launch.initialUrl ?? metro.url,
+    }
+  }
   const { udid, name } = await selectSimulator(ios, opts.device)
   await terminateStaleOnOtherSims(udid, ios.bundleId)
   const tokenFile = await mintTokenFile()
 
   return {
+    kind: 'simulator',
+    id: udid,
+    deviceName: name,
     simUdid: udid,
     simName: name,
     destination: ios.destination ?? `platform=iOS Simulator,id=${udid}`,
@@ -130,6 +154,13 @@ export interface SimDevice {
   readonly runtime: string
 }
 
+export interface PhysicalIosDevice {
+  readonly identifier: string
+  readonly udid: string
+  readonly name: string
+  readonly model?: string
+}
+
 async function selectSimulator(
   ios: IosConfig,
   deviceOverride?: string,
@@ -183,6 +214,126 @@ export function pickSimulator(
   const pick = booted[0] ?? [...iphones].sort(byNewest)[0]
   if (!pick) throw new Error('no available iPhone simulator found')
   return { udid: pick.udid, name: pick.name }
+}
+
+export function pickPhysicalIosDevice(
+  devices: readonly PhysicalIosDevice[],
+  deviceOverride: string | undefined,
+): PhysicalIosDevice {
+  if (deviceOverride) {
+    const exact = devices.find((device) => physicalDeviceMatches(device, deviceOverride))
+    if (exact) return exact
+    const byName = devices.filter(
+      (device) => device.name.includes(deviceOverride) || device.model?.includes(deviceOverride),
+    )
+    if (byName.length === 1) return byName[0]!
+    if (byName.length > 1) {
+      throw new Error(
+        `requested iOS device name is ambiguous: ${deviceOverride} (${byName.map((device) => device.name).join(', ')})`,
+      )
+    }
+    throw new Error(`requested iOS device not found: ${deviceOverride}`)
+  }
+
+  if (devices.length === 0) throw new Error('no available physical iOS device found')
+  if (devices.length > 1) {
+    throw new Error(
+      `multiple physical iOS devices available; pass --device with one of: ${devices
+        .map((device) => `${device.name} (${device.udid})`)
+        .join(', ')}`,
+    )
+  }
+  return devices[0]!
+}
+
+async function selectPhysicalIosDevice(deviceOverride?: string): Promise<PhysicalIosDevice> {
+  return pickPhysicalIosDevice(await listPhysicalIosDevices(), deviceOverride)
+}
+
+async function listPhysicalIosDevices(): Promise<PhysicalIosDevice[]> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'rn-driver-devicectl-'))
+  const file = path.join(dir, 'devices.json')
+  try {
+    await capture('xcrun', ['devicectl', 'list', 'devices', '--json-output', file])
+    const parsed = JSON.parse(await readFile(file, 'utf8')) as DevicectlDeviceList
+    return (parsed.result?.devices ?? []).flatMap(
+      (device) => physicalDeviceFromDevicectl(device) ?? [],
+    )
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}
+
+interface DevicectlDeviceList {
+  readonly result?: {
+    readonly devices?: readonly DevicectlDevice[]
+  }
+}
+
+interface DevicectlDevice {
+  readonly identifier?: unknown
+  readonly capabilities?: readonly { readonly featureIdentifier?: unknown }[]
+  readonly connectionProperties?: {
+    readonly pairingState?: unknown
+  }
+  readonly deviceProperties?: {
+    readonly name?: unknown
+  }
+  readonly hardwareProperties?: {
+    readonly marketingName?: unknown
+    readonly platform?: unknown
+    readonly reality?: unknown
+    readonly udid?: unknown
+  }
+}
+
+export function physicalDeviceFromDevicectl(
+  device: DevicectlDevice,
+): PhysicalIosDevice | undefined {
+  const platform = device.hardwareProperties?.platform
+  const reality = device.hardwareProperties?.reality
+  const identifier = device.identifier
+  const udid = device.hardwareProperties?.udid
+  const name = device.deviceProperties?.name
+  if (platform !== 'iOS' || reality !== 'physical') return undefined
+  if (
+    typeof identifier !== 'string' ||
+    typeof udid !== 'string' ||
+    typeof name !== 'string' ||
+    device.connectionProperties?.pairingState !== 'paired' ||
+    !canLaunchPhysicalIosDevice(device.capabilities)
+  ) {
+    return undefined
+  }
+  const model = device.hardwareProperties?.marketingName
+  return {
+    identifier,
+    udid,
+    name,
+    ...(typeof model === 'string' ? { model } : {}),
+  }
+}
+
+function canLaunchPhysicalIosDevice(
+  capabilities: readonly { readonly featureIdentifier?: unknown }[] | undefined,
+): boolean {
+  return (
+    capabilities?.some(
+      (capability) =>
+        capability.featureIdentifier === 'com.apple.coredevice.feature.launchapplication' ||
+        // Older Xcode payloads exposed this as the broad device-connect capability.
+        capability.featureIdentifier === 'com.apple.coredevice.feature.connectdevice',
+    ) ?? false
+  )
+}
+
+function physicalDeviceMatches(device: PhysicalIosDevice, value: string): boolean {
+  return (
+    device.udid === value ||
+    device.identifier === value ||
+    device.name === value ||
+    device.model === value
+  )
 }
 
 async function terminateStaleOnOtherSims(keepUdid: string, bundleId: string): Promise<void> {

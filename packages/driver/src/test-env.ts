@@ -102,10 +102,12 @@ function xctestOptionsFromEnv(
   readTextFile: ReadTextFile,
 ): NonNullable<TouchBackendConfig['xctest']> {
   const authToken = xctestAuthTokenFromEnv(env, readTextFile)
+  const requestTimeoutMs = parsePositiveInteger(env.RN_TOUCH_XCTEST_REQUEST_TIMEOUT)
   return {
     ...(env.RN_TOUCH_XCTEST_URL ? { url: env.RN_TOUCH_XCTEST_URL } : {}),
     ...(env.RN_TOUCH_XCTEST_HOST ? { host: env.RN_TOUCH_XCTEST_HOST } : {}),
     port: parsePort(env.RN_TOUCH_XCTEST_PORT) ?? DEFAULT_TOUCH_XCTEST_PORT,
+    ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
     ...(authToken === undefined ? {} : { authToken }),
   }
 }

@@ -97,6 +97,18 @@ describe('CDPClient connect-window event loss', () => {
     await client.disconnect()
   })
 
+  it('uses the inspector proxy loopback Origin even when Metro is reached by LAN host', async () => {
+    const client = new CDPClient()
+
+    await client.connect('ws://192.168.4.128:8083/inspector/debug?device=1&page=1')
+
+    expect(wsState.constructorCalls.at(-1)).toEqual({
+      url: 'ws://192.168.4.128:8083/inspector/debug?device=1&page=1',
+      options: { origin: 'http://127.0.0.1:8083' },
+    })
+    await client.disconnect()
+  })
+
   it('DROPS an event emitted before the caller subscribes (today RNDevice ordering)', async () => {
     const client = new CDPClient()
     const received: Array<Record<string, unknown>> = []

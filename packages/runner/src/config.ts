@@ -14,7 +14,7 @@ export type Platform = 'ios' | 'android'
 export type RunnerTarget =
   | {
       readonly platform: 'ios'
-      readonly kind: 'simulator'
+      readonly kind: 'simulator' | 'device'
       readonly id: string
       readonly deviceName: string
       readonly appId: string
@@ -100,6 +100,8 @@ export type LaunchMode = 'launch' | 'activate' | 'attach'
  */
 export type LaunchKind = 'plain' | 'expo-dev-client'
 
+export type IosTargetKind = 'simulator' | 'device'
+
 export interface MetroConfig {
   /** Full Metro URL. When set, host/port are derived from it. */
   url?: string
@@ -142,6 +144,8 @@ export interface CompanionConfig {
 export interface IosConfig {
   /** App bundle identifier, e.g. `com.company.app`. */
   bundleId: string
+  /** App URL scheme used for physical Expo dev-client payload URLs, e.g. `myapp`. */
+  scheme?: string
   /** Path to the `.xcworkspace`, e.g. `ios/App.xcworkspace`. */
   workspace: string
   /** Scheme that builds the app, e.g. `App`. */
@@ -150,10 +154,21 @@ export interface IosConfig {
   uitestScheme?: string
   /**
    * Explicit `xcodebuild` destination
-   * (`platform=iOS Simulator,id=<udid>`). When omitted the runner selects a
-   * booted iPhone, else the newest available iPhone runtime.
+   * (`platform=iOS Simulator,id=<udid>` or `platform=iOS,id=<udid>`). When
+   * omitted the runner derives the destination from the selected target.
    */
   destination?: string
+  /**
+   * iOS target class. Defaults to `simulator`. Physical devices are v1
+   * Expo-dev-client only and require a device-reachable `launch.initialUrl`.
+   */
+  target?: IosTargetKind
+  /**
+   * Pass `-allowProvisioningUpdates` to iOS `xcodebuild` commands. Useful for
+   * human-attended physical-device verification when Xcode must create/update
+   * development provisioning profiles. Defaults to false.
+   */
+  allowProvisioningUpdates?: boolean
   launch: LaunchConfig
   companion?: CompanionConfig
   /**

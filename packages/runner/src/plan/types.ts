@@ -61,6 +61,12 @@ export type StepAction =
       readonly contents: string
       readonly mode?: number
     }
+  | {
+      readonly type: 'copy-file'
+      readonly from: string
+      readonly to: string
+      readonly mode?: number
+    }
   | { readonly type: 'free-port'; readonly port: number }
   | {
       readonly type: 'probe'
@@ -160,6 +166,8 @@ export interface ProcessRunner {
   kill(handle: SpawnHandle): Promise<void>
   /** Write a file, optionally with a restrictive mode (used for 0600 configs). */
   writeFile(path: string, contents: string, mode?: number): Promise<void>
+  /** Copy a file without surfacing its contents in the plan/logs. */
+  copyFile(from: string, to: string, mode?: number): Promise<void>
   /** Remove a file (idempotent). */
   removeFile(path: string): Promise<void>
   /** Free a TCP listener bound to `port` (lsof + kill). Idempotent. */

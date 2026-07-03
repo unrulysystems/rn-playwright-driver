@@ -7,6 +7,7 @@ export interface ValidationResult {
 
 const LAUNCH_MODES = ['launch', 'activate', 'attach'] as const
 const LAUNCH_KINDS = ['plain', 'expo-dev-client'] as const
+const IOS_TARGET_KINDS = ['simulator', 'device'] as const
 
 const TOP_LEVEL_KEYS = new Set(['metro', 'ios', 'android', 'playwright', 'hooks', 'timeoutMs'])
 const METRO_KEYS = new Set(['url', 'command', 'host', 'port', 'reuseExisting', 'readyTimeoutMs'])
@@ -15,10 +16,13 @@ const COMPANION_KEYS = new Set(['port', 'readyTimeoutMs'])
 const HOOK_KEYS = new Set(['configureTarget'])
 const IOS_KEYS = new Set([
   'bundleId',
+  'scheme',
   'workspace',
   'appScheme',
   'uitestScheme',
   'destination',
+  'target',
+  'allowProvisioningUpdates',
   'launch',
   'companion',
   'defaults',
@@ -117,10 +121,24 @@ function validateIos(ios: unknown, errors: string[]): void {
   }
   reportUnknownKeys('config.ios', ios, IOS_KEYS, errors)
   requireString('config.ios.bundleId', ios.bundleId, errors)
+  if (ios.scheme !== undefined) requireAppScheme('config.ios.scheme', ios.scheme, errors)
   requireString('config.ios.workspace', ios.workspace, errors)
   requireString('config.ios.appScheme', ios.appScheme, errors)
   optionalString('config.ios.uitestScheme', ios.uitestScheme, errors)
   optionalString('config.ios.destination', ios.destination, errors)
+  if (
+    ios.target !== undefined &&
+    (typeof ios.target !== 'string' ||
+      !(IOS_TARGET_KINDS as readonly string[]).includes(ios.target))
+  ) {
+    errors.push(`config.ios.target: expected one of ${IOS_TARGET_KINDS.join(', ')}`)
+  }
+  if (
+    ios.allowProvisioningUpdates !== undefined &&
+    typeof ios.allowProvisioningUpdates !== 'boolean'
+  ) {
+    errors.push('config.ios.allowProvisioningUpdates: expected a boolean')
+  }
   validateCompanion('config.ios.companion', ios.companion, errors)
   if (ios.defaults !== undefined) {
     if (!isRecord(ios.defaults)) {
@@ -153,6 +171,30 @@ function validateIos(ios: unknown, errors: string[]): void {
     errors.push(
       'config.ios.launch: mode "attach" requires kind "expo-dev-client"; a plain app uses mode "launch" or "activate" (the companion launches it)',
     )
+  }
+  if (ios.target === 'device') {
+    if (ios.defaults !== undefined) {
+      errors.push(
+        'config.ios.defaults: simulator-only; physical iOS defaults seeding is not supported',
+      )
+    }
+    if (launch?.kind !== 'expo-dev-client') {
+      errors.push(
+        'config.ios.target: "device" currently requires ios.launch.kind "expo-dev-client"',
+      )
+    }
+    if (ios.scheme === undefined) {
+      errors.push('config.ios.scheme: required for physical iOS expo-dev-client payload URLs')
+    }
+    if (launch?.initialUrl === undefined) {
+      errors.push(
+        'config.ios.launch.initialUrl: required for physical iOS devices; use a LAN or tunnel URL reachable from the device',
+      )
+    } else if (isLoopbackUrl(launch.initialUrl)) {
+      errors.push(
+        'config.ios.launch.initialUrl: physical iOS devices cannot use localhost/loopback; use a LAN or tunnel URL reachable from the device',
+      )
+    }
   }
 }
 
@@ -209,7 +251,7 @@ function validateLaunch(
   path: string,
   launch: unknown,
   errors: string[],
-): { mode: string; kind: string } | undefined {
+): { mode: string; kind: string; initialUrl?: string } | undefined {
   if (!isRecord(launch)) {
     errors.push(`${path}: required (expected an object with mode and kind)`)
     return undefined
@@ -222,7 +264,22 @@ function validateLaunch(
     typeof launch.kind === 'string' && (LAUNCH_KINDS as readonly string[]).includes(launch.kind)
   if (!modeOk) errors.push(`${path}.mode: expected one of ${LAUNCH_MODES.join(', ')}`)
   if (!kindOk) errors.push(`${path}.kind: expected one of ${LAUNCH_KINDS.join(', ')}`)
-  return modeOk && kindOk ? { mode: launch.mode as string, kind: launch.kind as string } : undefined
+  return modeOk && kindOk
+    ? {
+        mode: launch.mode as string,
+        kind: launch.kind as string,
+        ...(typeof launch.initialUrl === 'string' ? { initialUrl: launch.initialUrl } : {}),
+      }
+    : undefined
+}
+
+function isLoopbackUrl(raw: string): boolean {
+  try {
+    const host = new URL(raw).hostname.toLowerCase()
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]'
+  } catch {
+    return false
+  }
 }
 
 // --- primitives ---

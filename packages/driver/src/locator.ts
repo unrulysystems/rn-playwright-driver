@@ -96,12 +96,23 @@ export class LocatorImpl implements Locator {
   }
 
   /**
-   * Tap the element center.
-   * Requires a selected touch backend.
+   * Tap the element.
+   * Prefers the in-app native element tap when available, then falls back to
+   * the selected coordinate touch backend.
    * Auto-waits for element to be visible and enabled.
    */
   async tap(): Promise<void> {
     const info = await this.waitForActionable()
+
+    const nativeTap = await this.device.evaluate<NativeResult<boolean>>(
+      buildHarnessCall('viewTree.tap', JSON.stringify(info.handle)),
+    )
+    if (nativeTap.success) {
+      return
+    }
+    if (nativeTap.code !== 'NOT_SUPPORTED') {
+      throw new LocatorError(nativeTap.error, nativeTap.code)
+    }
 
     try {
       await this.device.getTouchBackendInfo()

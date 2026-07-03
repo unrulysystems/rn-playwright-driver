@@ -120,6 +120,10 @@ async function runStep(
         await runner.writeFile(action.path, action.contents, action.mode)
         return
       }
+      case 'copy-file': {
+        await runner.copyFile(action.from, action.to, action.mode)
+        return
+      }
       case 'free-port': {
         await runner.freePort(action.port)
         return

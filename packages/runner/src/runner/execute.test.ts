@@ -6,7 +6,7 @@ import { executePlan, StageError } from './execute'
 import { ProbeFailure } from './probe-failure'
 
 interface Recorded {
-  readonly type: 'exec' | 'spawn' | 'kill' | 'write' | 'rm' | 'free' | 'probe'
+  readonly type: 'exec' | 'spawn' | 'kill' | 'write' | 'copy' | 'rm' | 'free' | 'probe'
   readonly label: string
   readonly spec?: CommandSpec
   /** The probe's early-abort watch, recorded so tests can assert the executor wired it through. */
@@ -50,6 +50,10 @@ function makeRunner(
       calls.push({ type: 'write', label: path })
       const error = opts.writeFileError?.(path)
       if (error) return Promise.reject(error)
+      return Promise.resolve()
+    },
+    copyFile(from, to) {
+      calls.push({ type: 'copy', label: `${from} -> ${to}` })
       return Promise.resolve()
     },
     removeFile(path) {

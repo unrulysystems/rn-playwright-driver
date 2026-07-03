@@ -40,6 +40,8 @@ function renderAction(action: StepAction): string {
       return `${action.background ? 'spawn ' : '$ '}${renderCommand(action.command)}${action.allowFailure ? '  (best-effort)' : ''}`
     case 'write-file':
       return `write ${action.path}${action.mode ? ` (mode ${action.mode.toString(8)})` : ''}`
+    case 'copy-file':
+      return `copy ${action.from} -> ${action.to}${action.mode ? ` (mode ${action.mode.toString(8)})` : ''}`
     case 'free-port':
       return `free-port ${action.port}`
     case 'probe': {

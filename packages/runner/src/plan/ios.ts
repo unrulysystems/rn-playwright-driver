@@ -24,10 +24,11 @@ export interface PlanIosInput {
  * runtime values, returns the ordered, side-effect-free {@link Plan}. Identical
  * inputs always yield an identical plan.
  *
- * The companion reads its port + token-file path from the runtime-config JSON
+ * The companion reads its port + token reference from the runtime-config JSON
  * written into the UI-test target resource (the documented reliable path when
- * Xcode does not propagate test env vars). The token *value* lives only in the
- * separate `0600` file referenced by `authTokenFile`; it never enters the plan.
+ * Xcode does not propagate test env vars). Simulators can read the host token
+ * file directly; physical devices receive a generated UI-test resource copied
+ * from the same `0600` file so token material stays out of argv/env/log output.
  */
 export function planIos(input: PlanIosInput): Plan {
   const { ios, metro, resolved, playwright, timeoutMs, projectCwd, specs, passthrough } = input
@@ -37,27 +38,32 @@ export function planIos(input: PlanIosInput): Plan {
   const steps: Step[] = []
   const push = (step: Step) => steps.push(step)
 
-  // device — boot (and wait for) the target simulator. `pickSimulator` can pick a
-  // shutdown sim (newest available when none booted), so issue `simctl boot`
-  // first (REQ-IOS-001); it exits non-zero when already booted ("current state:
-  // Booted"), which is the benign precondition we want, so allowFailure. Then
-  // `bootstatus -b` blocks until the sim is fully booted.
-  push({
-    id: 'ios.boot',
-    stage: 'device',
-    description: `Boot simulator ${resolved.simName}`,
-    action: {
-      type: 'command',
-      command: xcrun(['simctl', 'boot', resolved.simUdid]),
-      allowFailure: true,
-    },
-  })
-  push({
-    id: 'ios.boot-wait',
-    stage: 'device',
-    description: `Wait for ${resolved.simName} to finish booting`,
-    action: { type: 'command', command: xcrun(['simctl', 'bootstatus', resolved.simUdid, '-b']) },
-  })
+  if (resolved.kind === 'simulator') {
+    // device — boot (and wait for) the target simulator. `pickSimulator` can pick a
+    // shutdown sim (newest available when none booted), so issue `simctl boot`
+    // first (REQ-IOS-001); it exits non-zero when already booted ("current state:
+    // Booted"), which is the benign precondition we want, so allowFailure. Then
+    // `bootstatus -b` blocks until the sim is fully booted.
+    push({
+      id: 'ios.boot',
+      stage: 'device',
+      description: `Boot simulator ${resolved.simName}`,
+      action: {
+        type: 'command',
+        command: xcrun(['simctl', 'boot', resolved.simUdid]),
+        allowFailure: true,
+      },
+    })
+    push({
+      id: 'ios.boot-wait',
+      stage: 'device',
+      description: `Wait for ${resolved.simName} to finish booting`,
+      action: {
+        type: 'command',
+        command: xcrun(['simctl', 'bootstatus', resolved.simUdid, '-b']),
+      },
+    })
+  }
 
   // build — regenerate the project, scaffold the companion target, write the
   // per-run runtime config, install pods. The token/config refresh is NOT
@@ -111,6 +117,19 @@ export function planIos(input: PlanIosInput): Plan {
       mode: 0o600,
     },
   })
+  if (resolved.kind === 'device') {
+    push({
+      id: 'ios.runtime-token',
+      stage: 'build',
+      description: 'Copy companion token into UI-test bundle resource',
+      action: {
+        type: 'copy-file',
+        from: resolved.tokenFile,
+        to: projectPath(projectCwd, resolved.runtimeTokenFile),
+        mode: 0o600,
+      },
+    })
+  }
   push({
     id: 'ios.pods',
     stage: 'build',
@@ -134,45 +153,47 @@ export function planIos(input: PlanIosInput): Plan {
     },
   })
 
-  // device — point the app at this Metro via NSUserDefaults (best-effort).
-  push({
-    id: 'ios.packager-host-location',
-    stage: 'device',
-    description: 'Point app at Metro (RCT_jsLocation)',
-    action: {
-      type: 'command',
-      command: xcrun([
-        'simctl',
-        'spawn',
-        resolved.simUdid,
-        'defaults',
-        'write',
-        ios.bundleId,
-        'RCT_jsLocation',
-        `${metro.host}:${metro.port}`,
-      ]),
-      allowFailure: true,
-    },
-  })
-  push({
-    id: 'ios.packager-host-scheme',
-    stage: 'device',
-    description: 'Point app at Metro (RCT_packager_scheme)',
-    action: {
-      type: 'command',
-      command: xcrun([
-        'simctl',
-        'spawn',
-        resolved.simUdid,
-        'defaults',
-        'write',
-        ios.bundleId,
-        'RCT_packager_scheme',
-        'http',
-      ]),
-      allowFailure: true,
-    },
-  })
+  if (resolved.kind === 'simulator') {
+    // device — point the app at this Metro via NSUserDefaults (best-effort).
+    push({
+      id: 'ios.packager-host-location',
+      stage: 'device',
+      description: 'Point app at Metro (RCT_jsLocation)',
+      action: {
+        type: 'command',
+        command: xcrun([
+          'simctl',
+          'spawn',
+          resolved.simUdid,
+          'defaults',
+          'write',
+          ios.bundleId,
+          'RCT_jsLocation',
+          `${metro.host}:${metro.port}`,
+        ]),
+        allowFailure: true,
+      },
+    })
+    push({
+      id: 'ios.packager-host-scheme',
+      stage: 'device',
+      description: 'Point app at Metro (RCT_packager_scheme)',
+      action: {
+        type: 'command',
+        command: xcrun([
+          'simctl',
+          'spawn',
+          resolved.simUdid,
+          'defaults',
+          'write',
+          ios.bundleId,
+          'RCT_packager_scheme',
+          'http',
+        ]),
+        allowFailure: true,
+      },
+    })
+  }
 
   // build — compile the app scheme. `env -u LD` avoids the generic-Unix LD=ld
   // link failure (REQ-IOS-004).
@@ -191,6 +212,7 @@ export function planIos(input: PlanIosInput): Plan {
           ios.appScheme,
           '-destination',
           resolved.destination,
+          ...allowProvisioningUpdatesArgs(ios),
           `RCT_METRO_PORT=${metro.port}`,
         ],
         undefined,
@@ -200,26 +222,28 @@ export function planIos(input: PlanIosInput): Plan {
     skippable: true,
   })
 
-  // device — app-specific pre-launch seeds (e.g. onboarding flags).
-  for (const [key, value] of Object.entries(ios.defaults ?? {})) {
-    push({
-      id: `ios.seed.${key}`,
-      stage: 'device',
-      description: `Seed default ${key}`,
-      action: {
-        type: 'command',
-        command: xcrun([
-          'simctl',
-          'spawn',
-          resolved.simUdid,
-          'defaults',
-          'write',
-          ios.bundleId,
-          ...defaultsArgs(key, value),
-        ]),
-        allowFailure: true,
-      },
-    })
+  if (resolved.kind === 'simulator') {
+    // device — app-specific pre-launch seeds (e.g. onboarding flags).
+    for (const [key, value] of Object.entries(ios.defaults ?? {})) {
+      push({
+        id: `ios.seed.${key}`,
+        stage: 'device',
+        description: `Seed default ${key}`,
+        action: {
+          type: 'command',
+          command: xcrun([
+            'simctl',
+            'spawn',
+            resolved.simUdid,
+            'defaults',
+            'write',
+            ios.bundleId,
+            ...defaultsArgs(key, value),
+          ]),
+          allowFailure: true,
+        },
+      })
+    }
   }
 
   // companion — free a stale listener (FU-3), start the UI-test server, wait for
@@ -230,6 +254,26 @@ export function planIos(input: PlanIosInput): Plan {
     description: `Free stale listener on port ${resolved.touchPort}`,
     action: { type: 'free-port', port: resolved.touchPort },
   })
+  if (resolved.kind === 'device') {
+    push({
+      id: 'ios.port-forward',
+      stage: 'companion',
+      description: `Forward host port ${resolved.touchPort} to physical iOS companion`,
+      action: {
+        type: 'command',
+        background: true,
+        processKey: 'ios-port-forward',
+        command: cmd('pymobiledevice3', [
+          'usbmux',
+          'forward',
+          '--serial',
+          resolved.id,
+          String(resolved.touchPort),
+          String(resolved.touchPort),
+        ]),
+      },
+    })
+  }
   push({
     id: 'ios.companion-start',
     stage: 'companion',
@@ -247,6 +291,7 @@ export function planIos(input: PlanIosInput): Plan {
           resolved.uitestScheme,
           '-destination',
           resolved.destination,
+          ...allowProvisioningUpdatesArgs(ios),
           `-only-testing:${resolved.uitestScheme}/${DEFAULTS.xctestServerTest}`,
           `RCT_METRO_PORT=${metro.port}`,
         ],
@@ -276,35 +321,58 @@ export function planIos(input: PlanIosInput): Plan {
     },
   })
 
-  // app-launch — dev-client: terminate-first then cold-launch via --initialUrl
-  // (FU-1). plain: the companion's launch mode already launched the app.
+  // app-launch — dev-client: terminate-first then cold-launch with the target-reachable
+  // Metro URL (FU-1). plain: the companion's launch mode already launched the app.
   if (isDevClient) {
-    push({
-      id: 'ios.terminate-before-launch',
-      stage: 'app-launch',
-      description: 'Terminate any running instance (cold launch requires it)',
-      action: {
-        type: 'command',
-        command: xcrun(['simctl', 'terminate', resolved.simUdid, ios.bundleId]),
-        allowFailure: true,
-      },
-    })
-    push({
-      id: 'ios.launch',
-      stage: 'app-launch',
-      description: `Cold-launch dev client via --initialUrl ${resolved.initialUrl}`,
-      action: {
-        type: 'command',
-        command: xcrun([
-          'simctl',
-          'launch',
-          resolved.simUdid,
-          ios.bundleId,
-          '--initialUrl',
-          resolved.initialUrl,
-        ]),
-      },
-    })
+    if (resolved.kind === 'simulator') {
+      push({
+        id: 'ios.terminate-before-launch',
+        stage: 'app-launch',
+        description: 'Terminate any running instance (cold launch requires it)',
+        action: {
+          type: 'command',
+          command: xcrun(['simctl', 'terminate', resolved.simUdid, ios.bundleId]),
+          allowFailure: true,
+        },
+      })
+      push({
+        id: 'ios.launch',
+        stage: 'app-launch',
+        description: `Cold-launch dev client via --initialUrl ${resolved.initialUrl}`,
+        action: {
+          type: 'command',
+          command: xcrun([
+            'simctl',
+            'launch',
+            resolved.simUdid,
+            ios.bundleId,
+            '--initialUrl',
+            resolved.initialUrl,
+          ]),
+        },
+      })
+    } else {
+      push({
+        id: 'ios.launch',
+        stage: 'app-launch',
+        description: `Cold-launch dev client on physical device via ${resolved.initialUrl}`,
+        action: {
+          type: 'command',
+          command: xcrun([
+            'devicectl',
+            'device',
+            'process',
+            'launch',
+            '--device',
+            resolved.coreDeviceIdentifier,
+            '--terminate-existing',
+            '--payload-url',
+            physicalDevClientUrl(ios, resolved.initialUrl),
+            ios.bundleId,
+          ]),
+        },
+      })
+    }
   }
 
   // hermes-target — wait for a Hermes target on THIS simulator before testing.
@@ -319,13 +387,22 @@ export function planIos(input: PlanIosInput): Plan {
         platform: 'ios',
         metroUrl: metro.url,
         appId: ios.bundleId,
-        deviceNameMatch: resolved.simName,
+        ...(resolved.kind === 'simulator' ? { deviceNameMatch: resolved.deviceName } : {}),
         timeoutMs: resolved.hermesTimeoutMs,
       },
     },
   })
 
   const cleanup: CleanupAction[] = [
+    ...(resolved.kind === 'device'
+      ? [
+          {
+            type: 'kill-process' as const,
+            processKey: 'ios-port-forward',
+            description: 'Stop iOS port forward',
+          },
+        ]
+      : []),
     { type: 'kill-process', processKey: 'companion', description: 'Stop XCTest companion' },
     {
       type: 'free-port',
@@ -343,6 +420,13 @@ export function planIos(input: PlanIosInput): Plan {
       description: 'Remove per-run companion runtime config',
     },
   ]
+  if (resolved.kind === 'device') {
+    cleanup.push({
+      type: 'remove-file',
+      path: projectPath(projectCwd, resolved.runtimeTokenFile),
+      description: 'Remove per-run companion token resource',
+    })
+  }
 
   return {
     platform: 'ios',
@@ -356,7 +440,9 @@ export function planIos(input: PlanIosInput): Plan {
 function runtimeConfigJson(resolved: ResolvedIosTarget, ios: IosConfig): string {
   return JSON.stringify({
     port: resolved.touchPort,
-    authTokenFile: resolved.tokenFile,
+    ...(resolved.kind === 'device'
+      ? { authTokenResource: DEFAULTS.xctestTokenResourceName }
+      : { authTokenFile: resolved.tokenFile }),
     launch: ios.launch.mode,
   })
 }
@@ -365,6 +451,15 @@ function defaultsArgs(key: string, value: string | number | boolean): string[] {
   if (typeof value === 'boolean') return [key, '-bool', value ? 'YES' : 'NO']
   if (typeof value === 'number') return [key, '-int', String(value)]
   return [key, value]
+}
+
+function allowProvisioningUpdatesArgs(ios: IosConfig): string[] {
+  return ios.allowProvisioningUpdates ? ['-allowProvisioningUpdates'] : []
+}
+
+function physicalDevClientUrl(ios: IosConfig, initialUrl: string): string {
+  if (!ios.scheme) throw new Error('ios.scheme is required for physical iOS dev-client launch')
+  return `${ios.scheme}://expo-development-client/?url=${encodeURIComponent(initialUrl)}`
 }
 
 // --- iOS-specific command constructors (no secret values ever flow through these) ---
