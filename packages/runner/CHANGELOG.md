@@ -1,5 +1,17 @@
 # @unrulysystems/rn-playwright-driver-runner
 
+## 0.4.0
+
+### Minor Changes
+
+- [#42](https://github.com/unrulysystems/rn-playwright-driver/pull/42) [`9d4afc6`](https://github.com/unrulysystems/rn-playwright-driver/commit/9d4afc663c217de1882989d8cb7fe2d108f2fa74) Thanks [@alleneubank](https://github.com/alleneubank)! - Support physical iOS device runs in the runner with devicectl launch planning,
+  device-aware environment values, provisioning opt-in, and project-owned
+  pre-launch hooks.
+
+  Add driver and XCTest companion fixes for real-device touch execution, including
+  native tap fallback support, configurable XCTest request timeouts, and bundled
+  token resources for UI-test companions.
+
 ## 0.3.0
 
 ### Minor Changes
