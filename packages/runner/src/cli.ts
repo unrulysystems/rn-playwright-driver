@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import net from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -14,6 +14,13 @@ import { renderPlan } from './print-plan'
 import { executePlan, StageError } from './runner/execute'
 import { NodeProcessRunner } from './runner/process-runner'
 import { resolveAndroidTarget, resolveIosTarget } from './runner/resolve'
+import {
+  androidRunnerTarget,
+  applyTargetHook,
+  iosRunnerTarget,
+  TargetHookError,
+  targetHookContribution,
+} from './target-hooks'
 import { ConfigValidationError, assertValid } from './validate'
 
 interface CliFlags {
@@ -79,10 +86,18 @@ export async function run(argv: string[]): Promise<number> {
   }
 
   if (flags.dryRun) {
-    for (const platform of platforms) {
-      process.stdout.write(
-        `${renderPlan(buildDryRunPlan(config, platform, { projectCwd, specs, passthrough }))}\n\n`,
-      )
+    try {
+      for (const platform of platforms) {
+        process.stdout.write(
+          `${renderPlan(buildDryRunPlan(config, platform, { projectCwd, specs, passthrough }))}\n\n`,
+        )
+      }
+    } catch (error) {
+      if (error instanceof TargetHookError) {
+        process.stderr.write(`\nFAILED at stage [config]: ${error.message}\n`)
+        return STAGE_EXIT_CODES.config
+      }
+      throw error
     }
     return 0
   }
@@ -164,6 +179,10 @@ async function runPlatform(
   try {
     plan = await buildPlatformPlan(platform, config, metro, ctx)
   } catch (error) {
+    if (error instanceof TargetHookError) {
+      process.stderr.write(`\nFAILED [${platform}] at stage [config]: ${error.message}\n`)
+      return STAGE_EXIT_CODES.config
+    }
     process.stderr.write(`\nFAILED [${platform}] at stage [device]: ${(error as Error).message}\n`)
     return STAGE_EXIT_CODES.device
   }
@@ -212,16 +231,25 @@ async function buildPlatformPlan(
       ...deviceOpt(ctx.flags.device),
       projectCwd: ctx.projectCwd,
     })
-    return planIos({
-      ios: config.ios,
-      metro,
-      resolved,
-      playwright: config.playwright,
-      timeoutMs: config.timeoutMs,
-      projectCwd: ctx.projectCwd,
-      specs: ctx.specs,
-      passthrough: ctx.passthrough,
-    })
+    try {
+      const plan = planIos({
+        ios: config.ios,
+        metro,
+        resolved,
+        playwright: config.playwright,
+        timeoutMs: config.timeoutMs,
+        projectCwd: ctx.projectCwd,
+        specs: ctx.specs,
+        passthrough: ctx.passthrough,
+      })
+      return applyTargetHook(
+        plan,
+        targetHookContribution(config, iosRunnerTarget(config.ios, resolved, metro)),
+      )
+    } catch (error) {
+      await removeTokenFileOnHookFailure(error, resolved.tokenFile)
+      throw error
+    }
   }
   if (!config.android) throw new Error('config.android is required for the android platform')
   const { resolved, deviceName } = await resolveAndroidTarget(
@@ -229,17 +257,34 @@ async function buildPlatformPlan(
     metro,
     deviceOpt(ctx.flags.device),
   )
-  return planAndroid({
-    android: config.android,
-    metro,
-    resolved,
-    playwright: config.playwright,
-    timeoutMs: config.timeoutMs,
-    projectCwd: ctx.projectCwd,
-    specs: ctx.specs,
-    passthrough: ctx.passthrough,
-    hermesDeviceName: deviceName,
-  })
+  try {
+    const plan = planAndroid({
+      android: config.android,
+      metro,
+      resolved,
+      playwright: config.playwright,
+      timeoutMs: config.timeoutMs,
+      projectCwd: ctx.projectCwd,
+      specs: ctx.specs,
+      passthrough: ctx.passthrough,
+      hermesDeviceName: deviceName,
+    })
+    return applyTargetHook(
+      plan,
+      targetHookContribution(
+        config,
+        androidRunnerTarget(config.android, resolved, metro, deviceName),
+      ),
+    )
+  } catch (error) {
+    await removeTokenFileOnHookFailure(error, resolved.tokenFile)
+    throw error
+  }
+}
+
+async function removeTokenFileOnHookFailure(error: unknown, tokenFile: string): Promise<void> {
+  if (!(error instanceof TargetHookError)) return
+  await rm(tokenFile, { force: true })
 }
 
 function deviceOpt(device: string | undefined): { device?: string } {

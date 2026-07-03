@@ -111,6 +111,24 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(playwright?.spec?.env).toMatchObject(plan.driverEnv)
   })
 
+  it('lets runner driver env win over project Playwright env conflicts', async () => {
+    const conflictingPlan = {
+      ...plan,
+      playwright: {
+        ...plan.playwright,
+        env: { RN_METRO_URL: 'http://project-override.invalid', E2E_PROFILE: 'local' },
+      },
+    }
+    const { runner, calls } = makeRunner()
+    await executePlan(conflictingPlan, runner, { logDir: '/tmp/logs' })
+
+    const playwright = calls.find(isPlaywrightExec)
+    expect(playwright?.spec?.env).toMatchObject({
+      E2E_PROFILE: 'local',
+      RN_METRO_URL: plan.driverEnv.RN_METRO_URL,
+    })
+  })
+
   it('gates: a background process is spawned before its readiness probe', async () => {
     const { runner, calls } = makeRunner()
     await executePlan(plan, runner, { logDir: '/tmp/logs' })

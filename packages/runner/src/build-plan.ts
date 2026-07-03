@@ -3,6 +3,12 @@ import { planAndroid } from './plan/android'
 import { planIos } from './plan/ios'
 import { placeholderAndroid, placeholderIos, resolveMetro } from './plan/resolved'
 import type { Plan } from './plan/types'
+import {
+  androidRunnerTarget,
+  applyTargetHook,
+  iosRunnerTarget,
+  targetHookContribution,
+} from './target-hooks'
 
 export interface MetroOverrides {
   readonly url?: string
@@ -37,29 +43,40 @@ export function buildDryRunPlan(
   if (platform === 'ios') {
     const ios = config.ios
     if (!ios) throw new Error('config.ios is required to plan the ios platform')
-    return planIos({
+    const resolved = placeholderIos(ios, metro)
+    const plan = planIos({
       ios,
       metro,
-      resolved: placeholderIos(ios, metro),
+      resolved,
       playwright: config.playwright,
       timeoutMs: config.timeoutMs,
       ...(opts.projectCwd ? { projectCwd: opts.projectCwd } : {}),
       specs,
       passthrough,
     })
+    return applyTargetHook(
+      plan,
+      targetHookContribution(config, iosRunnerTarget(ios, resolved, metro)),
+    )
   }
 
   const android = config.android
   if (!android) throw new Error('config.android is required to plan the android platform')
-  return planAndroid({
+  const resolved = placeholderAndroid(android, metro)
+  const hermesDeviceName = '<android-device>'
+  const plan = planAndroid({
     android,
     metro,
-    resolved: placeholderAndroid(android, metro),
+    resolved,
     playwright: config.playwright,
     timeoutMs: config.timeoutMs,
     ...(opts.projectCwd ? { projectCwd: opts.projectCwd } : {}),
     specs,
     passthrough,
-    hermesDeviceName: '<android-device>',
+    hermesDeviceName,
   })
+  return applyTargetHook(
+    plan,
+    targetHookContribution(config, androidRunnerTarget(android, resolved, metro, hermesDeviceName)),
+  )
 }

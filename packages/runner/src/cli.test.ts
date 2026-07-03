@@ -18,17 +18,37 @@ const CONFIG_SRC = `export default {
 }
 `
 
+const INVALID_HOOK_CONFIG_SRC = `export default {
+  metro: { command: 'echo metro', port: 8099 },
+  ios: {
+    bundleId: 'com.example.app',
+    workspace: 'ios/App.xcworkspace',
+    appScheme: 'App',
+    launch: { mode: 'launch', kind: 'plain' },
+  },
+  hooks: {
+    configureTarget: () => ({ env: { playwright: { API_TOKEN: 'inline-secret' } } }),
+  },
+}
+`
+
 describe('run() --dry-run (REQ-CLI-002)', () => {
   let configPath: string
   let stdout: string
+  let stderr: string
 
   beforeEach(async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'rn-driver-cli-test-'))
     configPath = path.join(dir, 'rn-driver.config.mjs')
     await writeFile(configPath, CONFIG_SRC)
     stdout = ''
+    stderr = ''
     vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array): boolean => {
       stdout += String(chunk)
+      return true
+    })
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk: string | Uint8Array): boolean => {
+      stderr += String(chunk)
       return true
     })
   })
@@ -66,5 +86,15 @@ describe('run() --dry-run (REQ-CLI-002)', () => {
     // passthrough flag is appended.
     expect(stdout).toContain('e2e/x.spec.ts')
     expect(stdout).toContain('--grep @smoke')
+  })
+
+  it('reports dry-run hook validation failures as config-stage failures', async () => {
+    await writeFile(configPath, INVALID_HOOK_CONFIG_SRC)
+    const code = await run(['test', '--platform', 'ios', '--config', configPath, '--dry-run'])
+
+    expect(code).toBe(10)
+    expect(stderr).toContain('FAILED at stage [config]')
+    expect(stderr).toContain('API_TOKEN')
+    expect(stderr).not.toContain('TargetHookError')
   })
 })

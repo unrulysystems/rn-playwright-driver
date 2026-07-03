@@ -8,10 +8,11 @@ export interface ValidationResult {
 const LAUNCH_MODES = ['launch', 'activate', 'attach'] as const
 const LAUNCH_KINDS = ['plain', 'expo-dev-client'] as const
 
-const TOP_LEVEL_KEYS = new Set(['metro', 'ios', 'android', 'playwright', 'timeoutMs'])
+const TOP_LEVEL_KEYS = new Set(['metro', 'ios', 'android', 'playwright', 'hooks', 'timeoutMs'])
 const METRO_KEYS = new Set(['url', 'command', 'host', 'port', 'reuseExisting', 'readyTimeoutMs'])
 const LAUNCH_KEYS = new Set(['mode', 'kind', 'initialUrl'])
 const COMPANION_KEYS = new Set(['port', 'readyTimeoutMs'])
+const HOOK_KEYS = new Set(['configureTarget'])
 const IOS_KEYS = new Set([
   'bundleId',
   'workspace',
@@ -56,6 +57,7 @@ export function validateConfig(config: unknown, platforms: readonly Platform[]):
   }
   validateMetro(config.metro, errors)
   validatePlaywright(config.playwright, errors)
+  validateHooks(config.hooks, errors)
 
   if (platforms.includes('ios')) validateIos(config.ios, errors)
   if (platforms.includes('android')) validateAndroid(config.android, errors)
@@ -93,6 +95,18 @@ function validatePlaywright(playwright: unknown, errors: string[]): void {
   optionalString('config.playwright.config', playwright.config, errors)
   if (playwright.specs !== undefined && !isStringArray(playwright.specs)) {
     errors.push('config.playwright.specs: expected an array of strings')
+  }
+}
+
+function validateHooks(hooks: unknown, errors: string[]): void {
+  if (hooks === undefined) return
+  if (!isRecord(hooks)) {
+    errors.push('config.hooks: expected an object')
+    return
+  }
+  reportUnknownKeys('config.hooks', hooks, HOOK_KEYS, errors)
+  if (hooks.configureTarget !== undefined && typeof hooks.configureTarget !== 'function') {
+    errors.push('config.hooks.configureTarget: expected a function')
   }
 }
 

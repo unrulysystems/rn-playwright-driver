@@ -97,6 +97,51 @@ interface SecretRef {
 } // secrets travel by file path, never by value
 ```
 
+### Target-aware project extension
+
+The runner exposes the selected target to project configuration after runner-owned
+target resolution and before the pure platform plan is built. The extension is a
+declarative contribution to the plan, not an imperative callback that performs
+hidden I/O:
+
+```ts
+type RunnerTarget =
+  | {
+      platform: 'ios'
+      kind: 'simulator'
+      id: string
+      deviceName: string
+      appId: string
+      metroUrl: string
+    }
+  | {
+      platform: 'android'
+      kind: 'emulator' | 'device'
+      id: string
+      deviceName: string
+      appId: string
+      metroUrl: string
+    }
+
+interface TargetHookContribution {
+  env?: {
+    metro?: Record<string, string>
+    playwright?: Record<string, string>
+  }
+  steps?: {
+    beforeMetro?: ProjectCommandStep[]
+    afterMetroReady?: ProjectCommandStep[]
+    beforeLaunch?: ProjectCommandStep[]
+  }
+  cleanup?: ProjectCleanupCommand[]
+}
+```
+
+Projects use this surface for app-owned e2e network topology: target-reachable
+Supabase/RPC/bundler/mailbox/seed URLs, Android emulator-only `adb reverse`
+policy for app services, tunnel setup, or LAN profile selection. The runner
+continues to own React Native control-plane connectivity.
+
 ### The environment-variable contract (runner output -> driver input)
 
 The runner's job ends by setting the variables the Playwright fixture already
@@ -277,6 +322,41 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
 <url>`; later retry/second launches re-issue the deep link without the
   force-stop. `android.launch.initialUrl` defaults to the resolved Metro URL.
 
+### Target-aware project hooks — `REQ-HOOK-*`
+
+- **REQ-HOOK-001** `RnDriverConfig.hooks.configureTarget` is optional. When
+  present, the runner calls it after the selected target is resolved and before
+  building the platform plan. Existing configs without hooks continue to produce
+  the same lifecycle plan.
+- **REQ-HOOK-002** The hook receives runner-owned target facts for the selected
+  platform: `platform`, `kind`, stable target id (`simUdid` or adb serial),
+  human device name, app id (`bundleId`/`packageName`), and the resolved Metro
+  URL. iOS target kind is `simulator` only in this loop; physical iOS support is
+  a separate issue (#41).
+- **REQ-HOOK-003** The hook returns a declarative contribution only: scoped
+  `metro`/`playwright` environment variables, project-owned command steps at
+  stable insertion points, and project-owned cleanup commands. The hook itself
+  does not execute commands or mutate process environment.
+- **REQ-HOOK-004** `env.metro` is applied to the Metro start process the runner
+  spawns. If Metro is reused, the runner cannot mutate that existing process;
+  the hook env remains visible in `--dry-run` and docs state that reused Metro
+  must already have equivalent app env.
+- **REQ-HOOK-005** `env.playwright` is applied to the Playwright process in
+  addition to the runner's driver env contract. Runner-owned driver env wins on
+  key conflicts so project env cannot override `RN_*` control-plane variables.
+- **REQ-HOOK-006** Project steps are inserted deterministically:
+  `beforeMetro` before `metro.start`, `afterMetroReady` after `metro.ready`, and
+  `beforeLaunch` before the first app launch / Hermes wait. Failures are
+  attributed to the step's declared stage.
+- **REQ-HOOK-007** Project cleanup runs through the runner's normal cleanup
+  machinery on every exit path. The runner does not infer or clean up resources
+  it was not told about by the project contribution.
+- **REQ-HOOK-008** Hook contributions preserve secret-safety: env keys that look
+  like inline secret/token values are rejected, and command specs use
+  `stdinFromFile` or file-path references for secret material.
+- **REQ-HOOK-009** `--dry-run` prints hook env, project-owned steps, and cleanup
+  so the audited plan remains faithful to execution.
+
 ### Secure token handling — `REQ-SEC-*`
 
 - **REQ-SEC-001** Each run mints a fresh random token written to a `0600` file;
@@ -356,6 +436,8 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
   failure with diagnostics.
 - Planning (`planIos`/`planAndroid`) is pure: identical config + resolved target
   ⇒ identical plan, with zero I/O.
+- Target hooks contribute to the plan; they do not hide side effects outside the
+  plan/executor boundary.
 - The runner produces the existing driver env contract; it does not introduce a
   parallel driver configuration surface.
 - Cleanup never terminates a Metro the runner did not start.
@@ -373,6 +455,8 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
   acceptance (human-attended prerequisites).
 - Real-device (non-emulator/simulator) topologies beyond what the existing
   recipes support.
+- Physical iOS device orchestration. That is tracked separately by #41 and needs
+  its own verified loop and live-device gate.
 - Replacing the companion packages; the runner orchestrates them.
 - App priming flags or prebuild-clean policy knobs (`RN_E2E_PRIMED=1`,
   `prebuild.clean`). These are future API design, not v1 behavior.
@@ -413,6 +497,9 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 - [x] `nub run check` (typecheck + lint + format + unit tests) is green for the
       new package.
 - [x] README/docs config examples typecheck against the exported config schema.
+- [x] Target-aware hooks are unit-tested for target facts, scoped env, project
+      steps, cleanup, dry-run rendering, and conflict/secret validation
+      (`REQ-HOOK-*`).
 
 ## Open items
 

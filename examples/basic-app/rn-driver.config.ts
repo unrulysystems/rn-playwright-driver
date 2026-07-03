@@ -40,4 +40,20 @@ export default defineRnDriverConfig({
       'e2e/files/device-files.spec.ts',
     ],
   },
+  hooks: {
+    configureTarget: (target) => ({
+      env: {
+        // Example of app-owned, target-aware configuration. Real apps can use
+        // this hook to choose Supabase/RPC/localnet/tunnel URLs reachable from
+        // the selected simulator/emulator without making the runner infer them.
+        metro: {
+          EXPO_PUBLIC_RN_DRIVER_E2E_TARGET: `${target.platform}:${target.kind}`,
+        },
+        playwright: {
+          E2E_TARGET_ID: target.id,
+          E2E_TARGET_KIND: target.kind,
+        },
+      },
+    }),
+  },
 })

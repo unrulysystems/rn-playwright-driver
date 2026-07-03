@@ -75,6 +75,18 @@ export default defineRnDriverConfig({
   playwright: {
     config: 'playwright.config.ts',
   },
+  hooks: {
+    configureTarget: (target) => ({
+      env: {
+        metro: {
+          EXPO_PUBLIC_E2E_TARGET: `${target.platform}:${target.kind}`,
+        },
+        playwright: {
+          E2E_TARGET_ID: target.id,
+        },
+      },
+    }),
+  },
 })
 ```
 
@@ -107,6 +119,79 @@ export default defineRnDriverConfig({
 uses `simctl launch --initialUrl`; Android uses the configured
 `android.scheme` to open
 `<scheme>://expo-development-client/?url=<resolved-metro-url>`.
+
+### Target-aware project network setup
+
+The runner owns React Native control-plane connectivity: target selection,
+Metro readiness, app launch, Hermes discovery, companion ports, driver env, and
+cleanup for resources it created. App service topology stays project-owned:
+Supabase, RPC/bundler/paymaster URLs, seed APIs, Mailpit, localnet ports,
+feature flags, LAN profiles, and tunnels.
+
+Use `hooks.configureTarget` to add target-aware project configuration without
+hiding side effects outside the runner plan. The hook receives the selected
+target and returns scoped env, project-owned command steps, and cleanup:
+
+```ts
+export default defineRnDriverConfig({
+  // ...
+  hooks: {
+    configureTarget: (target) => ({
+      env: {
+        // Applied to the Metro process started by the runner. If you reuse an
+        // already-running Metro, start that Metro with equivalent env yourself.
+        metro: {
+          EXPO_PUBLIC_SUPABASE_URL: supabaseUrlFor(target),
+          EXPO_PUBLIC_BASE_RPC_URL: rpcUrlFor(target),
+        },
+        // Applied to the Playwright process. Runner-owned RN_* driver env wins
+        // if a project key conflicts with the driver contract.
+        playwright: {
+          E2E_NETWORK_PROFILE: `${target.platform}-${target.kind}`,
+        },
+      },
+      steps: {
+        beforeLaunch:
+          target.platform === 'android' && target.kind === 'emulator'
+            ? [
+                {
+                  id: 'app.reverse-supabase',
+                  description: 'Reverse app-owned Supabase port',
+                  stage: 'device',
+                  command: {
+                    command: 'adb',
+                    args: ['-s', target.id, 'reverse', 'tcp:54321', 'tcp:54321'],
+                  },
+                },
+              ]
+            : [],
+      },
+      cleanup:
+        target.platform === 'android' && target.kind === 'emulator'
+          ? [
+              {
+                description: 'Remove app-owned Supabase reverse',
+                command: {
+                  command: 'adb',
+                  args: ['-s', target.id, 'reverse', '--remove', 'tcp:54321'],
+                },
+              },
+            ]
+          : [],
+    }),
+  },
+})
+```
+
+Project steps are inserted at stable points: `beforeMetro`, `afterMetroReady`,
+and `beforeLaunch`. They are rendered by `--dry-run`, executed by the same
+runner executor as built-in steps, and cleaned up through the runner's `finally`
+path. Do not pass secret values through hook env or argv; pass file paths and
+stdin references instead.
+
+Physical iOS device orchestration is not part of this hook surface yet. It is
+tracked separately by #41 because it changes device resolution, launch, Metro
+reachability, and the live verification gate.
 
 ## Run
 

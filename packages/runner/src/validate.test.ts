@@ -48,6 +48,39 @@ describe('validateConfig', () => {
     )
   })
 
+  it('accepts a target hook function', () => {
+    const result = validateConfig(
+      {
+        ...configFixture(),
+        hooks: {
+          configureTarget: () => ({ env: { playwright: { E2E_PROFILE: 'local' } } }),
+        },
+      },
+      ['ios'],
+    )
+    expect(result.ok).toBe(true)
+  })
+
+  it('rejects unknown hook keys and non-function configureTarget values', () => {
+    const result = validateConfig(
+      {
+        ...configFixture(),
+        hooks: {
+          configureTarget: 'not-a-function',
+          beforeLaunch: () => ({}),
+        },
+      },
+      ['ios'],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('config.hooks.beforeLaunch: unknown key'),
+    )
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('config.hooks.configureTarget: expected a function'),
+    )
+  })
+
   it('enforces the dev-client attach-mode constraint (#21)', () => {
     const config = configFixture({
       ios: iosDevClientConfigFixture({ launch: { mode: 'launch', kind: 'expo-dev-client' } }),

@@ -81,6 +81,12 @@ environment. The intended stable marker for test-only app config is `RN_E2E=1`,
 but the runner does not emit it yet; do not rely on it as implemented behavior in
 this example.
 
+`rn-driver.config.ts` also demonstrates `hooks.configureTarget`. The example
+sets harmless target metadata env for Metro and Playwright; real apps can use the
+same hook to choose app-owned Supabase/RPC/localnet/tunnel URLs for the selected
+simulator or emulator. Keep runner-owned `RN_*` driver variables out of project
+hook env.
+
 ## Notes
 
 - The app entry (`index.ts`) installs the driver harness unconditionally for convenience in this example. In real apps, follow the dev-only harness pattern described in the root README.

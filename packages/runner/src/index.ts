@@ -9,7 +9,14 @@ export type {
   MetroConfig,
   Platform,
   PlaywrightConfig,
+  ProjectCleanupCommand,
+  ProjectCommandStep,
+  ProjectStepStage,
   RnDriverConfig,
+  RunnerCommandSpec,
+  RunnerHooks,
+  RunnerTarget,
+  TargetHookContribution,
 } from './config'
 export { buildDryRunPlan } from './build-plan'
 export type { BuildPlanOptions, MetroOverrides } from './build-plan'

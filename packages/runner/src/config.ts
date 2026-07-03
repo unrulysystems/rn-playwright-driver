@@ -11,6 +11,77 @@
 
 export type Platform = 'ios' | 'android'
 
+export type RunnerTarget =
+  | {
+      readonly platform: 'ios'
+      readonly kind: 'simulator'
+      readonly id: string
+      readonly deviceName: string
+      readonly appId: string
+      readonly metroUrl: string
+    }
+  | {
+      readonly platform: 'android'
+      readonly kind: 'emulator' | 'device'
+      readonly id: string
+      readonly deviceName: string
+      readonly appId: string
+      readonly metroUrl: string
+    }
+
+export type ProjectStepStage =
+  | 'config'
+  | 'metro'
+  | 'device'
+  | 'build'
+  | 'companion'
+  | 'app-launch'
+  | 'hermes-target'
+  | 'playwright'
+  | 'cleanup'
+
+export interface RunnerCommandSpec {
+  readonly command: string
+  readonly args: readonly string[]
+  readonly env?: Readonly<Record<string, string>>
+  readonly cwd?: string
+  readonly packageBin?: boolean
+  readonly stdinFromFile?: string
+  readonly stdinContents?: string
+}
+
+export interface ProjectCommandStep {
+  readonly id: string
+  readonly description: string
+  readonly stage?: ProjectStepStage
+  readonly command: RunnerCommandSpec
+  readonly background?: boolean
+  readonly processKey?: string
+  readonly allowFailure?: boolean
+}
+
+export interface ProjectCleanupCommand {
+  readonly description: string
+  readonly command: RunnerCommandSpec
+}
+
+export interface TargetHookContribution {
+  readonly env?: {
+    readonly metro?: Readonly<Record<string, string>>
+    readonly playwright?: Readonly<Record<string, string>>
+  }
+  readonly steps?: {
+    readonly beforeMetro?: readonly ProjectCommandStep[]
+    readonly afterMetroReady?: readonly ProjectCommandStep[]
+    readonly beforeLaunch?: readonly ProjectCommandStep[]
+  }
+  readonly cleanup?: readonly ProjectCleanupCommand[]
+}
+
+export interface RunnerHooks {
+  readonly configureTarget?: (target: RunnerTarget) => TargetHookContribution | undefined
+}
+
 /**
  * How the app process is brought up relative to the touch companion.
  * - `launch`/`activate`: the iOS companion launches/foregrounds the app.
@@ -128,6 +199,7 @@ export interface RnDriverConfig {
   ios?: IosConfig
   android?: AndroidConfig
   playwright?: PlaywrightConfig
+  hooks?: RunnerHooks
   /** Driver request timeout (`RN_TIMEOUT`). */
   timeoutMs?: number
 }

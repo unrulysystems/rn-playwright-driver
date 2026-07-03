@@ -27,6 +27,8 @@ failure, a message that names the stage that broke.
   just the example app.
 - **Faithfulness** — what `--dry-run` prints is exactly what executes; the planner
   is pure, so the audited plan is the real plan.
+- **Project extension clarity** — app-owned network setup is possible without
+  blurring runner-owned React Native control-plane responsibilities.
 - **Adopter clarity** — docs and examples make the runner-owned boundary obvious:
   `rn-driver test` owns lifecycle; Playwright specs consume the env it provides.
 
@@ -53,6 +55,10 @@ failure, a message that names the stage that broke.
 - **Dry-run is side-effect-free.** `--dry-run` prints the full plan and exits 0
   having spawned nothing and touched no device. _Measured by:_ a test asserting
   the mock runner received zero effectful calls.
+- **Project hooks are plan-visible.** Target-aware project env, command steps,
+  and cleanup appear in `--dry-run` and execute through the same executor as
+  runner-owned work. _Measured by:_ planner/render/executor tests over hook
+  contributions.
 - **`nub run check` green** for the new package (typecheck + lint + format + unit).
 - **Lifecycle docs stay aligned with implemented knobs.** README/SPEC examples do
   not document future priming flags as available behavior and do not tell apps to
@@ -90,6 +96,8 @@ failure, a message that names the stage that broke.
 - A runner-managed Playwright `globalSetup`/`globalTeardown` that starts or
   stops Metro, launches the native app, starts or stops companions, or deletes
   runner-owned companion state.
+- A target hook that performs hidden I/O outside the rendered plan.
+- Project env overriding runner-owned `RN_*` control-plane variables.
 - The core driver package acquiring a dependency on the runner or the companions.
 - Cleanup terminating a Metro the runner did not start.
 - Publishing, version-bumping, opening PRs, or filing/closing issues from the
@@ -137,6 +145,13 @@ failure, a message that names the stage that broke.
 - **Pure planner / effectful executor split.** Planning returns `Step[]` with no
   I/O; a `ProcessRunner` interface is the only OS boundary. _Why:_ this is the
   faithful, cheap, device-free harness — the whole testability story.
+- **Target-aware project setup is declarative.** `hooks.configureTarget` returns
+  scoped env, project steps, and cleanup; it does not execute work itself. _Why:_
+  the dry-run plan must remain the real plan, and cleanup/stage attribution must
+  keep working for app-owned network setup.
+- **Physical iOS is out of the target-hook loop.** Real iOS devices are tracked
+  by #41 and require their own verified loop. _Why:_ they change device
+  resolution, Metro reachability, launch semantics, and live verification.
 - **`--platform all` is sequential (v1).** Parallel multi-device is a non-goal.
 - **Priority policy:** secret-safety over unattended-reliability over
   correctness-of-output over ergonomics. A secret leak or a
@@ -152,6 +167,8 @@ failure, a message that names the stage that broke.
   implementation.
 - **Device prerequisites** — installing Xcode/Android SDK, first-launch Xcode
   acceptance, provisioning real devices: human-attended, not the loop's job.
+- **Physical iOS orchestration** — implementing real-device iOS runner support
+  belongs to #41, not the target-hook work.
 
 ## Final acceptance
 
