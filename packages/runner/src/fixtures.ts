@@ -17,6 +17,7 @@ export function iosConfigFixture(overrides: Partial<IosConfig> = {}): IosConfig 
 
 export function iosDevClientConfigFixture(overrides: Partial<IosConfig> = {}): IosConfig {
   return iosConfigFixture({
+    scheme: 'exp+example',
     launch: { mode: 'attach', kind: 'expo-dev-client', initialUrl: 'http://127.0.0.1:8081' },
     ...overrides,
   })

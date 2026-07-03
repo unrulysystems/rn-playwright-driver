@@ -42,6 +42,7 @@ describe('XCTest companion scaffold helpers', () => {
       fs.existsSync(path.join(testsDir, 'RNDriverTouchCompanionRuntimeConfig.json')),
       true,
     )
+    assert.equal(fs.existsSync(path.join(testsDir, 'RNDriverTouchCompanionToken')), true)
     assert.equal(
       fs
         .readFileSync(path.join(testsDir, 'RNDriverTouchCompanion.README.md'), 'utf8')
@@ -59,6 +60,7 @@ describe('XCTest companion scaffold helpers', () => {
     assert.equal(runner.includes('private enum LaunchMode: String'), true)
     assert.equal(runner.includes('environment["RN_TOUCH_XCTEST_LAUNCH"]'), true)
     assert.equal(runner.includes('payload["launchMode"] ?? payload["launch"]'), true)
+    assert.equal(runner.includes('payload["authTokenResource"]'), true)
     assert.equal(runner.includes('case .attach:'), true)
     assert.equal(runner.includes('should not be relaunched by XCTest'), true)
   })
@@ -88,6 +90,10 @@ describe('XCTest companion scaffold helpers', () => {
       fs.existsSync(
         path.join(iosDir, 'ExampleUITests', 'RNDriverTouchCompanionRuntimeConfig.json'),
       ),
+      true,
+    )
+    assert.equal(
+      fs.existsSync(path.join(iosDir, 'ExampleUITests', 'RNDriverTouchCompanionToken')),
       true,
     )
   })

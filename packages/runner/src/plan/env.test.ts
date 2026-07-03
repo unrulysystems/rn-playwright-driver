@@ -9,19 +9,20 @@ describe('buildIosDriverEnv', () => {
     const resolved = {
       ...placeholderIos(iosConfigFixture(), metro),
       tokenFile: '/run/tok',
+      id: 'UDID-1',
+      deviceName: 'iPhone 17',
       simName: 'iPhone 17',
+      simUdid: 'UDID-1',
       touchPort: 9999,
     }
-    expect(
-      buildIosDriverEnv({ ...resolved, simUdid: 'UDID-1' }, metro, undefined, 'com.acme.app'),
-    ).toEqual({
+    expect(buildIosDriverEnv(resolved, metro, undefined, 'com.acme.app')).toEqual({
       RN_TOUCH_BACKEND: 'xctest',
       RN_METRO_URL: 'http://127.0.0.1:8081',
       RN_DEVICE_NAME: 'iPhone 17',
       RN_TIMEOUT: '30000',
       RN_TOUCH_XCTEST_PORT: '9999',
       RN_TOUCH_XCTEST_TOKEN_FILE: '/run/tok',
-      // File-I/O targeting (REQ-TGT-002); runner is simulator-only.
+      // File-I/O targeting (REQ-TGT-002).
       RN_APP_BUNDLE_ID: 'com.acme.app',
       RN_SIM_UDID: 'UDID-1',
       RN_IOS_TARGET_KIND: 'simulator',
@@ -32,6 +33,35 @@ describe('buildIosDriverEnv', () => {
     const metro = resolveMetro(undefined)
     const resolved = placeholderIos(iosConfigFixture(), metro)
     expect(buildIosDriverEnv(resolved, metro, 60_000, 'com.acme.app').RN_TIMEOUT).toBe('60000')
+  })
+
+  it('emits physical iOS file-I/O targeting without an incompatible CDP device name', () => {
+    const metro = resolveMetro({ url: 'http://127.0.0.1:8081' })
+    const ios = iosConfigFixture({
+      target: 'device',
+      launch: {
+        mode: 'attach',
+        kind: 'expo-dev-client',
+        initialUrl: 'http://192.168.1.10:8081',
+      },
+    })
+    const resolved = {
+      ...placeholderIos(ios, metro),
+      id: '00008130-0012493614E8001C',
+      deviceName: 'Roman Crystal',
+    }
+
+    expect(buildIosDriverEnv(resolved, metro, undefined, 'com.acme.app')).toEqual({
+      RN_TOUCH_BACKEND: 'xctest',
+      RN_METRO_URL: 'http://127.0.0.1:8081',
+      RN_TIMEOUT: '30000',
+      RN_TOUCH_XCTEST_PORT: '9999',
+      RN_TOUCH_XCTEST_REQUEST_TIMEOUT: '30000',
+      RN_TOUCH_XCTEST_TOKEN_FILE: '<token-file>',
+      RN_APP_BUNDLE_ID: 'com.acme.app',
+      RN_SIM_UDID: '00008130-0012493614E8001C',
+      RN_IOS_TARGET_KIND: 'device',
+    })
   })
 })
 

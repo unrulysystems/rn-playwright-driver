@@ -47,6 +47,61 @@ nub run test:e2e:ios       # rn-driver test --platform ios
 nub run test:e2e           # rn-driver test --platform all
 ```
 
+### Real-device verification
+
+Discover connected targets first:
+
+```bash
+adb devices -l
+xcrun devicectl list devices
+```
+
+Android can run against either an emulator or a USB-attached Android device. If
+more than one target is visible, pin the serial:
+
+```bash
+nub run test:e2e:android -- --device emulator-5554
+nub run test:e2e:android -- --device <android-serial>
+```
+
+Physical iOS uses a dedicated Expo-dev-client config because real iPhones need a
+phone-reachable Metro URL and host-owned `devicectl` launch:
+
+```bash
+nub exec rn-driver test --platform ios --config rn-driver.ios-device.config.ts --device <ios-udid-or-device-name>
+nub run judge:visual
+```
+
+`rn-driver.ios-device.config.ts` starts Metro with `expo start --dev-client
+--host lan`, auto-selects the first non-internal IPv4 address, and uses that
+same LAN Metro URL for runner readiness, app launch, and CDP. The single origin
+matters: Expo's inspector rejects a DevTools websocket when the app loads Metro
+from the LAN URL but the driver asks for targets through loopback.
+
+The physical iOS config runs the normal counter integration spec and then
+`e2e/visual/ios-device-visual.spec.ts`, which writes blind visual judging
+artifacts to `test-results/visual-judge/latest/`. `nub run judge:visual` is the
+deterministic floor for those artifacts; after it passes, hand
+`blind-judge-packets/*.md`, their PNGs, and paired state JSON files to at least
+two independent subagent judges.
+
+See [`docs/BLIND-VISUAL-JUDGING.md`](./docs/BLIND-VISUAL-JUDGING.md) for the
+judge prompt contract and pass/fail policy.
+
+Override the address when the auto-selected interface is not reachable from the iPhone:
+
+```bash
+RN_DRIVER_IOS_DEVICE_METRO_HOST=<mac-lan-ip> \
+  nub exec rn-driver test --platform ios --config rn-driver.ios-device.config.ts --device <ios-udid-or-device-name>
+
+RN_DRIVER_IOS_DEVICE_METRO_URL=https://<tunnel-host> \
+  nub exec rn-driver test --platform ios --config rn-driver.ios-device.config.ts --device <ios-udid-or-device-name>
+```
+
+Use `--dry-run` first. The iOS physical-device plan should show
+`devicectl device process launch`, `RN_IOS_TARGET_KIND=device`, and the
+same LAN/tunnel URL in both the app `initialUrl` and `RN_METRO_URL`.
+
 The runner owns the whole native lifecycle — simulator/emulator selection, Metro,
 the touch companion, secure token passing, Hermes target wait, cleanup — then
 sets the driver's environment-variable contract (`RN_TOUCH_BACKEND` is
@@ -70,11 +125,10 @@ companion port/token-file vars). To change them, edit `rn-driver.config.ts`
 (e.g. `timeoutMs`, `metro`, `ios`/`android` device selection) rather than
 exporting environment variables.
 
-This app is configured as a plain Expo/RN app, not an Expo dev-client app:
-`ios.launch.kind` and `android.launch.kind` are both `plain`. Dev-client projects
-need the runner package docs' extra launch config, including an Android
-`scheme`. `launch.initialUrl` defaults to the resolved Metro URL for dev-client
-launches.
+The default simulator/emulator config uses plain launch semantics:
+`ios.launch.kind` and `android.launch.kind` are both `plain`. The dedicated
+physical iOS config uses Expo dev-client launch semantics because real iPhones
+need a device-reachable Metro URL and an app URL scheme.
 
 `expo prebuild` runs inside the runner process and inherits that process
 environment. The intended stable marker for test-only app config is `RN_E2E=1`,

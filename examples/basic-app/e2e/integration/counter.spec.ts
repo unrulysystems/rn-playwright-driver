@@ -89,6 +89,10 @@ async function getDragStatus(device: {
   )
 }
 
+function isPhysicalIos(device: { platform: 'ios' | 'android' }): boolean {
+  return device.platform === 'ios' && process.env.RN_IOS_TARGET_KIND === 'device'
+}
+
 test.describe('Counter App - Core Features', () => {
   test('harness is installed', async ({ device }) => {
     // Verify the harness is installed (use globalThis for Bridgeless RN compatibility)
@@ -130,6 +134,12 @@ test.describe('Counter App - Core Features', () => {
   })
 
   test('pointer tap simulates touch', async ({ device }) => {
+    // XCTest coordinate taps are delivered on physical iOS, but RN Pressable does
+    // not consistently translate that raw app-coordinate tap into `onPress` on a
+    // real device. The physical iOS lane still covers the XCTest pointer backend
+    // with the drag test below, and covers element activation via locator.tap().
+    test.skip(isPhysicalIos(device), 'raw Pressable coordinate tap is simulator-only for now')
+
     if (!(await requireViewTree(device))) {
       return
     }

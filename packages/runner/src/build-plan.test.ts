@@ -155,6 +155,42 @@ describe('buildDryRunPlan', () => {
     ])
   })
 
+  it('reports physical iOS target facts in dry-run', () => {
+    const seen: unknown[] = []
+    buildDryRunPlan(
+      configFixture({
+        ios: {
+          ...configFixture().ios!,
+          scheme: 'exp+example',
+          target: 'device',
+          launch: {
+            mode: 'attach',
+            kind: 'expo-dev-client',
+            initialUrl: 'http://192.168.1.10:8081',
+          },
+        },
+        hooks: {
+          configureTarget: (target) => {
+            seen.push(target)
+            return {}
+          },
+        },
+      }),
+      'ios',
+    )
+
+    expect(seen).toEqual([
+      {
+        platform: 'ios',
+        kind: 'device',
+        id: '<ios-device-udid>',
+        deviceName: '<ios-device-name>',
+        appId: 'com.unrulyfall.example',
+        metroUrl: 'http://192.168.1.10:8081',
+      },
+    ])
+  })
+
   it('rejects hook env that looks like an inline secret', () => {
     expect(() =>
       buildDryRunPlan(

@@ -54,10 +54,7 @@ export function buildDryRunPlan(
       specs,
       passthrough,
     })
-    return applyTargetHook(
-      plan,
-      targetHookContribution(config, iosRunnerTarget(ios, resolved, metro)),
-    )
+    return applyTargetHook(plan, targetHookContribution(config, iosRunnerTarget(ios, resolved)))
   }
 
   const android = config.android

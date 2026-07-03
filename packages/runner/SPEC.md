@@ -108,7 +108,7 @@ hidden I/O:
 type RunnerTarget =
   | {
       platform: 'ios'
-      kind: 'simulator'
+      kind: 'simulator' | 'device'
       id: string
       deviceName: string
       appId: string
@@ -281,13 +281,36 @@ kill`) **before** starting the companion, then start the companion UI test
     **not** use `simctl openurl` (which trips an untappable SpringBoard
     confirmation on fresh installs). `ios.launch.initialUrl` defaults to the
     resolved Metro URL. _(FU-1)_
-- **REQ-IOS-009** Wait for a Hermes/React Native target whose `deviceName`
-  matches the selected simulator (substring), within a bounded timeout, before
-  invoking Playwright; emit diagnostics (Metro `/json`, companion log tail) on
-  timeout.
+- **REQ-IOS-009** Wait for a Hermes/React Native target within a bounded timeout
+  before invoking Playwright. Simulator runs also pin by selected simulator
+  `deviceName`; physical-device runs omit the device-name filter because Metro
+  physical target labels are not stable across CoreDevice display names. Emit
+  diagnostics (Metro `/json`, companion log tail) on timeout.
 - **REQ-IOS-010** App-specific pre-launch seeds (e.g. dev-menu onboarding
   defaults) are expressed as config (`ios.defaults` → `simctl spawn defaults
 write`), not hard-coded.
+- **REQ-IOS-011** Physical iOS devices are selected only when
+  `ios.target === "device"`. The resolver uses
+  `xcrun devicectl list devices --json-output <file>`, filters paired available
+  physical iOS devices, honors `--device` by UDID/CoreDevice identifier/exact
+  name/model/unique substring, and fails clearly when selection is missing or
+  ambiguous.
+- **REQ-IOS-012** Physical iOS launch is Expo-dev-client only in this loop.
+  Config validation rejects `ios.target: "device"` unless
+  `ios.launch.kind === "expo-dev-client"`, `ios.launch.mode === "attach"`, and
+  `ios.launch.initialUrl` is an explicit non-loopback LAN/tunnel URL reachable
+  from the device. `ios.scheme` is required so the runner can wrap that URL as
+  an Expo dev-client payload URL. The host-side Metro probe continues to use
+  `metro.url`.
+- **REQ-IOS-013** Physical iOS dev-client launch uses
+  `xcrun devicectl device process launch --device <core-device-id>
+--terminate-existing --payload-url <dev-client-url> <bundleId>`. Simulator-only
+  `simctl boot`, `simctl defaults`, and `ios.defaults` steps are not emitted for
+  physical devices.
+- **REQ-IOS-014** `ios.allowProvisioningUpdates` is an explicit boolean opt-in
+  that appends `-allowProvisioningUpdates` to iOS `xcodebuild build` and
+  `xcodebuild test` commands. It defaults to false because provisioning changes
+  are human-attended device prerequisites, not hidden runner behavior.
 
 ### Android instrumentation lifecycle — `REQ-AND-*`
 
@@ -329,10 +352,11 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
   building the platform plan. Existing configs without hooks continue to produce
   the same lifecycle plan.
 - **REQ-HOOK-002** The hook receives runner-owned target facts for the selected
-  platform: `platform`, `kind`, stable target id (`simUdid` or adb serial),
-  human device name, app id (`bundleId`/`packageName`), and the resolved Metro
-  URL. iOS target kind is `simulator` only in this loop; physical iOS support is
-  a separate issue (#41).
+  platform: `platform`, `kind`, stable target id (iOS simulator/device UDID or
+  adb serial), human device name, app id (`bundleId`/`packageName`), and the
+  target-reachable Metro URL. For physical iOS, `kind` is `device` and
+  `metroUrl` is `ios.launch.initialUrl`; the host-side Metro probe remains
+  `metro.url`.
 - **REQ-HOOK-003** The hook returns a declarative contribution only: scoped
   `metro`/`playwright` environment variables, project-owned command steps at
   stable insertion points, and project-owned cleanup commands. The hook itself
@@ -453,10 +477,10 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
 - Owning Playwright assertions, fixtures, or the `device` API surface.
 - Provisioning devices, installing Xcode/Android SDK, or first-launch Xcode
   acceptance (human-attended prerequisites).
-- Real-device (non-emulator/simulator) topologies beyond what the existing
-  recipes support.
-- Physical iOS device orchestration. That is tracked separately by #41 and needs
-  its own verified loop and live-device gate.
+- Arbitrary real-device app backend topology. Project-owned LAN/tunnel/service
+  setup stays in target hooks or app config, not runner defaults.
+- Plain physical iOS launch. Physical iOS v1 supports Expo-dev-client only until
+  a durable packager-host injection path is specified.
 - Replacing the companion packages; the runner orchestrates them.
 - App priming flags or prebuild-clean policy knobs (`RN_E2E_PRIMED=1`,
   `prebuild.clean`). These are future API design, not v1 behavior.
@@ -500,6 +524,13 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 - [x] Target-aware hooks are unit-tested for target facts, scoped env, project
       steps, cleanup, dry-run rendering, and conflict/secret validation
       (`REQ-HOOK-*`).
+- [x] Physical iOS device support is unit-tested for config validation, dry-run
+      target facts, CoreDevice selection, devicectl launch planning, and
+      `RN_IOS_TARGET_KIND=device` env (`REQ-IOS-011`–`REQ-IOS-013`).
+- [x] Human-attended live-device gate: `examples/basic-app` passed on Heart
+      Happy iPhone (`00008101-001E05A41144001E`) with
+      `rn-driver.ios-device.config.ts`: 28 passed, 1 documented physical-iOS
+      coordinate-tap skip.
 
 ## Open items
 

@@ -149,9 +149,11 @@ failure, a message that names the stage that broke.
   scoped env, project steps, and cleanup; it does not execute work itself. _Why:_
   the dry-run plan must remain the real plan, and cleanup/stage attribution must
   keep working for app-owned network setup.
-- **Physical iOS is out of the target-hook loop.** Real iOS devices are tracked
-  by #41 and require their own verified loop. _Why:_ they change device
-  resolution, Metro reachability, launch semantics, and live verification.
+- **Physical iOS v1 is Expo-dev-client only.** `ios.target: "device"` selects a
+  paired CoreDevice target and launches with `devicectl --payload-url`; plain
+  physical iOS remains out until a durable packager-host injection path exists.
+  _Why:_ real devices need target-reachable Metro URLs and different launch
+  semantics, but app service topology stays project-owned.
 - **`--platform all` is sequential (v1).** Parallel multi-device is a non-goal.
 - **Priority policy:** secret-safety over unattended-reliability over
   correctness-of-output over ergonomics. A secret leak or a
@@ -167,8 +169,10 @@ failure, a message that names the stage that broke.
   implementation.
 - **Device prerequisites** — installing Xcode/Android SDK, first-launch Xcode
   acceptance, provisioning real devices: human-attended, not the loop's job.
-- **Physical iOS orchestration** — implementing real-device iOS runner support
-  belongs to #41, not the target-hook work.
+- **Physical-device prerequisites** — pairing/trust, Developer Mode, provisioning
+  profiles, first app install prompts, and LAN/tunnel reachability setup.
+- **Plain physical iOS launch** — not supported until a durable packager-host
+  injection path exists.
 
 ## Final acceptance
 

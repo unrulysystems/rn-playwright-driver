@@ -442,12 +442,7 @@ export class CDPClient {
 
 function originForWebSocketUrl(wsUrl: string): string {
   const url = new URL(wsUrl)
-  url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:'
-  url.pathname = '/'
-  url.search = ''
-  url.hash = ''
-  if (url.hostname === 'localhost' || url.hostname === '0.0.0.0') {
-    url.hostname = '127.0.0.1'
-  }
-  return url.origin
+  const protocol = url.protocol === 'wss:' ? 'https:' : 'http:'
+  const port = url.port ? `:${url.port}` : ''
+  return `${protocol}//127.0.0.1${port}`
 }

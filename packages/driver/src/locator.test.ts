@@ -202,13 +202,29 @@ describe('Locator.tap', () => {
     enabled: true,
   }
 
-  function tapDevice(touchBackendInfo: TouchBackendInfo | null): {
+  function tapDevice(
+    touchBackendInfo: TouchBackendInfo | null,
+    nativeTapResult?: NativeResult<boolean>,
+  ): {
     device: Parameters<typeof createLocator>[0]
     tap: ReturnType<typeof vi.fn>
+    evaluate: ReturnType<typeof vi.fn>
   } {
     const tap = vi.fn(async () => undefined)
+    const evaluate = vi.fn()
+    const evaluateImpl = async <T>(expression?: string): Promise<T> => {
+      evaluate(expression)
+      if (expression?.includes('.viewTree.tap(')) {
+        return (nativeTapResult ?? {
+          success: false,
+          code: 'NOT_SUPPORTED',
+          error: 'RNDriverViewTree.tap is not available',
+        }) as T
+      }
+      return { success: true, data: ELEMENT } as T
+    }
     const device = {
-      evaluate: async <T>(): Promise<T> => ({ success: true, data: ELEMENT }) as T,
+      evaluate: evaluateImpl,
       pointer: { tap },
       waitForTimeout: async () => undefined,
       getTouchBackendInfo: async () => {
@@ -221,10 +237,20 @@ describe('Locator.tap', () => {
       scroll: async () => undefined,
       platform: 'android' as const,
     }
-    return { device, tap }
+    return { device, tap, evaluate }
   }
 
-  it('allows tap through a selected non-native touch backend when the native module is absent', async () => {
+  it('prefers native view-tree tap when the module supports element taps', async () => {
+    const { device, tap, evaluate } = tapDevice(CLI_TOUCH_BACKEND, { success: true, data: true })
+    const locator = createLocator(device, { type: 'testId', value: 'button' })
+
+    await locator.tap()
+
+    expect(evaluate).toHaveBeenCalledWith('globalThis.__RN_DRIVER__.viewTree.tap("element_button")')
+    expect(tap).not.toHaveBeenCalled()
+  })
+
+  it('allows tap through a selected non-native touch backend when the native tap module is absent', async () => {
     const { device, tap } = tapDevice(CLI_TOUCH_BACKEND)
     const locator = createLocator(device, { type: 'testId', value: 'button' })
 

@@ -115,6 +115,18 @@ private func parseAuthToken(_ payload: [String: Any]) throws -> String? {
     return token
   }
 
+  if let resource = payload["authTokenResource"] as? String, !resource.isEmpty {
+    guard let tokenUrl = Bundle(for: RNDriverTouchCompanionTests.self)
+      .url(forResource: resource, withExtension: nil) else {
+      throw NSError(domain: "RNDriverTouchCompanion", code: 5, userInfo: [
+        NSLocalizedDescriptionKey: "Token resource '\(resource)' was not found in the XCTest bundle"
+      ])
+    }
+    let token = try String(contentsOf: tokenUrl, encoding: .utf8)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return token.isEmpty ? nil : token
+  }
+
   guard let tokenFile = payload["authTokenFile"] as? String, !tokenFile.isEmpty else {
     return nil
   }

@@ -54,13 +54,18 @@ export default defineRnDriverConfig({
     bundleId: 'com.company.app',
     workspace: 'ios/App.xcworkspace',
     appScheme: 'App',
+    // target defaults to "simulator"; use "device" for physical iOS devices.
+    // target: 'device',
+    // Human-attended physical-device signing opt-in:
+    // allowProvisioningUpdates: true,
     // uitestScheme defaults to `${appScheme}UITests`
     launch: {
       // expo-dev-client REQUIRES attach mode: the host owns the launch and
-      // hands the dev launcher the Metro URL via `simctl launch --initialUrl`.
+      // hands the dev launcher the Metro URL via simctl/devicectl launch.
       mode: 'attach',
       kind: 'expo-dev-client',
-      // initialUrl defaults to the resolved Metro URL
+      // initialUrl defaults to the resolved Metro URL on simulators. Physical
+      // iOS devices require an explicit LAN/tunnel URL reachable from the phone.
     },
     // App-specific pre-launch seeds (simctl defaults write):
     // defaults: { EXDevMenuIsOnboardingFinished: true },
@@ -119,6 +124,53 @@ export default defineRnDriverConfig({
 uses `simctl launch --initialUrl`; Android uses the configured
 `android.scheme` to open
 `<scheme>://expo-development-client/?url=<resolved-metro-url>`.
+
+### Physical iOS devices
+
+Physical iOS support is Expo-dev-client only in this release. Set
+`ios.target: 'device'` and provide a device-reachable `ios.launch.initialUrl`
+such as a LAN IP or tunnel URL. The runner still probes Metro on the host-side
+`metro.url`; `initialUrl` is the URL the iPhone opens.
+
+```ts
+export default defineRnDriverConfig({
+  metro: {
+    command: 'npx expo start --host lan --port 8081',
+    url: 'http://127.0.0.1:8081',
+  },
+  ios: {
+    target: 'device',
+    allowProvisioningUpdates: true,
+    bundleId: 'com.company.app',
+    workspace: 'ios/App.xcworkspace',
+    appScheme: 'App',
+    scheme: 'companyapp',
+    launch: {
+      mode: 'attach',
+      kind: 'expo-dev-client',
+      initialUrl: 'http://192.168.1.10:8081',
+    },
+  },
+})
+```
+
+Discover attached/paired iPhones with:
+
+```bash
+xcrun devicectl list devices
+```
+
+If more than one physical iOS device is available, select one explicitly:
+
+```bash
+rn-driver test --platform ios --device 00008130-0012493614E8001C
+rn-driver test --platform ios --device "Roman Crystal"
+```
+
+The physical-device plan uses `xcrun devicectl device process launch
+--terminate-existing --payload-url <dev-client-url> <bundleId>` for app launch
+and emits `RN_IOS_TARGET_KIND=device` for driver file I/O. Simulator behavior
+remains the default and continues to use `simctl`.
 
 ### Target-aware project network setup
 
@@ -189,9 +241,10 @@ runner executor as built-in steps, and cleaned up through the runner's `finally`
 path. Do not pass secret values through hook env or argv; pass file paths and
 stdin references instead.
 
-Physical iOS device orchestration is not part of this hook surface yet. It is
-tracked separately by #41 because it changes device resolution, launch, Metro
-reachability, and the live verification gate.
+For iOS physical devices, `target.kind` is `device` and `target.metroUrl` is the
+device-reachable `launch.initialUrl`. Keep app backend topology project-owned:
+use hooks to choose LAN/tunnel URLs or project-owned setup commands, not runner
+defaults.
 
 ## Run
 
@@ -217,7 +270,7 @@ rn-driver test --platform android -- --grep @smoke
 | ---------------- | ------------------------------------------------------ |
 | `-p, --platform` | `ios` \| `android` \| `all` (required)                 |
 | `-c, --config`   | Path to the config (default: searched upward from cwd) |
-| `-d, --device`   | Simulator udid / emulator serial override              |
+| `-d, --device`   | Simulator/device id or name / Android serial override  |
 | `--dry-run`      | Print the resolved plan and exit; no side effects      |
 | `--skip-build`   | Reuse an already-built native project                  |
 | `--verbose`      | Stream per-step progress                               |

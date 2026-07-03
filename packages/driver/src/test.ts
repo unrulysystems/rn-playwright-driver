@@ -43,6 +43,7 @@ export type RNWorkerFixtures = {
  * - RN_TOUCH_INSTRUMENTATION_TOKEN: Required auth token for the Android instrumentation companion
  * - RN_TOUCH_INSTRUMENTATION_TOKEN_FILE: File containing the auth token when RN_TOUCH_INSTRUMENTATION_TOKEN is unset
  * - RN_TOUCH_XCTEST_HOST / RN_TOUCH_XCTEST_PORT / RN_TOUCH_XCTEST_URL: XCTest companion endpoint
+ * - RN_TOUCH_XCTEST_REQUEST_TIMEOUT: Per-command XCTest companion timeout in ms
  * - RN_TOUCH_XCTEST_TOKEN / RN_TOUCH_XCTEST_TOKEN_FILE: XCTest companion auth token
  * File I/O targeting (device.files):
  * - RN_APP_BUNDLE_ID: iOS app bundle id (simctl/devicectl)

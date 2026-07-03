@@ -95,6 +95,117 @@ describe('validateConfig', () => {
     expect(validateConfig(config, ['ios']).ok).toBe(true)
   })
 
+  it('accepts a physical iOS dev-client config with a device-reachable launch URL', () => {
+    const config = configFixture({
+      ios: iosDevClientConfigFixture({
+        target: 'device',
+        allowProvisioningUpdates: true,
+        launch: {
+          mode: 'attach',
+          kind: 'expo-dev-client',
+          initialUrl: 'http://192.168.1.10:8081',
+        },
+      }),
+    })
+    expect(validateConfig(config, ['ios']).ok).toBe(true)
+  })
+
+  it('rejects non-boolean physical iOS provisioning updates config', () => {
+    const config = configFixture({
+      ios: {
+        ...iosDevClientConfigFixture({
+          target: 'device',
+          launch: {
+            mode: 'attach',
+            kind: 'expo-dev-client',
+            initialUrl: 'http://192.168.1.10:8081',
+          },
+        }),
+        allowProvisioningUpdates: 'yes' as unknown as boolean,
+      },
+    })
+    const result = validateConfig(config, ['ios'])
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('config.ios.allowProvisioningUpdates: expected a boolean'),
+    )
+  })
+
+  it('rejects physical iOS without an explicit device-reachable launch URL', () => {
+    const missing = validateConfig(
+      {
+        ...configFixture(),
+        ios: iosDevClientConfigFixture({
+          target: 'device',
+          launch: { mode: 'attach', kind: 'expo-dev-client' },
+        }),
+      },
+      ['ios'],
+    )
+    expect(missing.ok).toBe(false)
+    expect(missing.errors).toContainEqual(
+      expect.stringContaining('config.ios.launch.initialUrl: required for physical iOS devices'),
+    )
+
+    const loopback = validateConfig(
+      {
+        ...configFixture(),
+        ios: iosDevClientConfigFixture({
+          target: 'device',
+          launch: {
+            mode: 'attach',
+            kind: 'expo-dev-client',
+            initialUrl: 'http://127.0.0.1:8081',
+          },
+        }),
+      },
+      ['ios'],
+    )
+    expect(loopback.ok).toBe(false)
+    expect(loopback.errors).toContainEqual(expect.stringContaining('cannot use localhost/loopback'))
+  })
+
+  it('requires a scheme for physical iOS expo-dev-client payload URLs', () => {
+    const ios = iosDevClientConfigFixture({
+      target: 'device',
+      launch: {
+        mode: 'attach',
+        kind: 'expo-dev-client',
+        initialUrl: 'http://192.168.1.10:8081',
+      },
+    })
+    const { scheme: _scheme, ...iosWithoutScheme } = ios
+    const result = validateConfig(
+      {
+        ...configFixture(),
+        ios: iosWithoutScheme,
+      },
+      ['ios'],
+    )
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('config.ios.scheme: required for physical iOS'),
+    )
+  })
+
+  it('rejects unsupported physical iOS launch and defaults combinations', () => {
+    const config = configFixture({
+      ios: {
+        ...configFixture().ios!,
+        target: 'device',
+        defaults: { onboardingDone: true },
+      },
+    })
+    const result = validateConfig(config, ['ios'])
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('config.ios.target: "device" currently requires'),
+    )
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('config.ios.defaults: simulator-only'),
+    )
+  })
+
   it('rejects a plain app in attach mode (no launch step would run)', () => {
     const config = configFixture({
       ios: { ...configFixture().ios!, launch: { mode: 'attach', kind: 'plain' } },

@@ -244,7 +244,7 @@ async function buildPlatformPlan(
       })
       return applyTargetHook(
         plan,
-        targetHookContribution(config, iosRunnerTarget(config.ios, resolved, metro)),
+        targetHookContribution(config, iosRunnerTarget(config.ios, resolved)),
       )
     } catch (error) {
       await removeTokenFileOnHookFailure(error, resolved.tokenFile)
@@ -390,7 +390,7 @@ Usage:
 Options:
   -p, --platform   ios | android | all                       (required)
   -c, --config     Path to rn-driver.config.{ts,mjs,js}      (default: searched upward)
-  -d, --device     Simulator udid / emulator serial override
+  -d, --device     iOS simulator/device id or name / Android serial override
       --dry-run    Print the resolved plan and exit (no side effects)
       --skip-build Reuse an already-built native project
       --verbose    Stream per-step progress

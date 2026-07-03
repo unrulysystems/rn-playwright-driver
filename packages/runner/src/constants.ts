@@ -23,20 +23,16 @@ export const ENV = {
   touchBackend: 'RN_TOUCH_BACKEND',
   xctestPort: 'RN_TOUCH_XCTEST_PORT',
   xctestTokenFile: 'RN_TOUCH_XCTEST_TOKEN_FILE',
+  xctestRequestTimeout: 'RN_TOUCH_XCTEST_REQUEST_TIMEOUT',
   instrumentationPort: 'RN_TOUCH_INSTRUMENTATION_PORT',
   instrumentationTokenFile: 'RN_TOUCH_INSTRUMENTATION_TOKEN_FILE',
   androidSerial: 'ANDROID_SERIAL',
   // Device/app targeting for host-side file I/O (device.files) — see
   // packages/driver/SPEC.md REQ-TGT-002. Non-secret (ids/paths only).
   appBundleId: 'RN_APP_BUNDLE_ID',
-  // The iOS UDID. Named for the SIMULATOR deliberately, because the runner's iOS
-  // lifecycle IS simulator-only — it drives `simctl boot`/`bootstatus`/`terminate`
-  // on this UDID (see plan/ios.ts). The DRIVER additionally reuses the same UDID for
-  // the PROVISIONAL physical-device path (`devicectl --device <udid>`), which is not
-  // yet hardware-validated; `RN_IOS_TARGET_KIND` selects sim vs. device. A neutral
-  // alias (e.g. RN_IOS_UDID) is deferred until devicectl is de-provisionalized, so the
-  // name stays accurate for the shipping behavior rather than over-promising device
-  // support the runner does not implement. Matching note in driver `test-env.ts`.
+  // The published driver env name is historical: RN_SIM_UDID carries either the
+  // simulator UDID or the physical-device UDID. RN_IOS_TARGET_KIND selects the
+  // host transport (`simctl` vs `devicectl`). Matching note in driver `test-env.ts`.
   simUdid: 'RN_SIM_UDID',
   iosTargetKind: 'RN_IOS_TARGET_KIND',
   appPackage: 'RN_APP_PACKAGE',
@@ -55,6 +51,7 @@ export const DEFAULTS = {
   companionPort: 9999,
   /** Covers a cold `xcodebuild test` build, not just process startup (FU-2). */
   iosCompanionReadyTimeoutMs: 300_000,
+  iosPhysicalXctestRequestTimeoutMs: 30_000,
   androidCompanionReadyTimeoutMs: 45_000,
   hermesTargetTimeoutMs: 60_000,
   appLaunchAttempts: 3,
@@ -67,6 +64,8 @@ export const DEFAULTS = {
   xctestServerTest: 'RNDriverTouchCompanionTests/testRunServer',
   /** Device-private filename the Android companion reads its token from. */
   androidTokenFileName: 'rn-driver-touch-token',
+  /** UI-test bundle resource name the physical iOS companion reads its token from. */
+  xctestTokenResourceName: 'RNDriverTouchCompanionToken',
 } as const
 
 /** Placeholder shown in `--dry-run` output wherever a secret file path appears. */

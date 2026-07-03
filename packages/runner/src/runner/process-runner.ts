@@ -1,6 +1,12 @@
 import { type ChildProcess, spawn as nodeSpawn } from 'node:child_process'
 import { createReadStream, existsSync, openSync } from 'node:fs'
-import { chmod, readFile, rm, writeFile as fsWriteFile } from 'node:fs/promises'
+import {
+  chmod,
+  copyFile as fsCopyFile,
+  readFile,
+  rm,
+  writeFile as fsWriteFile,
+} from 'node:fs/promises'
 import path from 'node:path'
 import type {
   CommandSpec,
@@ -103,6 +109,11 @@ export class NodeProcessRunner implements ProcessRunner {
   async writeFile(path: string, contents: string, mode?: number): Promise<void> {
     await fsWriteFile(path, contents)
     if (mode !== undefined) await chmod(path, mode)
+  }
+
+  async copyFile(from: string, to: string, mode?: number): Promise<void> {
+    await fsCopyFile(from, to)
+    if (mode !== undefined) await chmod(to, mode)
   }
 
   async removeFile(path: string): Promise<void> {

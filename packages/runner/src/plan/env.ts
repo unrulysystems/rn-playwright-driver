@@ -15,16 +15,22 @@ export function buildIosDriverEnv(
   return {
     [ENV.touchBackend]: TOUCH_BACKEND.ios,
     [ENV.metroUrl]: metro.url,
-    [ENV.deviceName]: resolved.simName,
+    // Metro reports iOS simulator targets by simulator name, but physical iOS
+    // targets do not expose CoreDevice's user-facing device name. Emitting it
+    // would make CDP selection miss the runtime the runner just launched.
+    ...(resolved.kind === 'simulator' ? { [ENV.deviceName]: resolved.deviceName } : {}),
     [ENV.timeout]: String(timeoutMs ?? DEFAULTS.driverTimeoutMs),
     [ENV.xctestPort]: String(resolved.touchPort),
     [ENV.xctestTokenFile]: resolved.tokenFile,
-    // File-I/O targeting (device.files). The runner orchestrates simulators only,
-    // so the transport kind is always `simulator` here (physical-iOS run
-    // orchestration is a separate effort — see driver SPEC non-goals).
+    ...(resolved.kind === 'device'
+      ? { [ENV.xctestRequestTimeout]: String(DEFAULTS.iosPhysicalXctestRequestTimeoutMs) }
+      : {}),
+    // File-I/O targeting (device.files). RN_SIM_UDID is the published driver env
+    // name for both simulator and provisional devicectl targeting; RN_IOS_TARGET_KIND
+    // selects the transport.
     [ENV.appBundleId]: bundleId,
-    [ENV.simUdid]: resolved.simUdid,
-    [ENV.iosTargetKind]: 'simulator',
+    [ENV.simUdid]: resolved.id,
+    [ENV.iosTargetKind]: resolved.kind,
   }
 }
 
