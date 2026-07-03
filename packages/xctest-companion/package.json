@@ -2,7 +2,14 @@
   "name": "@unrulysystems/rn-playwright-driver-xctest-companion",
   "version": "0.2.4",
   "description": "XCTest WebSocket companion for RN Playwright driver touch injection",
+  "homepage": "https://github.com/unrulysystems/rn-playwright-driver#readme",
   "license": "MIT",
+  "author": "0xbigboss",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unrulysystems/rn-playwright-driver.git",
+    "directory": "packages/xctest-companion"
+  },
   "bin": {
     "rn-driver-xctest-scaffold": "bin/scaffold.js"
   },
