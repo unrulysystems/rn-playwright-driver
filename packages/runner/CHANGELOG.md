@@ -1,5 +1,16 @@
 # @unrulysystems/rn-playwright-driver-runner
 
+## 0.3.0
+
+### Minor Changes
+
+- [`7161f0f`](https://github.com/unrulysystems/rn-playwright-driver/commit/7161f0f4e3acdb6c5b868f8d2d64807617b8c8fc) Thanks [@alleneubank](https://github.com/alleneubank)! - Add target-aware project-owned setup hooks for runner targets.
+
+  Projects can now return target-scoped Metro env, Playwright env, command steps,
+  and cleanup from `hooks.configureTarget`. Hook contributions are rendered in
+  `--dry-run`, execute through the runner plan, reject secret-looking env keys,
+  and preserve runner-owned driver env precedence.
+
 ## 0.2.1
 
 ### Patch Changes
