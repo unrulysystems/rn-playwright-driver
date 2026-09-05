@@ -4,9 +4,9 @@ id: clean-seam
 objective: Close upstream issues 44 through 51 so the driver installs from Metro config under a runner-emitted marker, excludes its native modules from production prebuilds, and proves both in a CI artifact check; the example app is the reference consumer.
 status: active
 phase: DEV
-iteration: 8
+iteration: 9
 iteration_budget: 14
-updated_at: 2026-09-05T14:05:00Z
+updated_at: 2026-09-05T14:50:00Z
 mission: native-e2e-clean-seam
 targets:
   spec:
@@ -41,7 +41,7 @@ gates:
   - id: e2e-ios
     run: cd examples/basic-app && node_modules/.bin/rn-driver test --platform ios --device rnpd-clean-seam
     green: Playwright exits 0 on the simulator with the Metro-installed harness
-    state: unknown
+    state: green
   - id: e2e-android
     run: cd examples/basic-app && node_modules/.bin/rn-driver test --platform android --device emulator-5554
     green: Playwright exits 0 on the emulator with the Metro-installed harness
@@ -148,7 +148,7 @@ boundary:
 - Baseline on aem5: `nub ci` exit 0, `nub run check` exit 0 (2026-09-05 04:00 UTC, `/tmp/rnpd/nub-check.log`).
 - Host aem5 is shared: another session runs an eight-process CPU load test (cos.worktrees/1785-shim-e2e-flake) that ends on its own; two booted simulators (`send-qa-bb-aem5`, `send-qa-pr6924`) belong to other lanes and are never touched. Metro ports 8081–8085 were free at authoring.
 - Issue drafts with the cited evidence are at `~/.handoffs/upstream-issues/1..8-*.md` on this host.
-- Sibling checkout for the Send campaign: `/Users/allen/0xbigboss/0xsend/sendapp.worktrees/bb/native-e2e-clean-seam` consumes this checkout through yarn `portal:` resolutions until publish.
+- Sibling checkout for the Send campaign: `/Users/allen/0xbigboss/0xsend/sendapp.worktrees/bb/native-e2e-clean-seam` consumes this checkout through `file:` tarballs in its `.yarn/local` (packed with `nub pack` per package) until publish; repack and `yarn install` there after every driver change.
 
 - U2 (2026-09-05): `harness/dev` now `if (__DEV__) void import(..)`; the RAF loop starts on first `getFrameCount()`. Red observed: `harness/dev.test.ts` ×2 and `harness.test.ts` "schedules no frame work on install" before the change; green after. `nub run check` green.
 
@@ -163,7 +163,8 @@ boundary:
 - U8 (2026-09-05): README install is the Metro line + unconditional plugin list with a seam table; legacy harness import kept as a section; AGENTS.md constraint updated; runner README/constants and example README say the driver plugin excludes without the marker (companions inert). Changesets: driver minor, runner minor, companions minor.
 - Runner (2026-09-05): `android.hermes-1` retry now uses launch-2 (no force-stop); test observed red on the pre-fix tree (1 failed) then green (15 passed).
 - U9 run 1 (2026-09-05, `/tmp/rnpd/e2e-ios-1.log`, EXIT 16): `FAILED [ios] at stage [hermes-target]` after 60 s. Metro on 8083 logged no bundle request (`.expo/dev/logs/start.log` has no `metro:bundling:started` after the 8083 instantiate); the XCTest companion launched the app and idled; the simulator home screen was showing afterwards (`/tmp/rnpd/sim-after-ios-1.png`). Root cause: the example ships `expo-dev-client` (since 9d4afc6) but `rn-driver.config.ts` launched it `kind: 'plain'`; `EXDevLauncherController.start` with no `--initialUrl` reloads the last-opened URL or shows the launcher, so fresh `rnpd-clean-seam` never fetched a bundle while older simulators hid the defect. Fix in 3b264a8: example iOS `{ attach, expo-dev-client }`, Android `{ launch, expo-dev-client }` + `scheme: 'exp+example'`; runner `readProjectContext` + REQ-CFG-006 validation (observed red ×2 before the validator change, 164 runner tests green after); `nub run check` and `nub run build` green. Run 2 (`/tmp/rnpd/e2e-ios-2-dryrun.log`, `/tmp/rnpd/e2e-ios-2.log`) targeted the wrong simulator: `nub run … -- --device X` reaches the runner as `rn-driver test --platform ios -- --device X`, the `--` is the Playwright passthrough separator, so the runner auto-selected the newest booted iPhone (`iPhone 17 Pro`, 453F9188, another lane's device; the example app is now installed there and was not removed). Gate commands now call the bin directly.
-- U9 by-hand reproduction on `rnpd-clean-seam` (2026-09-05): with the dev-client launch the app showed `Could not connect to development server … URL: http://127.0.0.1:8083/examples/basic-app/index.ts.bundle` (`/tmp/rnpd/sim-manual-launch.png`) while Metro listened on `[::1]:8083` only (Node 26 resolves `localhost` to `::1` first; `@expo/cli` `UrlCreator.js` rewrites `localhost` to `127.0.0.1` in advertised URLs). Restarting Metro with `NODE_OPTIONS=--dns-result-order=ipv4first` bound `127.0.0.1:8083`; the app rendered (`/tmp/rnpd/sim-manual-launch-2.png`) and `/json` listed its Hermes target. The served bundle for the manifest URL (`index.ts.bundle`, extension kept) had 0 harness strings while the virtual entry had 2: the seam compared extension-less paths only. The dev-menu onboarding sheet covered the app. All three fixed in 0fe0182 (seam test red then green; 170 runner tests; `check:footprint` now fetches the manifest-advertised URL too). Run 3 through the bin: `/tmp/rnpd/e2e-ios-3.log`.
+- U9 by-hand reproduction on `rnpd-clean-seam` (2026-09-05): with the dev-client launch the app showed `Could not connect to development server … URL: http://127.0.0.1:8083/examples/basic-app/index.ts.bundle` (`/tmp/rnpd/sim-manual-launch.png`) while Metro listened on `[::1]:8083` only (Node 26 resolves `localhost` to `::1` first; `@expo/cli` `UrlCreator.js` rewrites `localhost` to `127.0.0.1` in advertised URLs). Restarting Metro with `NODE_OPTIONS=--dns-result-order=ipv4first` bound `127.0.0.1:8083`; the app rendered (`/tmp/rnpd/sim-manual-launch-2.png`) and `/json` listed its Hermes target. The served bundle for the manifest URL (`index.ts.bundle`, extension kept) had 0 harness strings while the virtual entry had 2: the seam compared extension-less paths only. The dev-menu onboarding sheet covered the app. All three fixed in 0fe0182 (seam test red then green; 170 runner tests; `check:footprint` now fetches the manifest-advertised URL too). Run 3 through the bin (`/tmp/rnpd/e2e-ios-3.log`): the app rendered and Playwright ran, then all 66 specs failed at connect with `Could not detect platform: CDP target carried no device identity and the Platform.OS probe failed (CDP evaluate failed: Property 'require' doesn't exist)`: `rnpd-clean-seam` carries no platform keyword, so `detectPlatform` fell through to `require('react-native')`, which Hermes does not expose; model-named simulators had hidden this. Fixed in 76cc0db: the harness reports `capabilities.platform` (Platform.OS) and the driver polls it, bounded by the device timeout (test red on the pre-fix tree 1 failed | 43 passed, green after; `nub run check` and `nub run build` green). The stray example app was uninstalled from the other lane's `iPhone 17 Pro` (453F9188; `simctl listapps` confirms absent).
+- U9 run 4 (2026-09-05, `/tmp/rnpd/e2e-ios-4.log`, EXIT 0): `rnpd-clean-seam` (already Booted; simctl's 405 is tolerated), 62 passed, 4 skipped (Android-only specs), 31.8 s of Playwright. `check:footprint` re-run after the script change (`/tmp/rnpd/footprint-4.log`, EXIT 0): both the manifest-advertised `index.ts.bundle` and the virtual entry carry the harness (4/2/1 hits each); every exclusion assertion holds. Android run 1 on `emulator-5554`: `/tmp/rnpd/e2e-android-1.log`.
 
 ## Known pre-existing failures — do not chase (cited evidence only)
 
