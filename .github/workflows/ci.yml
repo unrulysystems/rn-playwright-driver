@@ -49,6 +49,28 @@ jobs:
       - name: Build packages
         run: nub run build
 
+  footprint:
+    name: Release footprint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup nub
+        uses: nubjs/setup-nub@v0
+
+      - name: Install dependencies
+        run: nub ci
+
+      - name: Build packages
+        run: nub run build
+
+      # REQ-SEAM-009/010: the example app's release export, Metro-served bundle and prebuild carry
+      # the driver only under RN_E2E=1, and never in an export. Runs on Linux: prebuild --no-install
+      # generates both native projects and the autolinking resolve needs no toolchain.
+      - name: Check release footprint
+        run: nub run check:footprint
+        working-directory: examples/basic-app
+
   # E2E tests require a real device/simulator and are run locally or on self-hosted runners.
   # Official example confidence gates:
   # - cd examples/basic-app && nub run test:e2e:android  # Android instrumentation companion

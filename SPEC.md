@@ -111,10 +111,14 @@ directions.
 
 ### Release-artifact check — `REQ-SEAM-*` (continued)
 
-- **REQ-SEAM-009** `examples/basic-app` carries `check:footprint`: with the marker
-  unset it exports a release bundle and prebuilds both platforms and asserts the
-  harness strings and the four modules are absent; with the marker set it repeats
-  both and asserts they are present. Either direction failing fails the script.
+- **REQ-SEAM-009** `examples/basic-app` carries `check:footprint`. With the marker
+  unset it asserts the app entry and config read nothing of the driver, a release
+  export and a Metro-served dev bundle carry no harness string, and a fresh
+  prebuild excludes the four modules and scaffolds no companion. With the marker
+  set it asserts the export still carries no harness string, the Metro-served
+  bundle carries it, and a prebuild over that project links the four modules and
+  scaffolds both companions; a further unmarked prebuild restores the exclusion.
+  Any assertion failing fails the script.
 - **REQ-SEAM-010** The repo CI runs `check:footprint` on every push and pull
   request to `main`. The README states the promise as held by that job, by name.
 

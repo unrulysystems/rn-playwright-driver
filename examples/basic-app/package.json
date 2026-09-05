@@ -18,6 +18,7 @@
     "test:e2e:playwright": "playwright test",
     "test:e2e:android:bash": "bash scripts/e2e-android-instrumentation.sh",
     "test:e2e:ios:bash": "bash scripts/e2e-ios-xctest.sh",
+    "check:footprint": "node scripts/check-footprint.mjs",
     "judge:visual": "node scripts/qualify-visual-artifacts.mjs",
     "prepare": "lefthook install"
   },
