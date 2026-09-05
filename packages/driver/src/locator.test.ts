@@ -340,6 +340,11 @@ describe('Locator.scrollIntoView', () => {
     await expectLocatorError(locatorFor(device).scrollIntoView(), 'TIMEOUT')
     // Stopped at the boundary, not after exhausting all maxScrolls.
     expect(device.scrollCalls.length).toBeLessThan(10)
+    // The failure is diagnosable from the message alone: the stuck edge, the
+    // scroll that did nothing, the element's bounds, and the window it had to fit.
+    await expect(locatorFor(device).scrollIntoView()).rejects.toThrow(
+      /vertical leading edge 1700 did not move after a scroll of \d+; bounds x\d+ y1700 w\d+ h\d+, \d+ still needed along vertical, viewport 400x800/,
+    )
   })
 
   it('throws TIMEOUT when maxScrolls is exhausted before convergence', async () => {

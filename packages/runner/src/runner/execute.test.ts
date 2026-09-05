@@ -233,7 +233,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     )
     expect(labels(calls, 'seed')).toEqual([
       'com.unrulyfall.example: RCT_jsLocation=127.0.0.1:8081 RCT_packager_scheme=http',
-      'com.unrulyfall.example: EXDevMenuIsOnboardingFinished=true EXDevMenuShowsAtLaunch=false',
+      'com.unrulyfall.example: EXDevMenuIsOnboardingFinished=true EXDevMenuShowsAtLaunch=false EXDevMenuShowFloatingActionButton=false',
     ])
     const firstSeedAt = order(calls, (c) => c.type === 'seed')
     expect(firstSeedAt).toBeGreaterThan(order(calls, (c) => c.type === 'install'))

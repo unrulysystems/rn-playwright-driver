@@ -130,9 +130,11 @@ uses `simctl launch --initialUrl`; Android uses the configured
 `<scheme>://expo-development-client/?url=<resolved-metro-url>`.
 
 For a dev client the runner also marks the expo-dev-menu onboarding finished
-before the launch (iOS: `EXDevMenuIsOnboardingFinished`/`EXDevMenuShowsAtLaunch`
-in the app container; Android: `expo.modules.devmenu.sharedpreferences.xml`).
-Without it the dev menu opens over the app at launch and takes the suite's first
+and hides its floating button before the launch (iOS:
+`EXDevMenuIsOnboardingFinished`, `EXDevMenuShowsAtLaunch`, and
+`EXDevMenuShowFloatingActionButton` in the app container; Android:
+`expo.modules.devmenu.sharedpreferences.xml`). Without it the dev menu opens
+over the app at launch and its button floats over the app, taking the suite's
 taps.
 
 The runner starts Metro with `--dns-result-order=ipv4first` appended to

@@ -348,10 +348,11 @@ kill`) **before** starting the companion, then start the companion UI test
   launch mode and under `--skip-build`; a failure is a `build`-stage failure.
 
 - **REQ-IOS-016** A simulator `expo-dev-client` app gets an `ios.dev-menu` step
-  after the install that seeds `EXDevMenuIsOnboardingFinished=true` and
-  `EXDevMenuShowsAtLaunch=false` into the app container. expo-dev-menu otherwise
-  opens its onboarding sheet over the app at launch, and the suite's first taps
-  land on that sheet.
+  after the install that seeds `EXDevMenuIsOnboardingFinished=true`,
+  `EXDevMenuShowsAtLaunch=false`, and `EXDevMenuShowFloatingActionButton=false`
+  into the app container. expo-dev-menu otherwise opens its onboarding sheet
+  over the app at launch and floats a draggable button over it; the suite's taps
+  land on them.
 
 ### Android instrumentation lifecycle — `REQ-AND-*`
 
@@ -388,10 +389,11 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
 - **REQ-AND-010** An `expo-dev-client` app gets an `android.dev-menu` step
   between `android.debug-host` and `android.launch-1` that writes
   `shared_prefs/expo.modules.devmenu.sharedpreferences.xml` (`run-as`, stdin)
-  with `isOnboardingFinished=true` and `showsAtLaunch=false`. expo-dev-menu
-  otherwise opens its onboarding sheet, a dialog window over `MainActivity`,
-  at every launch until the user finishes it; the suite's first injected tap
-  only dismissed that dialog (observed on an API 35 emulator: two
+  with `isOnboardingFinished=true`, `showsAtLaunch=false`, and `showFab=false`.
+  expo-dev-menu otherwise opens its onboarding sheet, a dialog window over
+  `MainActivity`, at every launch until the user finishes it, and floats a
+  draggable button over the app; the suite's first injected tap only dismissed
+  that dialog (observed on an API 35 emulator: two
   `MainActivity` windows before the tap, one after, counter still 0).
 
 ### Target-aware project hooks — `REQ-HOOK-*`

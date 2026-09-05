@@ -373,6 +373,8 @@ export class LocatorImpl implements Locator {
     // Leading-edge position recorded before the previous scroll, per axis, so we
     // can detect when a scroll made no progress (scroll container at its limit).
     let last: { axis: 'vertical' | 'horizontal'; position: number } | null = null
+    // Magnitude of the previous scroll request, reported when the loop gives up.
+    let lastDelta = 0
 
     for (let attempt = 0; ; attempt++) {
       const result = await this.query()
@@ -405,7 +407,7 @@ export class LocatorImpl implements Locator {
 
       if (attempt >= maxScrolls) {
         throw new LocatorError(
-          `scrollIntoView: ${this.toString()} could not be brought fully into view after ${maxScrolls} scroll(s)`,
+          `scrollIntoView: ${this.toString()} could not be brought fully into view after ${maxScrolls} scroll(s): ${describeGeometry(step, result.data.bounds, metrics)}`,
           'TIMEOUT',
         )
       }
@@ -418,7 +420,7 @@ export class LocatorImpl implements Locator {
         isSamePosition(step.position, last.position)
       ) {
         throw new LocatorError(
-          `scrollIntoView: reached scroll boundary before ${this.toString()} was fully visible`,
+          `scrollIntoView: reached scroll boundary before ${this.toString()} was fully visible: ${step.axis} leading edge ${step.position} did not move after a scroll of ${lastDelta}; ${describeGeometry(step, result.data.bounds, metrics)}`,
           'TIMEOUT',
         )
       }
@@ -428,6 +430,7 @@ export class LocatorImpl implements Locator {
       // actually scrolls; preserve the direction.
       const magnitude = Math.max(Math.abs(step.delta), MIN_SCROLL_STEP)
       const signed = step.delta < 0 ? -magnitude : magnitude
+      lastDelta = signed
       const scrollOptions: ScrollOptions =
         step.axis === 'vertical' ? { dy: signed } : { dx: signed }
       await this.device.scroll(scrollOptions)
@@ -839,3 +842,16 @@ export function buildRoleSelector(role: string, options?: { name?: string }): Lo
  * Re-export Locator type for external use.
  */
 export type { Locator }
+
+/** The numbers a scroll failure is diagnosed from: what was measured, where, and the window it had to fit. */
+function describeGeometry(
+  step: { axis: 'vertical' | 'horizontal'; delta: number },
+  bounds: ElementBounds,
+  metrics: WindowMetrics,
+): string {
+  const insets = metrics.safeAreaInsets
+  const insetText = insets
+    ? `insets t${insets.top} r${insets.right} b${insets.bottom} l${insets.left}`
+    : 'no insets'
+  return `bounds x${bounds.x} y${bounds.y} w${bounds.width} h${bounds.height}, ${step.delta} still needed along ${step.axis}, viewport ${metrics.width}x${metrics.height}, ${insetText}`
+}

@@ -225,6 +225,7 @@ describe('planAndroid', () => {
     ])
     expect(command.stdinContents).toContain('<boolean name="isOnboardingFinished" value="true" />')
     expect(command.stdinContents).toContain('<boolean name="showsAtLaunch" value="false" />')
+    expect(command.stdinContents).toContain('<boolean name="showFab" value="false" />')
     expect(step?.action.type === 'command' && step.action.allowFailure).toBeFalsy()
   })
 

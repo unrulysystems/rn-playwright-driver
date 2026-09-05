@@ -31,7 +31,7 @@ describe('renderPlan', () => {
       'seed-ios-defaults com.unrulyfall.example on <sim-udid>: RCT_jsLocation=127.0.0.1:8081 RCT_packager_scheme=http  (app-container plist)',
     )
     expect(text).toContain(
-      'seed-ios-defaults com.unrulyfall.example on <sim-udid>: EXDevMenuIsOnboardingFinished=true EXDevMenuShowsAtLaunch=false  (app-container plist)',
+      'seed-ios-defaults com.unrulyfall.example on <sim-udid>: EXDevMenuIsOnboardingFinished=true EXDevMenuShowsAtLaunch=false EXDevMenuShowFloatingActionButton=false  (app-container plist)',
     )
   })
 

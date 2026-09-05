@@ -167,14 +167,14 @@ export function planAndroid(input: PlanAndroidInput): Plan {
 
   if (android.launch.kind === 'expo-dev-client') {
     // device — expo-dev-menu opens its onboarding sheet (a dialog window over
-    // MainActivity) at launch until the user finishes it; the suite's first tap
-    // would only dismiss that sheet (REQ-AND-010). Written before launch-1's
+    // MainActivity) at launch until the user finishes it, and floats a draggable
+    // button over the app; the suite's taps would land on them (REQ-AND-010). Written before launch-1's
     // force-stop so the fresh process reads it.
     const prefsDir = `/data/data/${android.packageName}/shared_prefs`
     push({
       id: 'android.dev-menu',
       stage: 'device',
-      description: 'Mark the dev-menu onboarding finished',
+      description: 'Mark the dev-menu onboarding finished; hide its floating button',
       action: {
         type: 'command',
         command: {
@@ -400,7 +400,7 @@ function hermesStep(
 const DEV_MENU_PREFS_FILE = 'expo.modules.devmenu.sharedpreferences.xml'
 
 function devMenuPrefsXml(): string {
-  return `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n  <boolean name="isOnboardingFinished" value="true" />\n  <boolean name="showsAtLaunch" value="false" />\n</map>\n`
+  return `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n  <boolean name="isOnboardingFinished" value="true" />\n  <boolean name="showsAtLaunch" value="false" />\n  <boolean name="showFab" value="false" />\n</map>\n`
 }
 
 function debugHostXml(host: string): string {

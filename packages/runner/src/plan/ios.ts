@@ -228,10 +228,12 @@ export function planIos(input: PlanIosInput): Plan {
     ])
     if (isDevClient) {
       // expo-dev-menu opens its onboarding sheet over the app at launch until the
-      // user finishes it; that sheet would take the suite's first taps (REQ-IOS-016).
-      seed('ios.dev-menu', 'Mark the dev-menu onboarding finished', [
+      // user finishes it, and floats a draggable button over the app; both would
+      // take the suite's taps (REQ-IOS-016).
+      seed('ios.dev-menu', 'Mark the dev-menu onboarding finished; hide its floating button', [
         { key: 'EXDevMenuIsOnboardingFinished', value: true },
         { key: 'EXDevMenuShowsAtLaunch', value: false },
+        { key: 'EXDevMenuShowFloatingActionButton', value: false },
       ])
     }
     const configured = Object.entries(ios.defaults ?? {}).map(([key, value]) => ({ key, value }))

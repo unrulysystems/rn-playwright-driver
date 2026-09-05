@@ -123,6 +123,7 @@ describe('planIos', () => {
         entries: [
           { key: 'EXDevMenuIsOnboardingFinished', value: true },
           { key: 'EXDevMenuShowsAtLaunch', value: false },
+          { key: 'EXDevMenuShowFloatingActionButton', value: false },
         ],
       },
     })
