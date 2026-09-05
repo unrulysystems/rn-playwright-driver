@@ -238,6 +238,14 @@ depend on transient Playwright setup state for prebuild decisions.
   would desync the command from the readiness probe.
 - **REQ-METRO-004** Metro started by the runner is owned by the runner and is
   terminated in cleanup; reused Metro is never terminated.
+- **REQ-METRO-005** Metro started by the runner binds the IPv4 loopback. Expo
+  advertises `127.0.0.1` in the bundle and inspector URLs it hands the app, while
+  `expo start --localhost` binds the `localhost` hostname, which Node resolves
+  to `::1` first on hosts whose resolver lists the IPv6 loopback first; the app
+  then cannot reach the bundle. The runner appends
+  `--dns-result-order=ipv4first` to the Metro process's `NODE_OPTIONS` (both the
+  default command and `metro.command`), keeping any consumer value, and
+  `--dry-run` shows it as `NODE_OPTIONS+=…`.
 
 ### Prebuild environment — `REQ-PREBUILD-*`
 

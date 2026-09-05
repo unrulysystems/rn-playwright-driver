@@ -78,11 +78,11 @@ function renderCleanup(action: CleanupAction): string {
 }
 
 function renderCommand(command: CommandSpec): string {
-  const env = command.env
-    ? `${Object.entries(command.env)
-        .map(([k, v]) => `${k}=${v}`)
-        .join(' ')} `
-    : ''
+  const envEntries = [
+    ...Object.entries(command.appendEnv ?? {}).map(([k, v]) => `${k}+=${v}`),
+    ...Object.entries(command.env ?? {}).map(([k, v]) => `${k}=${v}`),
+  ]
+  const env = envEntries.length > 0 ? `${envEntries.join(' ')} ` : ''
   const packageBin = command.packageBin ? ' [package-bin]' : ''
   const stdin = command.stdinFromFile
     ? ` < ${command.stdinFromFile}`

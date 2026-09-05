@@ -9,6 +9,12 @@ export interface CommandSpec {
   readonly command: string
   readonly args: readonly string[]
   readonly env?: Readonly<Record<string, string>>
+  /**
+   * Space-separated values appended to the runner's own value of the same
+   * variable at execution time (e.g. `NODE_OPTIONS`), so a consumer's value is
+   * kept rather than replaced. `env` still wins for a key set in both.
+   */
+  readonly appendEnv?: Readonly<Record<string, string>>
   readonly cwd?: string
   /** Resolve `command` from node_modules/.bin at execution time, relative to cwd. */
   readonly packageBin?: boolean

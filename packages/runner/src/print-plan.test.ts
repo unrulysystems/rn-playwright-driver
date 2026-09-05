@@ -16,6 +16,11 @@ describe('renderPlan', () => {
     expect(text).toContain('Cleanup (defensive, idempotent):')
   })
 
+  it('renders appended env as KEY+=value so the dry run shows the Metro loopback binding (REQ-METRO-005)', () => {
+    const text = renderPlan(buildDryRunPlan(configFixture(), 'ios'))
+    expect(text).toContain('NODE_OPTIONS+=--dns-result-order=ipv4first')
+  })
+
   it('shows the dev-client --initialUrl launch and marks skippable steps', () => {
     const text = renderPlan(
       buildDryRunPlan(configFixture({ ios: iosDevClientConfigFixture() }), 'ios'),

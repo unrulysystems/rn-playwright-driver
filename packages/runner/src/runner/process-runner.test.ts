@@ -2,7 +2,12 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { metroTargetMatchesDeviceName, readWatchedLog, resolvePackageBin } from './process-runner'
+import {
+  mergeSpecEnv,
+  metroTargetMatchesDeviceName,
+  readWatchedLog,
+  resolvePackageBin,
+} from './process-runner'
 
 // The OS-boundary process runner is verified by the live e2e oracle, NOT unit tests — except
 // `readWatchedLog`, whose FAIL-CLOSED contract (a missing/unreadable companion log is a defect, not
@@ -129,5 +134,30 @@ describe('metroTargetMatchesDeviceName', () => {
         'iPhone 17',
       ),
     ).toBe(false)
+  })
+})
+
+describe('mergeSpecEnv (REQ-METRO-005)', () => {
+  it('appends to an existing parent value instead of replacing it', () => {
+    const env = mergeSpecEnv(
+      { NODE_OPTIONS: '--max-old-space-size=8192', PATH: '/bin' },
+      { appendEnv: { NODE_OPTIONS: '--dns-result-order=ipv4first' } },
+    )
+    expect(env.NODE_OPTIONS).toBe('--max-old-space-size=8192 --dns-result-order=ipv4first')
+    expect(env.PATH).toBe('/bin')
+  })
+
+  it('sets the value when the parent has none', () => {
+    const env = mergeSpecEnv({}, { appendEnv: { NODE_OPTIONS: '--dns-result-order=ipv4first' } })
+    expect(env.NODE_OPTIONS).toBe('--dns-result-order=ipv4first')
+  })
+
+  it('lets an explicit env entry win over an appended one', () => {
+    const env = mergeSpecEnv(
+      { NODE_OPTIONS: '--a' },
+      { appendEnv: { NODE_OPTIONS: '--b' }, env: { NODE_OPTIONS: '--c', RN_E2E: '1' } },
+    )
+    expect(env.NODE_OPTIONS).toBe('--c')
+    expect(env.RN_E2E).toBe('1')
   })
 })

@@ -61,7 +61,9 @@ directions.
   `withRnDriverHarness(config)`. With `RN_E2E=1` it writes a static entry to
   `.expo/rn-driver-e2e-entry.js` that loads the harness and then the project entry,
   composes after Expo's `server.rewriteRequestUrl` so a request for the virtual or
-  project entry is served that file, resolves the two specifiers the file uses only
+  project entry (extension-less `index.bundle` or the extension-kept
+  `index.ts.bundle` that the dev-client manifest advertises) is served that file,
+  resolves the two specifiers the file uses only
   from that file, and adds `rn-driver-e2e` to `cacheVersion`; without the marker it
   adds `rn-driver-off` to `cacheVersion` and touches nothing else. Metro only runs
   `getModulesRunBeforeMainModule` entries already in the graph

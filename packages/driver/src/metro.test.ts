@@ -145,6 +145,30 @@ describe('withRnDriverHarness under RN_E2E=1', () => {
     )
   })
 
+  it('serves the generated entry for the dev-client manifest request, which keeps the entry extension', () => {
+    // Expo's manifest advertises `launchAsset.url` as `<serverRoot-relative entry>.bundle`
+    // with the source extension kept (`index.ts.bundle`); Metro accepts both forms.
+    const result = withRnDriverHarness(baseConfig(), {
+      env,
+      paths,
+      fs: memoryFs(),
+      harnessPath: HARNESS,
+    })
+    const rewrite = result.server!.rewriteRequestUrl!
+
+    expect(
+      rewrite('/apps/app/index.ts.bundle?platform=ios&dev=true&lazy=true&transform.engine=hermes'),
+    ).toBe(
+      '/apps/app/.expo/rn-driver-e2e-entry.bundle?platform=ios&dev=true&lazy=true&transform.engine=hermes',
+    )
+    expect(rewrite('/apps/app/index.android.ts.bundle?platform=android&dev=true')).toBe(
+      '/apps/app/.expo/rn-driver-e2e-entry.bundle?platform=android&dev=true',
+    )
+    expect(rewrite('http://127.0.0.1:8083/apps/app/index.ts.bundle?platform=ios&dev=true')).toBe(
+      'http://127.0.0.1:8083/apps/app/.expo/rn-driver-e2e-entry.bundle?platform=ios&dev=true',
+    )
+  })
+
   it('leaves every other request alone', () => {
     const result = withRnDriverHarness(baseConfig(), {
       env,

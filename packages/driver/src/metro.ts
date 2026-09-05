@@ -177,9 +177,21 @@ function writeIfChanged(io: EntryFileIo, file: string, contents: string): void {
   io.writeFileSync(file, contents)
 }
 
+const SOURCE_EXTENSION = /\.[cm]?[jt]sx?$/
+
 function bundlePathname(serverRoot: string, file: string): string {
   const relative = path.relative(serverRoot, file).split(path.sep).join('/')
-  return `/${relative.replace(/\.[cm]?[jt]sx?$/, '')}.bundle`
+  return `/${relative.replace(SOURCE_EXTENSION, '')}.bundle`
+}
+
+/**
+ * The module a `.bundle` request names, with the source extension dropped: Metro
+ * serves `/apps/app/index.bundle` and `/apps/app/index.ts.bundle` alike, and Expo's
+ * dev-client manifest advertises the extension-kept form.
+ */
+function bundleModulePath(pathname: string): string | undefined {
+  if (!pathname.endsWith('.bundle')) return undefined
+  return pathname.slice(0, -'.bundle'.length).replace(SOURCE_EXTENSION, '')
 }
 
 function parseUrl(url: string): { readonly parsed: URL; readonly absolute: boolean } {
@@ -206,7 +218,8 @@ function isEntryRequest(
 ): boolean {
   if (parseUrl(originalUrl).parsed.pathname === VIRTUAL_ENTRY_PATHNAME) return true
   const { parsed } = parseUrl(rewrittenUrl)
-  if (!parsed.pathname.endsWith('.bundle')) return false
+  const requested = bundleModulePath(parsed.pathname)
+  if (requested === undefined) return false
   const platform = parsed.searchParams.get('platform')
   let entry: string
   try {
@@ -214,5 +227,5 @@ function isEntryRequest(
   } catch {
     return false
   }
-  return parsed.pathname === bundlePathname(serverRoot, entry)
+  return requested === bundleModulePath(bundlePathname(serverRoot, entry))
 }

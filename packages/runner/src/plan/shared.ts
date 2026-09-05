@@ -1,6 +1,6 @@
 import path from 'node:path'
 import type { PlaywrightConfig } from '../config'
-import { E2E_MARKER_ENV } from '../constants'
+import { E2E_MARKER_ENV, METRO_NODE_OPTIONS } from '../constants'
 import type { ResolvedMetro } from './resolved'
 import type { CommandSpec, Step } from './types'
 
@@ -39,12 +39,16 @@ export function metroStartStep(metro: ResolvedMetro, cwd?: string): Step {
       type: 'command',
       background: true,
       processKey: 'metro',
-      // Either form carries the e2e marker so the Metro seam installs the harness (REQ-SEAM-001).
+      // Either form carries the e2e marker so the Metro seam installs the harness
+      // (REQ-SEAM-001) and binds loopback as IPv4 (REQ-METRO-005): Expo rewrites
+      // `localhost` to `127.0.0.1` in the URLs it hands the app, while a Node that
+      // resolves `localhost` to `::1` first would bind only the IPv6 loopback.
       command: metro.command
-        ? { ...shell(metro.command, cwd), env: E2E_MARKER_ENV }
+        ? { ...shell(metro.command, cwd), env: E2E_MARKER_ENV, appendEnv: METRO_NODE_OPTIONS }
         : {
             ...packageBin('expo', ['start', '--localhost', '--port', String(metro.port)], cwd),
             env: { CI: '1', EXPO_NO_TELEMETRY: '1', ...E2E_MARKER_ENV },
+            appendEnv: METRO_NODE_OPTIONS,
           },
     },
   }

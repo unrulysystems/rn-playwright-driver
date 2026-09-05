@@ -107,3 +107,30 @@ describe('metroStartStep marker (REQ-SEAM-001)', () => {
     })
   })
 })
+
+describe('metroStartStep loopback binding (REQ-METRO-005)', () => {
+  const metro = {
+    url: 'http://localhost:8083',
+    host: 'localhost',
+    port: 8083,
+    reuseExisting: false,
+    readyTimeoutMs: 90_000,
+  }
+
+  it('appends IPv4-first DNS ordering to NODE_OPTIONS for the default Expo Metro', () => {
+    const step = metroStartStep({ ...metro, command: undefined })
+    expect(step.action.type === 'command' && step.action.command.appendEnv).toEqual({
+      NODE_OPTIONS: '--dns-result-order=ipv4first',
+    })
+  })
+
+  it('appends it for a custom metro.command too, without replacing the consumer NODE_OPTIONS', () => {
+    const step = metroStartStep({ ...metro, command: 'my-metro --port 8083' })
+    expect(step.action.type === 'command' && step.action.command.appendEnv).toEqual({
+      NODE_OPTIONS: '--dns-result-order=ipv4first',
+    })
+    expect(step.action.type === 'command' && step.action.command.env).not.toHaveProperty(
+      'NODE_OPTIONS',
+    )
+  })
+})

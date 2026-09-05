@@ -38,7 +38,7 @@ export class NodeProcessRunner implements ProcessRunner {
       const usesStdin = Boolean(spec.stdinFromFile) || spec.stdinContents !== undefined
       const child = nodeSpawn(command, [...spec.args], {
         cwd: spec.cwd,
-        env: { ...process.env, ...spec.env },
+        env: mergeSpecEnv(process.env, spec),
         stdio: [usesStdin ? 'pipe' : 'inherit', 'inherit', 'inherit'],
       })
       child.on('error', reject)
@@ -58,7 +58,7 @@ export class NodeProcessRunner implements ProcessRunner {
     const fd = openSync(opts.logPath, 'a')
     const child = nodeSpawn(command, [...spec.args], {
       cwd: spec.cwd,
-      env: { ...process.env, ...spec.env },
+      env: mergeSpecEnv(process.env, spec),
       detached: true,
       stdio: ['ignore', fd, fd],
     })
@@ -422,4 +422,21 @@ function close(socket: WebSocket): void {
   } catch {
     // ignore
   }
+}
+
+/**
+ * The child environment for a command spec: the runner's environment, then the
+ * spec's `appendEnv` values appended (space-separated) to any existing value,
+ * then the spec's `env` verbatim.
+ */
+export function mergeSpecEnv(
+  parent: NodeJS.ProcessEnv,
+  spec: Pick<CommandSpec, 'env' | 'appendEnv'>,
+): NodeJS.ProcessEnv {
+  const merged: NodeJS.ProcessEnv = { ...parent }
+  for (const [key, value] of Object.entries(spec.appendEnv ?? {})) {
+    const current = merged[key]
+    merged[key] = current ? `${current} ${value}` : value
+  }
+  return { ...merged, ...spec.env }
 }

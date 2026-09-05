@@ -69,6 +69,16 @@ export const DEFAULTS = {
 } as const
 
 /**
+ * Node options for the Metro process (REQ-METRO-005). `--localhost` makes Expo
+ * bind the `localhost` hostname, which Node resolves to `::1` first on hosts
+ * that list the IPv6 loopback first; the app then dials the `127.0.0.1` URL
+ * Expo advertises and fails to connect. IPv4-first resolution binds 127.0.0.1.
+ */
+export const METRO_NODE_OPTIONS: Readonly<Record<string, string>> = {
+  NODE_OPTIONS: '--dns-result-order=ipv4first',
+}
+
+/**
  * The prebuild and Metro marker (REQ-SEAM-001). The runner sets it on every `expo prebuild`
  * it plans and every Metro it starts. The driver's Metro helper serves the harness only under
  * it, the companion plugins scaffold only under it, and the driver's own plugin excludes its

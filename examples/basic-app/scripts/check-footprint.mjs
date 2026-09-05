@@ -174,12 +174,26 @@ async function metroBundle(marked) {
       METRO_READY_MS,
       `Metro on ${port}`,
     )
-    const url = `${base}/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&minify=false&modulesOnly=false&runModule=true`
-    const res = await fetch(url, { signal: AbortSignal.timeout(BUNDLE_FETCH_MS) })
-    const body = await res.text()
-    if (!res.ok)
-      throw new Error(`Metro bundle request returned ${res.status}:\n${body.slice(0, 2000)}`)
-    return countHits(body)
+    // Two request forms reach Metro for the same entry: Expo Go / `expo start` clients ask for the
+    // virtual entry, and a dev client asks for the bundle URL the manifest advertises (the
+    // serverRoot-relative entry with its extension kept, e.g. `examples/basic-app/index.ts.bundle`).
+    // Both must carry the harness with the marker and neither without it.
+    const manifestUrl = await manifestLaunchAssetUrl(base)
+    const virtualUrl = `${base}/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&minify=false&modulesOnly=false&runModule=true`
+    const hits = {}
+    for (const [label, url] of [
+      ['manifest', manifestUrl],
+      ['virtual', virtualUrl],
+    ]) {
+      const res = await fetch(url, { signal: AbortSignal.timeout(BUNDLE_FETCH_MS) })
+      const body = await res.text()
+      if (!res.ok)
+        throw new Error(
+          `Metro ${label} bundle request returned ${res.status}:\n${body.slice(0, 2000)}`,
+        )
+      hits[label] = countHits(body)
+    }
+    return hits
   } finally {
     try {
       process.kill(-child.pid, 'SIGTERM')
@@ -187,6 +201,27 @@ async function metroBundle(marked) {
       /* already gone */
     }
   }
+}
+
+/** The bundle URL a dev client loads, read from Expo's manifest and re-based onto `base`. */
+async function manifestLaunchAssetUrl(base) {
+  const res = await fetch(`${base}/`, {
+    headers: { 'expo-platform': 'ios', accept: 'application/expo+json,application/json' },
+    signal: AbortSignal.timeout(BUNDLE_FETCH_MS),
+  })
+  const text = await res.text()
+  if (!res.ok)
+    throw new Error(`Metro manifest request returned ${res.status}:\n${text.slice(0, 2000)}`)
+  const manifest = JSON.parse(text)
+  const advertised = manifest?.launchAsset?.url
+  if (typeof advertised !== 'string') throw new Error('Expo manifest has no launchAsset.url')
+  // The manifest names 127.0.0.1; Metro may only answer on the loopback family `base` found.
+  const url = new URL(advertised)
+  const dev = new URL(`${url.pathname}${url.search}`, base)
+  dev.searchParams.set('dev', 'true')
+  dev.searchParams.set('minify', 'false')
+  dev.searchParams.delete('transform.bytecode')
+  return dev.toString()
 }
 
 // --- prebuild + autolinking ------------------------------------------------------------------
@@ -288,17 +323,24 @@ console.log(`== ${MARKER} unset`)
 const exportOff = exportBundle(false)
 check(noHits(exportOff), `release export has no harness string (${describeHits(exportOff)})`)
 const metroOff = await metroBundle(false)
-check(noHits(metroOff), `Metro dev bundle has no harness string (${describeHits(metroOff)})`)
+for (const [form, hits] of Object.entries(metroOff)) {
+  check(
+    noHits(hits),
+    `Metro dev bundle (${form} entry) has no harness string (${describeHits(hits)})`,
+  )
+}
 assertModules(prebuild(false, { clean: true }), 'fresh prebuild', false)
 
 console.log(`== ${MARKER}=1`)
 const exportOn = exportBundle(true)
 check(noHits(exportOn), `release export still has no harness string (${describeHits(exportOn)})`)
 const metroOn = await metroBundle(true)
-check(
-  metroOn.HARNESS_API_VERSION > 0 && metroOn.__RN_DRIVER__ > 0,
-  `Metro dev bundle carries the harness (${describeHits(metroOn)})`,
-)
+for (const [form, hits] of Object.entries(metroOn)) {
+  check(
+    hits.HARNESS_API_VERSION > 0 && hits.__RN_DRIVER__ > 0,
+    `Metro dev bundle (${form} entry) carries the harness (${describeHits(hits)})`,
+  )
+}
 assertModules(prebuild(true, { clean: false }), 'prebuild over the excluded project', true)
 
 console.log(`== ${MARKER} unset again`)
