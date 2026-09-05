@@ -6,7 +6,7 @@
  * after prebuild and a full native build, so an unsupported runtime is refused
  * before any effectful step instead.
  */
-export const RUNTIME_GLOBALS = ['WebSocket', 'fetch'] as const
+const RUNTIME_GLOBALS = ['WebSocket', 'fetch'] as const
 
 export function runtimePreflight(
   version: string,
