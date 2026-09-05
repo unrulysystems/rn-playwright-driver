@@ -6,7 +6,7 @@ import { executePlan, StageError } from './execute'
 import { ProbeFailure } from './probe-failure'
 
 interface Recorded {
-  readonly type: 'exec' | 'spawn' | 'kill' | 'write' | 'copy' | 'rm' | 'free' | 'probe'
+  readonly type: 'exec' | 'spawn' | 'kill' | 'write' | 'copy' | 'rm' | 'free' | 'install' | 'probe'
   readonly label: string
   readonly spec?: CommandSpec
   /** The probe's early-abort watch, recorded so tests can assert the executor wired it through. */
@@ -19,6 +19,7 @@ function makeRunner(
     spawnError?: (spec: CommandSpec) => Error | null
     writeFileError?: (path: string) => Error | null
     freePortError?: (port: number) => Error | null
+    installError?: () => Error | null
     probeResult?: (probe: ReadinessProbe) => boolean
     /** Simulate the real probe's fast-fail: return a marker for a probe to throw ProbeFailure. */
     probeFailure?: (probe: ReadinessProbe) => string | null
@@ -63,6 +64,15 @@ function makeRunner(
     freePort(port) {
       calls.push({ type: 'free', label: String(port) })
       const error = opts.freePortError?.(port)
+      if (error) return Promise.reject(error)
+      return Promise.resolve()
+    },
+    installIosApp(spec) {
+      calls.push({
+        type: 'install',
+        label: `${spec.scheme} -> ${spec.target.kind} ${spec.target.udid}`,
+      })
+      const error = opts.installError?.()
       if (error) return Promise.reject(error)
       return Promise.resolve()
     },
@@ -194,6 +204,29 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     ).catch((e: unknown) => e)
     expect(freePortFailure).toBeInstanceOf(StageError)
     expect(freePortFailure).toMatchObject({ stage: 'companion', stepId: 'ios.free-port' })
+  })
+
+  it('installs the built app through the runner between the build and the companion, attributing failures to the build stage (REQ-IOS-015)', async () => {
+    const { runner, calls } = makeRunner()
+    await executePlan(plan, runner, { logDir: '/tmp/logs' })
+    const installAt = order(calls, (c) => c.type === 'install')
+    expect(labels(calls, 'install')).toEqual(['example -> simulator <sim-udid>'])
+    expect(installAt).toBeGreaterThan(
+      order(calls, (c) => c.type === 'exec' && c.label.includes('xcodebuild build')),
+    )
+    expect(installAt).toBeLessThan(
+      order(calls, (c) => c.type === 'spawn' && c.label === 'companion'),
+    )
+
+    const failure = await executePlan(
+      plan,
+      makeRunner({ installError: () => new Error('the scheme builds no application target') })
+        .runner,
+      { logDir: '/tmp/logs' },
+    ).catch((e: unknown) => e)
+    expect(failure).toBeInstanceOf(StageError)
+    expect(failure).toMatchObject({ stage: 'build', stepId: 'ios.install-app' })
+    expect((failure as StageError).message).toContain('no application target')
   })
 
   it('attributes synchronous background spawn failures to their lifecycle stage', async () => {

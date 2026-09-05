@@ -61,7 +61,9 @@ export default defineRnDriverConfig({
     // uitestScheme defaults to `${appScheme}UITests`
     launch: {
       // expo-dev-client REQUIRES attach mode: the host owns the launch and
-      // hands the dev launcher the Metro URL via simctl/devicectl launch.
+      // hands the dev launcher the Metro URL via simctl/devicectl launch. The
+      // runner installs the built app first (XCTest only installs it in
+      // launch/activate mode).
       mode: 'attach',
       kind: 'expo-dev-client',
       // initialUrl defaults to the resolved Metro URL on simulators. Physical

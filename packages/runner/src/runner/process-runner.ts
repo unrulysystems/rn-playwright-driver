@@ -15,7 +15,9 @@ import type {
   ProcessRunner,
   ReadinessProbe,
   SpawnHandle,
+  InstallIosAppSpec,
 } from '../plan/types'
+import { builtApplicationPath } from './built-product'
 import { findFailureMarker, ProbeFailure } from './probe-failure'
 
 const PROBE_INTERVAL_MS = 1_000
@@ -161,6 +163,61 @@ export class NodeProcessRunner implements ProcessRunner {
 
   log(line: string): void {
     process.stderr.write(`${line}\n`)
+  }
+
+  async installIosApp(spec: InstallIosAppSpec): Promise<void> {
+    const settings = await this.capture(
+      'env',
+      [
+        '-u',
+        'LD',
+        'xcodebuild',
+        '-showBuildSettings',
+        '-json',
+        '-workspace',
+        spec.workspace,
+        '-scheme',
+        spec.scheme,
+        '-destination',
+        spec.destination,
+      ],
+      spec.cwd,
+    )
+    if (settings.code !== 0) {
+      throw new Error(
+        `xcodebuild -showBuildSettings exited ${settings.code} for scheme ${spec.scheme}: ${tail(settings.stderr)}`,
+      )
+    }
+    const product = builtApplicationPath(settings.stdout)
+    const args =
+      spec.target.kind === 'simulator'
+        ? ['simctl', 'install', spec.target.udid, product]
+        : ['devicectl', 'device', 'install', 'app', '--device', spec.target.udid, product]
+    const result = await this.exec({ command: 'xcrun', args })
+    if (result.code !== 0) {
+      throw new Error(`xcrun ${args[0]} install exited ${result.code} for ${product}`)
+    }
+  }
+
+  /** Run a command to completion with its output captured (never inherited). */
+  private capture(command: string, args: string[], cwd?: string): Promise<ExecResult> {
+    return new Promise((resolve, reject) => {
+      const child = nodeSpawn(command, args, {
+        cwd,
+        env: process.env,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+      let stdout = ''
+      let stderr = ''
+      child.stdout?.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString()
+      })
+      child.stderr?.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString()
+      })
+      child.on('error', reject)
+      child.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }))
+    })
   }
 
   private lsofPids(port: number): Promise<number[]> {
@@ -439,4 +496,8 @@ export function mergeSpecEnv(
     merged[key] = current ? `${current} ${value}` : value
   }
   return { ...merged, ...spec.env }
+}
+
+function tail(text: string, lines = 8): string {
+  return text.trim().split('\n').slice(-lines).join('\n')
 }

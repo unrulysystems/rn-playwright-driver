@@ -16,6 +16,12 @@ describe('renderPlan', () => {
     expect(text).toContain('Cleanup (defensive, idempotent):')
   })
 
+  it('renders the install step with the resolved target so the dry run shows who installs the app (REQ-IOS-015)', () => {
+    const text = renderPlan(buildDryRunPlan(configFixture(), 'ios'))
+    expect(text).toContain('ios.install-app')
+    expect(text).toContain('install-ios-app example -> simulator <sim-udid>')
+  })
+
   it('renders appended env as KEY+=value so the dry run shows the Metro loopback binding (REQ-METRO-005)', () => {
     const text = renderPlan(buildDryRunPlan(configFixture(), 'ios'))
     expect(text).toContain('NODE_OPTIONS+=--dns-result-order=ipv4first')

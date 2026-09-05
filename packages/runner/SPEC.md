@@ -332,6 +332,14 @@ write`), not hard-coded.
   that appends `-allowProvisioningUpdates` to iOS `xcodebuild build` and
   `xcodebuild test` commands. It defaults to false because provisioning changes
   are human-attended device prerequisites, not hidden runner behavior.
+- **REQ-IOS-015** After the app build, the runner installs the built application
+  itself: it asks `xcodebuild -showBuildSettings -json` (same workspace, scheme,
+  and destination as the build) for the application target's
+  `BUILT_PRODUCTS_DIR`/`FULL_PRODUCT_NAME` and runs `simctl install` (simulator)
+  or `devicectl device install app` (device). XCTest installs the app under test
+  only when the companion launches it, so `attach` mode on a fresh simulator
+  otherwise fails `simctl launch` with "not installed". The step runs on every
+  launch mode and under `--skip-build`; a failure is a `build`-stage failure.
 
 ### Android instrumentation lifecycle — `REQ-AND-*`
 

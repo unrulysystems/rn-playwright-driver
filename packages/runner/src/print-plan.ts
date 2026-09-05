@@ -44,6 +44,8 @@ function renderAction(action: StepAction): string {
       return `copy ${action.from} -> ${action.to}${action.mode ? ` (mode ${action.mode.toString(8)})` : ''}`
     case 'free-port':
       return `free-port ${action.port}`
+    case 'install-ios-app':
+      return `install-ios-app ${action.spec.scheme} -> ${action.spec.target.kind} ${action.spec.target.udid}  (product from xcodebuild -showBuildSettings)`
     case 'probe': {
       // Fast-fail markers change what the probe DOES (abort early instead of waiting out the
       // timeout), so the audited dry-run plan must show them to stay faithful (REQ-CLI-002,

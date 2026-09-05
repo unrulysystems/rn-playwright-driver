@@ -60,11 +60,31 @@ describe('planIos', () => {
       'ios.packager-host-location',
       'ios.packager-host-scheme',
       'ios.build-app',
+      'ios.install-app',
       'ios.free-port',
       'ios.companion-start',
       'ios.companion-ready',
       'ios.hermes',
     ])
+  })
+
+  it('installs the built app itself right after the build, on every launch mode, and under --skip-build (REQ-IOS-015)', () => {
+    for (const kind of ['plain', 'expo-dev-client'] as const) {
+      const plan = planIos(inputFor(kind))
+      const ids = stepIds(plan)
+      expect(ids.indexOf('ios.install-app')).toBe(ids.indexOf('ios.build-app') + 1)
+      const install = plan.steps.find((s) => s.id === 'ios.install-app')
+      expect(install?.stage).toBe('build')
+      expect(install?.skippable).toBeUndefined()
+      expect(install?.action).toMatchObject({
+        type: 'install-ios-app',
+        spec: {
+          target: { kind: 'simulator', udid: '<sim-udid>' },
+          workspace: 'ios/example.xcworkspace',
+          scheme: 'example',
+        },
+      })
+    }
   })
 
   it('plain apps do NOT host-launch (the companion launch mode owns it)', () => {

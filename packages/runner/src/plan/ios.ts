@@ -226,6 +226,30 @@ export function planIos(input: PlanIosInput): Plan {
     skippable: true,
   })
 
+  // install — XCTest installs the app under test only when the companion launches
+  // it (`launch`/`activate`). In `attach` mode the host owns the launch, so the
+  // runner installs the built product itself; a fresh simulator otherwise fails
+  // `simctl launch` with "not installed" (REQ-IOS-015). Not skippable: under
+  // --skip-build the products exist and the install is cheap.
+  push({
+    id: 'ios.install-app',
+    stage: 'build',
+    description: `Install the built ${ios.appScheme} app on ${resolved.kind === 'simulator' ? resolved.simName : resolved.deviceName}`,
+    action: {
+      type: 'install-ios-app',
+      spec: {
+        target:
+          resolved.kind === 'simulator'
+            ? { kind: 'simulator', udid: resolved.simUdid }
+            : { kind: 'device', udid: resolved.coreDeviceIdentifier },
+        workspace: ios.workspace,
+        scheme: ios.appScheme,
+        destination: resolved.destination,
+        ...(projectCwd ? { cwd: projectCwd } : {}),
+      },
+    },
+  })
+
   if (resolved.kind === 'simulator') {
     // device — app-specific pre-launch seeds (e.g. onboarding flags).
     for (const [key, value] of Object.entries(ios.defaults ?? {})) {

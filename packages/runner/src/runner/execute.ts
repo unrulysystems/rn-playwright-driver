@@ -128,6 +128,10 @@ async function runStep(
         await runner.freePort(action.port)
         return
       }
+      case 'install-ios-app': {
+        await runner.installIosApp(action.spec)
+        return
+      }
       case 'probe': {
         const key = processKeyForProbe(action.probe)
         const aliveFn = key === null ? () => true : () => isAlive(key)

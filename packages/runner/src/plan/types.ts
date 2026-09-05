@@ -51,6 +51,20 @@ export type ReadinessProbe =
       readonly timeoutMs: number
     }
 
+/**
+ * Install the application product of an Xcode scheme on the resolved simulator or
+ * device (REQ-IOS-015). The product path is asked of `xcodebuild -showBuildSettings`
+ * at execution time with the same workspace/scheme/destination the build used, so
+ * the plan never guesses DerivedData or product names.
+ */
+export interface InstallIosAppSpec {
+  readonly target: { readonly kind: 'simulator' | 'device'; readonly udid: string }
+  readonly workspace: string
+  readonly scheme: string
+  readonly destination: string
+  readonly cwd?: string
+}
+
 export type StepAction =
   | {
       readonly type: 'command'
@@ -74,6 +88,7 @@ export type StepAction =
       readonly mode?: number
     }
   | { readonly type: 'free-port'; readonly port: number }
+  | { readonly type: 'install-ios-app'; readonly spec: InstallIosAppSpec }
   | {
       readonly type: 'probe'
       readonly probe: ReadinessProbe
@@ -178,6 +193,8 @@ export interface ProcessRunner {
   removeFile(path: string): Promise<void>
   /** Free a TCP listener bound to `port` (lsof + kill). Idempotent. */
   freePort(port: number): Promise<void>
+  /** Resolve the scheme's built application and install it on the target (REQ-IOS-015). */
+  installIosApp(spec: InstallIosAppSpec): Promise<void>
   /**
    * Poll a readiness probe; resolves true when ready, false on timeout. When `watch` is given, the
    * probe also scans the backing process's log each poll and THROWS {@link ProbeFailure} the moment
