@@ -94,8 +94,7 @@ units:
 decisions:
   - {
       date: 2026-09-05,
-      call: The Metro seam is a request-time entry swap through server.rewriteRequestUrl with a generated .expo/rn-driver-e2e-entry.js; Metro runs getModulesRunBeforeMainModule entries only when something already imports them (metro/src/lib/getAppendScripts.js),
-      so issue 51's proposed mechanism cannot work as written.,
+      call: "The Metro seam is a request-time entry swap through server.rewriteRequestUrl with a generated .expo/rn-driver-e2e-entry.js; Metro runs getModulesRunBeforeMainModule entries only when something already imports them (metro/src/lib/getAppendScripts.js), so issue 51's proposed mechanism cannot work as written.",
       status: provisional,
     }
   - {
