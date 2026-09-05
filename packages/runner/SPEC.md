@@ -221,6 +221,11 @@ depend on transient Playwright setup state for prebuild decisions.
   (see REQ-DIAG-001).
 - **REQ-CLI-007** Device override flags (`--device <id|name>`) take precedence
   over config device-selection preferences.
+- **REQ-CLI-008** Before any effectful step, `rn-driver test` verifies the
+  runtime exposes the globals its readiness probes use (`WebSocket`, `fetch`:
+  Node >= 22 or bun) and otherwise fails at stage `config` naming the running
+  version and the requirement. `--dry-run` is exempt (REQ-CLI-002 holds on any
+  runtime that can load the config).
 
 ### Metro ownership — `REQ-METRO-*`
 

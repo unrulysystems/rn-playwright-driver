@@ -21,6 +21,7 @@ import {
   TargetHookError,
   targetHookContribution,
 } from './target-hooks'
+import { runtimePreflight } from './runtime-preflight'
 import { ConfigValidationError, assertValid } from './validate'
 
 interface CliFlags {
@@ -100,6 +101,14 @@ export async function run(argv: string[]): Promise<number> {
       throw error
     }
     return 0
+  }
+
+  // REQ-CLI-008: the readiness probes need the global WebSocket/fetch; refuse an
+  // unsupported runtime here rather than at the companion stage after a native build.
+  const runtimeError = runtimePreflight(process.version, globalThis as Record<string, unknown>)
+  if (runtimeError) {
+    process.stderr.write(`\nFAILED at stage [config] runtime: ${runtimeError}\n`)
+    return STAGE_EXIT_CODES.config
   }
 
   const runner = new NodeProcessRunner()

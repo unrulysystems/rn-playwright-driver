@@ -358,7 +358,10 @@ not available runner flags today.
   Node shim that loads built JavaScript from `dist`, so npm/Yarn consumers do not
   need bun or nub on `PATH`.
 - The readiness probes use the global `WebSocket`/`fetch`, so embedding the
-  library API (the `.` export) standalone requires **Node >= 22**.
+  library API (the `.` export) standalone requires **Node >= 22**. `rn-driver
+test` checks for those globals before its first effectful step and fails at
+  stage `config` on an older Node (a Node 20 consumer can run the bin under
+  `bun` instead); `--dry-run` works on any runtime.
 - The platform companion packages installed and their Expo config plugins added.
 - `xcrun`/`xcodebuild`/`pod` (iOS) and `adb`/`gradle` (Android) on `PATH`.
 

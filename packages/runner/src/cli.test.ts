@@ -115,3 +115,40 @@ describe('run() --dry-run (REQ-CLI-002)', () => {
     expect(stderr).not.toContain('TargetHookError')
   })
 })
+
+describe('run() runtime preflight (REQ-CLI-008)', () => {
+  let configPath: string
+  let stderr: string
+
+  beforeEach(async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'rn-driver-cli-runtime-'))
+    configPath = path.join(dir, 'rn-driver.config.mjs')
+    await writeFile(configPath, CONFIG_SRC)
+    stderr = ''
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk: string | Uint8Array): boolean => {
+      stderr += String(chunk)
+      return true
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('refuses a runtime without global WebSocket at the config stage before any effectful step', async () => {
+    vi.stubGlobal('WebSocket', undefined)
+    const code = await run(['test', '--platform', 'ios', '--config', configPath])
+    expect(code).toBe(10)
+    expect(stderr).toContain('FAILED at stage [config] runtime:')
+    expect(stderr).toContain('Node >= 22 or bun')
+  })
+
+  it('still prints the dry-run plan on such a runtime (REQ-CLI-002)', async () => {
+    vi.stubGlobal('WebSocket', undefined)
+    const code = await run(['test', '--platform', 'ios', '--dry-run', '--config', configPath])
+    expect(code).toBe(0)
+    expect(stderr).toBe('')
+  })
+})
