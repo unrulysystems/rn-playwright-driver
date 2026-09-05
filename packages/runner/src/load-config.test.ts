@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ConfigNotFoundError, loadConfig } from './load-config'
+import { ConfigNotFoundError, loadConfig, readProjectContext } from './load-config'
 
 describe('loadConfig', () => {
   it('loads an explicit config path and extracts the default export', async () => {
@@ -38,5 +38,39 @@ describe('loadConfig', () => {
       fileExists: () => true,
     })
     expect(result.config).toBe(namespace)
+  })
+})
+
+describe('readProjectContext (REQ-CFG-006)', () => {
+  const enoent = (): Promise<string> =>
+    Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+
+  it('returns undefined when the project has no package.json', async () => {
+    expect(await readProjectContext('/proj', enoent)).toBeUndefined()
+  })
+
+  it('names dependencies and devDependencies from the package next to the config', async () => {
+    const read = (): Promise<string> =>
+      Promise.resolve(
+        JSON.stringify({
+          dependencies: { expo: '1', 'expo-dev-client': '1' },
+          devDependencies: { vitest: '1' },
+        }),
+      )
+    expect(await readProjectContext('/proj', read)).toEqual({
+      packageJsonPath: '/proj/package.json',
+      dependencies: ['expo', 'expo-dev-client', 'vitest'],
+    })
+  })
+
+  it('reports an unreadable package.json by path instead of ignoring it', async () => {
+    const read = (): Promise<string> => Promise.resolve('{ not json')
+    await expect(readProjectContext('/proj', read)).rejects.toThrow('/proj/package.json: ')
+  })
+
+  it('propagates read failures other than a missing file', async () => {
+    const read = (): Promise<string> =>
+      Promise.reject(Object.assign(new Error('EACCES'), { code: 'EACCES' }))
+    await expect(readProjectContext('/proj', read)).rejects.toThrow('EACCES')
   })
 })

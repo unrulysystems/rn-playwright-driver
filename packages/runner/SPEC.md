@@ -193,6 +193,14 @@ depend on transient Playwright setup state for prebuild decisions.
 - **REQ-CFG-005** A platform absent from config is a hard error only when that
   platform is selected; `--platform all` with only `ios` configured fails fast
   naming `android` as unconfigured.
+- **REQ-CFG-006** Config is validated against the app package next to it: when
+  `expo-dev-client` is declared in that `package.json` (dependencies or
+  devDependencies), a selected platform whose `launch.kind` is `plain` fails
+  validation naming the field, the package.json path, and the dev-client fix.
+  A dev-client build launched plain lands on the dev-launcher screen and never
+  registers a Hermes target; on a simulator that once opened a Metro URL the
+  launcher reloads it silently, so the defect otherwise only surfaces on a fresh
+  device as a Hermes-target timeout. No package.json means no project check.
 
 ### CLI surface & platform selection — `REQ-CLI-*`
 

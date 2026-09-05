@@ -5,6 +5,19 @@ export interface ValidationResult {
   readonly errors: readonly string[]
 }
 
+/**
+ * What the runner knows about the app package the config belongs to. Lets
+ * validation reject config that contradicts the installed app (REQ-CFG-006).
+ */
+export interface ProjectContext {
+  /** Path of the package.json the dependency names came from (named in errors). */
+  readonly packageJsonPath: string
+  /** Names declared under `dependencies` and `devDependencies`. */
+  readonly dependencies: readonly string[]
+}
+
+const DEV_CLIENT_PACKAGE = 'expo-dev-client'
+
 const LAUNCH_MODES = ['launch', 'activate', 'attach'] as const
 const LAUNCH_KINDS = ['plain', 'expo-dev-client'] as const
 const IOS_TARGET_KINDS = ['simulator', 'device'] as const
@@ -43,9 +56,15 @@ const PLAYWRIGHT_KEYS = new Set(['config', 'specs'])
 /**
  * Validate a loaded config for the selected platforms. Runs before any side
  * effect; failures name the offending field and the expected shape (REQ-CFG-003).
- * Unknown keys are reported as typo protection (REQ-CFG-004).
+ * Unknown keys are reported as typo protection (REQ-CFG-004). With a
+ * `project`, launch kinds are also checked against the installed app
+ * (REQ-CFG-006).
  */
-export function validateConfig(config: unknown, platforms: readonly Platform[]): ValidationResult {
+export function validateConfig(
+  config: unknown,
+  platforms: readonly Platform[],
+  project?: ProjectContext,
+): ValidationResult {
   const errors: string[] = []
 
   if (!isRecord(config)) {
@@ -65,8 +84,36 @@ export function validateConfig(config: unknown, platforms: readonly Platform[]):
 
   if (platforms.includes('ios')) validateIos(config.ios, errors)
   if (platforms.includes('android')) validateAndroid(config.android, errors)
+  if (project) validateLaunchKindsAgainstProject(config, platforms, project, errors)
 
   return { ok: errors.length === 0, errors }
+}
+
+/**
+ * A dev-client build launched `plain` lands on the dev-launcher home screen and
+ * never registers a Hermes target; on a simulator that once opened a Metro URL
+ * the launcher silently reloads it, so the misconfiguration only surfaces on a
+ * fresh device as a Hermes-target timeout. Reject it up front (REQ-CFG-006).
+ */
+function validateLaunchKindsAgainstProject(
+  config: Record<string, unknown>,
+  platforms: readonly Platform[],
+  project: ProjectContext,
+  errors: string[],
+): void {
+  if (!project.dependencies.includes(DEV_CLIENT_PACKAGE)) return
+  for (const platform of platforms) {
+    const section = config[platform]
+    if (!isRecord(section) || !isRecord(section.launch) || section.launch.kind !== 'plain') continue
+    const fix =
+      platform === 'ios'
+        ? 'kind "expo-dev-client" with mode "attach"'
+        : 'kind "expo-dev-client" and android.scheme'
+    errors.push(
+      `config.${platform}.launch.kind: "plain" but ${DEV_CLIENT_PACKAGE} is a dependency in ${project.packageJsonPath}; ` +
+        `a dev-client build launched plain lands on the dev-launcher screen and never registers a Hermes target. Use ${fix}`,
+    )
+  }
 }
 
 function validateMetro(metro: unknown, errors: string[]): void {
@@ -376,8 +423,9 @@ function reportUnknownKeys(
 export function assertValid(
   config: unknown,
   platforms: readonly Platform[],
+  project?: ProjectContext,
 ): asserts config is RnDriverConfig {
-  const result = validateConfig(config, platforms)
+  const result = validateConfig(config, platforms, project)
   if (!result.ok) {
     throw new ConfigValidationError(result.errors)
   }

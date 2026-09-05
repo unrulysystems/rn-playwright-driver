@@ -5,7 +5,7 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { buildDryRunPlan } from './build-plan'
 import type { Platform, RnDriverConfig } from './config'
-import { ConfigNotFoundError, loadConfig } from './load-config'
+import { ConfigNotFoundError, loadConfig, readProjectContext } from './load-config'
 import { planAndroid } from './plan/android'
 import { planIos } from './plan/ios'
 import { resolveMetro } from './plan/resolved'
@@ -74,9 +74,9 @@ export async function run(argv: string[]): Promise<number> {
       cwd: process.cwd(),
       ...(flags.config ? { configPath: flags.config } : {}),
     })
-    assertValid(loaded.config, platforms)
-    config = loaded.config
     projectCwd = path.dirname(loaded.path)
+    assertValid(loaded.config, platforms, await readProjectContext(projectCwd))
+    config = loaded.config
   } catch (error) {
     if (error instanceof ConfigValidationError || error instanceof ConfigNotFoundError) {
       process.stderr.write(`${error.message}\n`)

@@ -88,6 +88,23 @@ describe('run() --dry-run (REQ-CLI-002)', () => {
     expect(stdout).toContain('--grep @smoke')
   })
 
+  it('rejects a plain launch kind when the app package installs expo-dev-client (REQ-CFG-006)', async () => {
+    const packageJsonPath = path.join(path.dirname(configPath), 'package.json')
+    await writeFile(
+      packageJsonPath,
+      JSON.stringify({
+        name: 'app',
+        dependencies: { expo: '~56.0.0', 'expo-dev-client': '~56.0.0' },
+      }),
+    )
+    const code = await run(['test', '--platform', 'ios', '--config', configPath, '--dry-run'])
+    expect(code).toBe(2)
+    expect(stderr).toContain(
+      `config.ios.launch.kind: "plain" but expo-dev-client is a dependency in ${packageJsonPath}`,
+    )
+    expect(stdout).not.toContain('Plan (ios)')
+  })
+
   it('reports dry-run hook validation failures as config-stage failures', async () => {
     await writeFile(configPath, INVALID_HOOK_CONFIG_SRC)
     const code = await run(['test', '--platform', 'ios', '--config', configPath, '--dry-run'])

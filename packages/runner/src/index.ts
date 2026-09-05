@@ -22,7 +22,7 @@ export { buildDryRunPlan } from './build-plan'
 export type { BuildPlanOptions, MetroOverrides } from './build-plan'
 export { renderPlan } from './print-plan'
 export { ConfigValidationError, validateConfig } from './validate'
-export type { ValidationResult } from './validate'
+export type { ProjectContext, ValidationResult } from './validate'
 export type {
   CleanupAction,
   CommandSpec,
@@ -32,3 +32,4 @@ export type {
   Step,
   StepAction,
 } from './plan/types'
+export { readProjectContext } from './load-config'

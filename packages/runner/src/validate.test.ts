@@ -90,6 +90,52 @@ describe('validateConfig', () => {
     expect(result.errors).toContainEqual(expect.stringContaining('requires mode "attach"'))
   })
 
+  it('rejects a plain launch kind when expo-dev-client is a project dependency (REQ-CFG-006)', () => {
+    const project = {
+      packageJsonPath: '/proj/package.json',
+      dependencies: ['expo', 'expo-dev-client'],
+    }
+    const result = validateConfig(configFixture(), ['ios', 'android'], project)
+    expect(result.ok).toBe(false)
+    expect(result.errors).toEqual([
+      expect.stringContaining(
+        'config.ios.launch.kind: "plain" but expo-dev-client is a dependency in /proj/package.json',
+      ),
+      expect.stringContaining(
+        'config.android.launch.kind: "plain" but expo-dev-client is a dependency in /proj/package.json',
+      ),
+    ])
+    expect(result.errors[0]).toContain('kind "expo-dev-client" with mode "attach"')
+    expect(result.errors[1]).toContain('kind "expo-dev-client" and android.scheme')
+  })
+
+  it('checks the dev-client dependency only for selected platforms (REQ-CFG-006)', () => {
+    const project = { packageJsonPath: '/proj/package.json', dependencies: ['expo-dev-client'] }
+    const result = validateConfig(configFixture(), ['android'], project)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]).toContain('config.android.launch.kind')
+  })
+
+  it('accepts a plain launch kind when expo-dev-client is not installed (REQ-CFG-006)', () => {
+    const project = {
+      packageJsonPath: '/proj/package.json',
+      dependencies: ['expo', 'react-native'],
+    }
+    expect(validateConfig(configFixture(), ['ios', 'android'], project)).toEqual({
+      ok: true,
+      errors: [],
+    })
+  })
+
+  it('accepts dev-client launch kinds when expo-dev-client is installed (REQ-CFG-006)', () => {
+    const project = { packageJsonPath: '/proj/package.json', dependencies: ['expo-dev-client'] }
+    const config = configFixture({
+      ios: iosDevClientConfigFixture(),
+      android: androidDevClientConfigFixture(),
+    })
+    expect(validateConfig(config, ['ios', 'android'], project)).toEqual({ ok: true, errors: [] })
+  })
+
   it('accepts a dev-client config in attach mode', () => {
     const config = configFixture({ ios: iosDevClientConfigFixture() })
     expect(validateConfig(config, ['ios']).ok).toBe(true)

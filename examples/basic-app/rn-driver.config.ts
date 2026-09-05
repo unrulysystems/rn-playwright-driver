@@ -6,8 +6,12 @@ import { defineRnDriverConfig } from '@unrulysystems/rn-playwright-driver-runner
  * `scripts/e2e-android-instrumentation.sh`; run it with
  * `rn-driver test --platform <ios|android|all>`.
  *
- * The example is a plain Expo app (the companion launches it), so iOS uses
- * `launch` mode rather than dev-client `attach`.
+ * The example is an Expo dev-client build (`expo-dev-client` is installed), so
+ * the runner owns the launch on both platforms: iOS cold-launches with
+ * `simctl launch --initialUrl` (companion in `attach` mode) and Android opens
+ * the `exp+example://expo-development-client/?url=` deep link. A dev-client
+ * build launched `plain` lands on the dev-launcher home screen on a fresh
+ * simulator/emulator and never registers a Hermes target.
  */
 export default defineRnDriverConfig({
   metro: {
@@ -23,12 +27,13 @@ export default defineRnDriverConfig({
     bundleId: 'com.unrulyfall.example',
     workspace: 'ios/example.xcworkspace',
     appScheme: 'example',
-    launch: { mode: 'launch', kind: 'plain' },
+    launch: { mode: 'attach', kind: 'expo-dev-client' },
   },
   android: {
     packageName: 'com.unrulyfall.example',
     activity: '.MainActivity',
-    launch: { mode: 'launch', kind: 'plain' },
+    scheme: 'exp+example',
+    launch: { mode: 'launch', kind: 'expo-dev-client' },
   },
   playwright: {
     config: 'playwright.config.ts',

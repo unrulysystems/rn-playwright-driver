@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import type { ProjectContext } from './validate'
 
 /**
  * Loads an ES module by absolute path and returns its namespace. Injected in
@@ -76,4 +78,35 @@ function findConfigUp(startDir: string, fileExists: (p: string) => boolean): str
     if (parent === dir) return undefined
     dir = parent
   }
+}
+
+/**
+ * Read the app package next to the config so validation can check the config
+ * against what is installed (REQ-CFG-006). `undefined` when there is no
+ * package.json; an unreadable one is an error naming the path.
+ */
+export async function readProjectContext(
+  dir: string,
+  read: (p: string) => Promise<string> = (p) => readFile(p, 'utf8'),
+): Promise<ProjectContext | undefined> {
+  const packageJsonPath = path.join(dir, 'package.json')
+  let raw: string
+  try {
+    raw = await read(packageJsonPath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+    throw error
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch (error) {
+    throw new Error(`${packageJsonPath}: ${(error as Error).message}`, { cause: error })
+  }
+  const names = (key: string): string[] => {
+    if (typeof parsed !== 'object' || parsed === null) return []
+    const section = (parsed as Record<string, unknown>)[key]
+    return typeof section === 'object' && section !== null ? Object.keys(section) : []
+  }
+  return { packageJsonPath, dependencies: [...names('dependencies'), ...names('devDependencies')] }
 }

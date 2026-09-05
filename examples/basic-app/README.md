@@ -125,10 +125,16 @@ companion port/token-file vars). To change them, edit `rn-driver.config.ts`
 (e.g. `timeoutMs`, `metro`, `ios`/`android` device selection) rather than
 exporting environment variables.
 
-The default simulator/emulator config uses plain launch semantics:
-`ios.launch.kind` and `android.launch.kind` are both `plain`. The dedicated
-physical iOS config uses Expo dev-client launch semantics because real iPhones
-need a device-reachable Metro URL and an app URL scheme.
+This app is an Expo dev-client build (`expo-dev-client` is installed), so every
+lane uses Expo dev-client launch semantics: `ios.launch` is
+`{ mode: 'attach', kind: 'expo-dev-client' }` (the runner cold-launches with
+`simctl launch --initialUrl`; the XCTest companion only injects) and
+`android.launch.kind` is `expo-dev-client` with `android.scheme` set (the runner
+opens the `expo-development-client` deep link). A dev-client build launched
+`plain` lands on the dev-launcher home screen on a fresh simulator/emulator and
+never registers a Hermes target; the runner rejects that combination at config
+validation. The physical iOS config additionally needs a device-reachable Metro
+URL.
 
 `expo prebuild` runs inside the runner process and inherits that process
 environment. The runner sets `RN_E2E=1` on every prebuild and on the Metro it
