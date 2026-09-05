@@ -147,14 +147,21 @@ describe('planAndroid', () => {
     expect(offDefaultCleanup.some((c) => c.includes('reverse --remove tcp:8081'))).toBe(true)
   })
 
-  it('REQ-AND-005: both Hermes waits carry a bounded am-start retry', () => {
-    const plan = planAndroid(inputFor())
-    for (const id of ['android.hermes-1', 'android.hermes-2']) {
-      const action = plan.steps.find((s) => s.id === id)?.action
-      expect(action?.type).toBe('probe')
-      if (action?.type === 'probe') {
-        expect(action.retry?.max).toBeGreaterThan(0)
-        expect(action.retry?.command.args.join(' ')).toContain('am start')
+  it('REQ-AND-005: both Hermes waits carry a bounded am-start retry that never force-stops', () => {
+    for (const android of [androidConfigFixture(), androidDevClientConfigFixture()]) {
+      const plan = planAndroid(
+        inputFor({ android, resolved: placeholderAndroid(android, resolveMetro(undefined)) }),
+      )
+      for (const id of ['android.hermes-1', 'android.hermes-2']) {
+        const action = plan.steps.find((s) => s.id === id)?.action
+        expect(action?.type).toBe('probe')
+        if (action?.type === 'probe') {
+          expect(action.retry?.max).toBeGreaterThan(0)
+          const retry = action.retry?.command.args.join(' ') ?? ''
+          expect(retry).toContain('am start')
+          // A retry that force-stops discards a registration in flight; only launch-1 does.
+          expect(retry).not.toContain('force-stop')
+        }
       }
     }
   })

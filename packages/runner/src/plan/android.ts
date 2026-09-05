@@ -166,11 +166,14 @@ export function planAndroid(input: PlanAndroidInput): Plan {
   })
 
   // app-launch — first launch + wait for a Hermes target. The wait re-issues
-  // `am start` on a transient registration miss (REQ-AND-005).
+  // `am start` on a transient registration miss (REQ-AND-005). The first launch force-stops
+  // for a clean process; the retry does not: a registration in flight survives a warm
+  // `am start` (a dev client reloads its bundle from the deep link, a plain app is brought
+  // to front), whereas force-stopping on every retry discards it and the race never settles.
   const launch1Command = launchCommandFor(android, resolved, serial, { forceStopBefore: true })
   const launch2Command = launchCommandFor(android, resolved, serial, { forceStopBefore: false })
   push(launchStep('android.launch-1', android, launch1Command))
-  push(hermesStep('android.hermes-1', android, metro, resolved, hermesDeviceName, launch1Command))
+  push(hermesStep('android.hermes-1', android, metro, resolved, hermesDeviceName, launch2Command))
 
   // companion — forward the port (clearing any stale mapping first) and start
   // the instrumentation server, then wait for an authenticated hello.
