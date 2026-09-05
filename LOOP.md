@@ -4,9 +4,9 @@ id: clean-seam
 objective: Close upstream issues 44 through 51 so the driver installs from Metro config under a runner-emitted marker, excludes its native modules from production prebuilds, and proves both in a CI artifact check; the example app is the reference consumer.
 status: active
 phase: DEV
-iteration: 6
+iteration: 7
 iteration_budget: 14
-updated_at: 2026-09-05T09:20:00Z
+updated_at: 2026-09-05T13:40:00Z
 mission: native-e2e-clean-seam
 targets:
   spec:
@@ -108,6 +108,11 @@ decisions:
       status: provisional,
     }
   - {
+      date: 2026-09-05,
+      call: 'An app that installs expo-dev-client is always launched as kind expo-dev-client (iOS mode attach, Android with scheme); the runner rejects kind plain for such an app at config validation (REQ-CFG-006) because a plain launch of a dev-client build only ever worked on simulators that had cached a Metro URL.',
+      status: provisional,
+    }
+  - {
       date: 2026-09-04,
       call: The Metro helper and the native-module plugin ship in the driver package as ./metro and app.plugin.js.,
       status: provisional,
@@ -147,6 +152,7 @@ boundary:
 - U7 (2026-09-05): `examples/basic-app/scripts/check-footprint.mjs` (`nub run check:footprint`) green in `/tmp/rnpd/footprint-3.log`: source grep, release export ×2 (0 harness strings both states), Metro-served bundle (0 → 4/2/1 hits), clean prebuild excludes 0/4 on apple+android with no scaffolds, marked prebuild links 4/4 with both scaffolds, unmarked prebuild restores both exclusions. Observed red: a planted `RN_E2E` read in `index.ts` (`FAIL source index.ts ... found RN_E2E`), and a planted `isE2EMarked → true` (`/tmp/rnpd/footprint-planted.log`, 5 FAILs: Metro-off bundle carried the harness, both fresh-prebuild exclusions, both restores). CI job `Release footprint` added. Two script fixes along the way: `expo start --localhost` binds only `[::1]` on macOS (probe both loopbacks); the settings.gradle exclude parser must read the array after `+`.
 - U8 (2026-09-05): README install is the Metro line + unconditional plugin list with a seam table; legacy harness import kept as a section; AGENTS.md constraint updated; runner README/constants and example README say the driver plugin excludes without the marker (companions inert). Changesets: driver minor, runner minor, companions minor.
 - Runner (2026-09-05): `android.hermes-1` retry now uses launch-2 (no force-stop); test observed red on the pre-fix tree (1 failed) then green (15 passed).
+- U9 run 1 (2026-09-05, `/tmp/rnpd/e2e-ios-1.log`, EXIT 16): `FAILED [ios] at stage [hermes-target]` after 60 s. Metro on 8083 logged no bundle request (`.expo/dev/logs/start.log` has no `metro:bundling:started` after the 8083 instantiate); the XCTest companion launched the app and idled; the simulator home screen was showing afterwards (`/tmp/rnpd/sim-after-ios-1.png`). Root cause: the example ships `expo-dev-client` (since 9d4afc6) but `rn-driver.config.ts` launched it `kind: 'plain'`; `EXDevLauncherController.start` with no `--initialUrl` reloads the last-opened URL or shows the launcher, so fresh `rnpd-clean-seam` never fetched a bundle while older simulators hid the defect. Fix in 3b264a8: example iOS `{ attach, expo-dev-client }`, Android `{ launch, expo-dev-client }` + `scheme: 'exp+example'`; runner `readProjectContext` + REQ-CFG-006 validation (observed red ×2 before the validator change, 164 runner tests green after); `nub run check` and `nub run build` green. Run 2 in progress: `/tmp/rnpd/e2e-ios-2.log`.
 
 ## Known pre-existing failures — do not chase (cited evidence only)
 
