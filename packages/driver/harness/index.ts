@@ -225,6 +225,16 @@ const MODULE_INSTALL_INSTRUCTIONS: Record<string, string> = {
 
 const HARNESS_API_VERSION = 1
 
+/** `Platform.OS` as React Native reports it; `'unknown'` when react-native cannot load. */
+function runtimePlatform(): string {
+  try {
+    const { Platform } = require('react-native') as { Platform?: { OS?: unknown } }
+    return typeof Platform?.OS === 'string' ? Platform.OS : 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 /**
  * Create error result for unavailable modules.
  */
@@ -544,6 +554,7 @@ function installHarness(): void {
 
   const capabilities: Capabilities = {
     apiVersion: HARNESS_API_VERSION,
+    platform: runtimePlatform(),
     viewTree: viewTreeNative !== null,
     viewTreeTap: viewTreeTapSupported,
     screenshot: screenshotNative !== null,

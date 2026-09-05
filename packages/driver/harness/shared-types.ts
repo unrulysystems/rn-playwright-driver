@@ -62,6 +62,11 @@ export type AppState = 'active' | 'background' | 'inactive'
 export type Capabilities = {
   /** Harness API version for capability negotiation */
   apiVersion: number
+  /**
+   * `Platform.OS` as the runtime reports it. The driver reads this when the CDP
+   * target's device name carries no platform keyword (a custom-named simulator).
+   */
+  platform: string
   viewTree: boolean
   viewTreeTap: boolean
   screenshot: boolean

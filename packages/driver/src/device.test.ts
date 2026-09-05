@@ -33,7 +33,7 @@ function defaultTarget(): MockTarget {
 }
 
 function isPlatformProbe(expr: string): boolean {
-  return expr.includes('Platform') && expr.includes('OS')
+  return expr.includes('__RN_DRIVER__') && expr.includes('capabilities?.platform')
 }
 
 function mockDefaultPlatform(platform: 'ios' | 'android' = 'ios'): void {
@@ -228,7 +228,7 @@ describe('RNDevice Core Primitives', () => {
       expect(platformDevice.platform).toBe('android')
     })
 
-    it('defers a BARE app-id title to Platform.OS (never guesses platform from an app id)', async () => {
+    it('defers a BARE app-id title to the harness (never guesses platform from an app id)', async () => {
       // No deviceName, no parenthetical — a bare `com.acme.iosapp` is ambiguous and
       // must NOT be matched on the `ios` substring; the authoritative probe decides.
       const platformDevice = await connectWithPlatformProbe(
@@ -239,6 +239,26 @@ describe('RNDevice Core Primitives', () => {
       expect(platformDevice.platform).toBe('android')
     })
 
+    it('detects the platform from the harness when the simulator name carries no platform keyword', async () => {
+      // A custom-named simulator (rnpd-clean-seam) reports that name as deviceName, and a
+      // Hermes runtime has no global `require`, so only the harness can answer.
+      vi.clearAllMocks()
+      mockSelectedTarget = { ...defaultTarget(), deviceName: 'rnpd-clean-seam' }
+      const platformDevice = new RNDevice({ timeout: 1000 })
+      mockEvaluateFn.mockImplementation((expr: string) => {
+        if (expr.includes('__RN_DRIVER__') && expr.includes('platform')) {
+          return Promise.resolve('ios')
+        }
+        if (expr.includes("require('react-native')")) {
+          return Promise.reject(new Error("Property 'require' doesn't exist"))
+        }
+        return Promise.resolve(undefined)
+      })
+
+      await platformDevice.connect()
+      expect(platformDevice.platform).toBe('ios')
+    })
+
     it('fails closed when a bare title carries no device identity and the probe fails', async () => {
       await expect(
         connectWithPlatformProbe({ ...defaultTarget(), title: 'com.acme.iosapp' }, () =>
@@ -247,7 +267,7 @@ describe('RNDevice Core Primitives', () => {
       ).rejects.toThrow(/Could not detect platform/)
     })
 
-    it('uses Platform.OS when target name metadata is unknown', async () => {
+    it('uses the harness-reported platform when target name metadata is unknown', async () => {
       const platformDevice = await connectWithPlatformProbe(defaultTarget(), () =>
         Promise.resolve('android'),
       )
@@ -255,7 +275,7 @@ describe('RNDevice Core Primitives', () => {
       expect(platformDevice.platform).toBe('android')
     })
 
-    it('throws when target name metadata is unknown and Platform.OS probe fails', async () => {
+    it('throws when target name metadata is unknown and the harness probe fails', async () => {
       vi.clearAllMocks()
       mockSelectedTarget = defaultTarget()
       const platformDevice = new RNDevice({ timeout: 1000 })
@@ -267,7 +287,7 @@ describe('RNDevice Core Primitives', () => {
       })
 
       await expect(platformDevice.connect()).rejects.toThrow(
-        'Could not detect platform: CDP target carried no device identity and the Platform.OS probe failed',
+        'Could not detect platform: CDP target carried no device identity and the harness did not report one',
       )
       // connect() is atomic: the socket opened (cdp.connect resolved) but detectPlatform
       // then rejected, so connect() must tear its OWN partial state down before rejecting
@@ -279,7 +299,7 @@ describe('RNDevice Core Primitives', () => {
       expect(mockDisconnectFn).toHaveBeenCalledTimes(2)
     })
 
-    it('throws when target name metadata is unknown and Platform.OS is unsupported', async () => {
+    it('throws when target name metadata is unknown and the harness platform is unsupported', async () => {
       vi.clearAllMocks()
       mockSelectedTarget = defaultTarget()
       const platformDevice = new RNDevice({ timeout: 1000 })
@@ -291,7 +311,7 @@ describe('RNDevice Core Primitives', () => {
       })
 
       await expect(platformDevice.connect()).rejects.toThrow(
-        'Could not detect platform: CDP target carried no device identity and Platform.OS returned an unsupported value',
+        'Could not detect platform: CDP target carried no device identity and the harness reported an unsupported platform (web)',
       )
     })
   })

@@ -530,6 +530,7 @@ export type RNDriverGlobal = {
   // Feature detection
   capabilities: {
     apiVersion: number
+    platform: string // Platform.OS as the runtime reports it
     viewTree: boolean
     viewTreeTap: boolean
     screenshot: boolean
@@ -547,6 +548,7 @@ export type RNDriverGlobal = {
 function detectCapabilities(): Capabilities {
   return {
     apiVersion: 1,
+    platform: Platform.OS,
     viewTree: typeof ViewTreeModule?.findByTestId === 'function',
     viewTreeTap: typeof ViewTreeModule?.tap === 'function',
     screenshot: typeof ScreenshotModule?.captureScreen === 'function',

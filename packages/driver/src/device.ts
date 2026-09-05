@@ -586,18 +586,20 @@ export class RNDevice implements Device {
       return fromName
     }
 
-    // Authoritative source: ask the runtime itself. It decides for any bare/ambiguous
-    // title. If it cannot answer, fail loudly rather than guess a platform from a
-    // string that might be an app id — evaluate() is core to the driver, so a probe
-    // that cannot run means the connection is unusable anyway.
+    // Authoritative source: the harness reports `Platform.OS` from inside the app
+    // (`capabilities.platform`). It decides for any bare/ambiguous title and for a
+    // custom-named simulator whose name carries no platform keyword. A Hermes runtime
+    // has no global `require`, so there is no other in-runtime probe; the harness may
+    // still be loading right after the target appears, so wait for it (bounded by the
+    // device timeout) and fail loudly rather than guess from a string.
     let platform: unknown
     try {
-      platform = await this.evaluate<unknown>(
-        "(() => { const { Platform } = require('react-native'); return Platform?.OS })()",
-      )
+      platform = await this.waitForFunction<unknown>(HARNESS_PLATFORM_PROBE, {
+        polling: HARNESS_PLATFORM_POLL_MS,
+      })
     } catch (error) {
       throw new Error(
-        `Could not detect platform: CDP target carried no device identity and the Platform.OS probe failed (${error instanceof Error ? error.message : String(error)})`,
+        `Could not detect platform: CDP target carried no device identity and the harness did not report one (${error instanceof Error ? error.message : String(error)}); is the harness installed (withRnDriverHarness under RN_E2E=1)?`,
         { cause: error },
       )
     }
@@ -605,7 +607,7 @@ export class RNDevice implements Device {
       return platform
     }
     throw new Error(
-      'Could not detect platform: CDP target carried no device identity and Platform.OS returned an unsupported value',
+      `Could not detect platform: CDP target carried no device identity and the harness reported an unsupported platform (${String(platform)})`,
     )
   }
 }
@@ -615,6 +617,10 @@ export class RNDevice implements Device {
  * Returns undefined when nothing matches, so the caller can defer to the authoritative
  * Platform.OS probe rather than guess from an ambiguous string.
  */
+/** Read by detectPlatform: the harness's own `Platform.OS` report. */
+const HARNESS_PLATFORM_PROBE = 'globalThis.__RN_DRIVER__?.capabilities?.platform'
+const HARNESS_PLATFORM_POLL_MS = 250
+
 function matchPlatformName(name: string | undefined): 'ios' | 'android' | undefined {
   const n = name?.toLowerCase() ?? ''
   if (n.includes('iphone') || n.includes('ipad') || n.includes('ios')) {

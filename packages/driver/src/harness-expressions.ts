@@ -11,6 +11,7 @@ export function buildCapabilitiesExpression(): string {
   const capabilitiesPath = `${HARNESS_GLOBAL}?.capabilities`
   const fallback: Capabilities = {
     apiVersion: 0,
+    platform: 'unknown',
     viewTree: false,
     viewTreeTap: false,
     screenshot: false,
@@ -21,6 +22,7 @@ export function buildCapabilitiesExpression(): string {
 
   return `({
     apiVersion: ${capabilitiesPath}?.apiVersion ?? ${fallback.apiVersion},
+    platform: ${capabilitiesPath}?.platform ?? '${fallback.platform}',
     viewTree: ${capabilitiesPath}?.viewTree ?? ${fallback.viewTree},
     viewTreeTap: ${capabilitiesPath}?.viewTreeTap ?? ${fallback.viewTreeTap},
     screenshot: ${capabilitiesPath}?.screenshot ?? ${fallback.screenshot},
