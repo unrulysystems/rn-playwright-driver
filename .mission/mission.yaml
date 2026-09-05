@@ -1,0 +1,34 @@
+mission: 1
+id: native-e2e-clean-seam
+title: Native e2e through the RN Playwright driver with zero test code in the app
+outcome: Send's e2e suites, web and native, are dogfooded green on the redesign branch; the native lane runs on the driver's marker-gated Metro seam with no test branch in app source; and the driver holds its "no test code in the app binary" promise with a two-direction artifact check in CI.
+rubric:
+  - id: SEAM-001
+    criterion: The harness installs from Metro config under the runner's marker; the reference consumer's app source has no driver import and no marker read.
+    floor: examples/basic-app e2e green on iOS and Android through rn-driver test with withRnDriverHarness as the only install; check:footprint grep over app entry and app config passes.
+    status: open
+  - id: SEAM-002
+    criterion: Driver native modules are absent from production prebuilds by default and present under the marker.
+    floor: check:footprint prebuild direction passes both ways on the example app.
+    status: open
+  - id: SEAM-003
+    criterion: The promise is held by a CI job, not a sentence.
+    floor: check:footprint runs in .github/workflows/ci.yml and was observed red on a planted regression before green.
+    status: open
+  - id: SEAM-004
+    criterion: The remaining leaks are closed — the dev gate folds, the frame counter is lazy, the companion plugin owns its native side effects, the harness needs no consumer resolver override.
+    floor: unit tests for REQ-SEAM-005, -006, -008 and the example app's Android companion run with no consumer plugin.
+    status: open
+  - id: SEAM-005
+    criterion: Send's native lane runs on the seam.
+    floor: apps/expo smoke spec green on an iOS simulator and an Android emulator via rn-driver test against the worktree's localnet, twice; app-test-footprint.test.ts green with no exemption for app source.
+    status: open
+  - id: SEAM-006
+    criterion: Send's web e2e suite is dogfooded on the redesign branch.
+    floor: the suite runs at CI parity (served production build, --workers=1) on the worktree's localnet and a chartered bug bash terminates green or findings with every finding drafted for filing.
+    status: open
+boundary:
+  - publish
+  - npm-release
+  - merge-tracked-ref
+  - github-mutation
