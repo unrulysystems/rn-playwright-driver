@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { describe, test } = require('node:test')
+const { afterEach, describe, test } = require('node:test')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
@@ -7,12 +7,28 @@ const plugin = require('./withRNDriverTouchCompanion')
 const appPlugin = require('../app.plugin')
 
 describe('withRNDriverTouchCompanion plugin helpers', () => {
-  test('app plugin exports the companion config plugin', () => {
-    assert.equal(appPlugin, plugin)
+  afterEach(() => {
+    delete process.env.RN_E2E
+  })
+
+  test('app plugin exposes the companion config plugin and gates it on RN_E2E=1 (REQ-SEAM-003)', () => {
+    assert.equal(appPlugin.withRNDriverTouchCompanion, plugin)
+
+    const config = { name: 'Example', slug: 'example', android: { package: 'com.example.app' } }
+    assert.equal(appPlugin(config), config)
+    assert.equal(config.mods, undefined)
+
+    process.env.RN_E2E = 'true'
+    assert.equal(appPlugin(config), config)
+    assert.equal(config.mods, undefined)
+
+    process.env.RN_E2E = '1'
+    assert.equal(typeof appPlugin({ ...config }).mods.android.dangerous, 'function')
   })
 
   test('exported app plugin registers and runs the Android dangerous mod', async () => {
     const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'rn-driver-touch-companion-'))
+    process.env.RN_E2E = '1'
     try {
       const manifestPath = path.join(projectRoot, 'app/src/androidTest/AndroidManifest.xml')
       fs.mkdirSync(path.dirname(manifestPath), { recursive: true })

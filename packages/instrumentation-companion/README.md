@@ -20,6 +20,10 @@ bun add -d @unrulysystems/rn-playwright-driver-instrumentation-companion
 }
 ```
 
+The plugin is inert unless `RN_E2E=1` is set for the prebuild (`rn-driver test`
+sets it), so the entry stays in `app.json` unconditionally and a production
+prebuild scaffolds nothing.
+
 During `expo prebuild`, the plugin:
 
 - copies `RNDriverTouchCompanion.kt` into `android/app/src/androidTest/java`;

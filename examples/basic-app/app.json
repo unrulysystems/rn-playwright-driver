@@ -25,6 +25,7 @@
     },
     "plugins": [
       "expo-dev-client",
+      "@unrulysystems/rn-playwright-driver",
       "@unrulysystems/rn-playwright-driver-instrumentation-companion",
       "@unrulysystems/rn-playwright-driver-xctest-companion"
     ]

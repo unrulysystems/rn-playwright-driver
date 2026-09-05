@@ -68,16 +68,22 @@ directions.
   (`metro/src/lib/getAppendScripts.js`), so an entry swap is the seam. `expo export`
   and `export:embed` bundle the project entry directly, so no export carries the
   harness. The helper is unit-tested in both marker states.
-- **REQ-SEAM-003** Every config plugin in this repo (`instrumentation-companion`,
-  `xctest-companion`, and the native-module plugin below) is a no-op unless
-  `RN_E2E=1`, so a consumer lists them unconditionally.
+- **REQ-SEAM-003** The companion config plugins (`instrumentation-companion`,
+  `xctest-companion`) are no-ops unless `RN_E2E=1`, and the native-module plugin
+  below acts in both marker states, so a consumer lists all three unconditionally.
+  A companion scaffold left by an earlier marked prebuild lives only in test source
+  sets (`androidTest`, `*UITests`) that never enter the app product;
+  `expo prebuild --clean` removes it.
 - **REQ-SEAM-004** `@unrulysystems/rn-playwright-driver` ships `app.plugin.js`
   (`withRnDriverNativeModules`). Without the marker it writes the four driver
-  module names (`rn-driver-view-tree`, `rn-driver-screenshot`,
-  `rn-driver-lifecycle`, `rn-driver-touch`) into the generated iOS Podfile
-  `use_expo_modules!` exclude list and the Android settings-gradle exclude list.
-  With the marker it writes nothing. The exclusion lives only in generated native
-  files.
+  packages (`@unrulysystems/rn-driver-view-tree`, `-screenshot`, `-lifecycle`,
+  `-touch`, the npm names Expo autolinking keys an exclusion by) into the generated
+  iOS Podfile `use_expo_modules!` exclude list and an `expoAutolinking.exclude`
+  assignment before `useExpoModules()` in the Android `settings.gradle`, merging
+  with any consumer list. With the marker it removes exactly that list and adds
+  nothing, so `expo prebuild` without `--clean` (which reuses existing native
+  files) converges in either direction. The exclusion lives only in generated
+  native files.
 
 ### Harness — `REQ-SEAM-*` (continued)
 

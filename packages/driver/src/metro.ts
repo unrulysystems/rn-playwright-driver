@@ -23,7 +23,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 
-export const E2E_MARKER = 'RN_E2E'
+import { E2E_MARKER, isE2EMarked } from './e2e-marker'
+
+export { E2E_MARKER }
 /** Project-relative path of the generated entry. `.expo/` is Expo-owned and gitignored. */
 export const E2E_ENTRY_RELATIVE = '.expo/rn-driver-e2e-entry.js'
 const HARNESS_SPECIFIER = 'rn-driver:harness'
@@ -100,7 +102,7 @@ export function withRnDriverHarness<T extends MetroConfigLike>(
   options: WithRnDriverHarnessOptions = {},
 ): T {
   const env = options.env ?? process.env
-  const enabled = env[E2E_MARKER] === '1'
+  const enabled = isE2EMarked(env)
   const cacheVersion = [config.cacheVersion, enabled ? 'rn-driver-e2e' : 'rn-driver-off']
     .filter((part) => part !== undefined && part !== '')
     .join('-')
@@ -155,7 +157,8 @@ function loadExpoPaths(projectRoot: string): ExpoPaths {
     return appRequire('@expo/config/paths') as ExpoPaths
   } catch (error) {
     throw new Error(
-      `withRnDriverHarness: @expo/config/paths (a dependency of expo) is not resolvable from ${projectRoot}: ${String(error)}`, { cause: error },
+      `withRnDriverHarness: @expo/config/paths (a dependency of expo) is not resolvable from ${projectRoot}: ${String(error)}`,
+      { cause: error },
     )
   }
 }

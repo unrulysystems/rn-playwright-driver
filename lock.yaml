@@ -108,6 +108,9 @@ importers:
         specifier: ^8.18.3
         version: 8.18.3
     devDependencies:
+      '@expo/config-plugins':
+        specifier: ~56.0.9
+        version: 56.0.9(typescript@6.0.3)
       '@playwright/test':
         specifier: ^1.57.0
         version: 1.57.0

@@ -18,6 +18,10 @@ bun add -d @unrulysystems/rn-playwright-driver-xctest-companion
 }
 ```
 
+The plugin is inert unless `RN_E2E=1` is set for the prebuild (`rn-driver test`
+sets it), so the entry stays in `app.json` unconditionally and a production
+prebuild scaffolds nothing.
+
 During `expo prebuild`, the plugin scaffolds an iOS UI test target containing:
 
 - `RNDriverTouchCompanion.swift`, the WebSocket touch server;

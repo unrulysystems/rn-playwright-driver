@@ -20,6 +20,7 @@ function tempDir() {
 }
 
 afterEach(() => {
+  delete process.env.RN_E2E
   while (tempDirs.length > 0) {
     fs.rmSync(tempDirs.pop(), { recursive: true, force: true })
   }
@@ -28,7 +29,37 @@ afterEach(() => {
 describe('XCTest companion scaffold helpers', () => {
   test('app plugin exports the companion config plugin and scaffold helper', () => {
     assert.equal(typeof plugin, 'function')
+    assert.equal(typeof plugin.withRNDriverXCTestCompanion, 'function')
     assert.equal(plugin.scaffoldCompanion, scaffoldCompanion)
+  })
+
+  test('app plugin gates the iOS dangerous mod on RN_E2E=1 (REQ-SEAM-003)', () => {
+    const config = { name: 'Example', slug: 'example' }
+    assert.equal(plugin(config), config)
+    assert.equal(config.mods, undefined)
+
+    process.env.RN_E2E = 'true'
+    assert.equal(plugin(config), config)
+    assert.equal(config.mods, undefined)
+
+    process.env.RN_E2E = '1'
+    assert.equal(typeof plugin({ ...config }).mods.ios.dangerous, 'function')
+  })
+
+  test('the gated mod scaffolds the companion into the iOS project directory', async () => {
+    process.env.RN_E2E = '1'
+    const iosDir = tempDir()
+    const config = plugin({ name: 'Example', slug: 'example' })
+
+    await config.mods.ios.dangerous({
+      ...config,
+      modRequest: { platformProjectRoot: iosDir, projectName: 'Example' },
+    })
+
+    assert.equal(
+      fs.existsSync(path.join(iosDir, 'ExampleUITests', 'RNDriverTouchCompanion.swift')),
+      true,
+    )
   })
 
   test('copies companion Swift files into the UI test folder', () => {

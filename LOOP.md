@@ -4,9 +4,9 @@ id: clean-seam
 objective: Close upstream issues 44 through 51 so the driver installs from Metro config under a runner-emitted marker, excludes its native modules from production prebuilds, and proves both in a CI artifact check; the example app is the reference consumer.
 status: active
 phase: DEV
-iteration: 3
+iteration: 4
 iteration_budget: 14
-updated_at: 2026-09-05T06:10:00Z
+updated_at: 2026-09-05T07:30:00Z
 mission: native-e2e-clean-seam
 targets:
   spec:
@@ -70,11 +70,11 @@ units:
   - id: U5
     title: 'Native-module exclude plugin, marker-gated; companion plugins self-gate (#45, #46)'
     targets: [REQ-SEAM-003, REQ-SEAM-004]
-    state: current
+    state: done
   - id: U6
     title: 'Instrumentation companion owns manifest-merge and MainApplication requirements (#47)'
     targets: [REQ-SEAM-008]
-    state: pending
+    state: current
   - id: U7
     title: 'check:footprint script, both directions, observed red then green; CI job (#50)'
     targets: [REQ-SEAM-009, REQ-SEAM-010]
@@ -129,6 +129,8 @@ boundary:
 
 - U3 (2026-09-05): runner sets `RN_E2E=1` on prebuild and Metro steps; red observed on four planner tests, green after; runner docs no longer call the marker planned.
 - U4 (2026-09-05): `withRnDriverHarness` in `packages/driver/src/metro.ts` (11 unit tests). Live probe on the example app (`/tmp/rnpd/probe-seam.out`): with the marker Metro bundled `.expo/rn-driver-e2e-entry.js` (714 modules) and the bundle had 2 `HARNESS_API_VERSION` hits; without it Metro bundled `index.ts` (711 modules) and 0 hits. `index.ts` imports nothing from the driver.
+
+- U5 (2026-09-05): `packages/driver/src/plugin.ts` (`withRnDriverNativeModules`, 13 unit tests through the real `withPodfile`/`withSettingsGradle` mods) shipped as `app.plugin.js`; both companion `app.plugin.js` files return the config untouched unless `RN_E2E=1` (tests added, 8+8 green). Exclusion keys by npm package name (`expo-modules-autolinking` `findModules.js`), so the list is the four `@unrulysystems/rn-driver-*` names; SPEC REQ-SEAM-003/004 corrected. Live on the example app (SDK 56): marker off → Podfile `use_expo_modules!(exclude: [...])` and a generated `expoAutolinking.exclude` block, no companion scaffolds; marker on (non-clean prebuild) → bare call, block removed, scaffolds present; marker off again → exclusion back. `expo-modules-autolinking resolve --exclude <names>` drops all four on apple and android; `react-native-config` never lists them. `nub run check` and `nub run knip` green.
 
 ## Known pre-existing failures — do not chase (cited evidence only)
 
