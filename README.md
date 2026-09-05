@@ -21,15 +21,16 @@ Drive a React Native app from a Playwright test the same way you'd drive a web p
 
 ## Packages
 
-| Package                                                         | Purpose                                               |
-| --------------------------------------------------------------- | ----------------------------------------------------- |
-| `@unrulysystems/rn-playwright-driver`                           | Driver + Playwright fixtures + harness                |
-| `@unrulysystems/rn-driver-view-tree`                            | View tree queries (locators, bounds, visibility)      |
-| `@unrulysystems/rn-driver-screenshot`                           | Screen/region capture                                 |
-| `@unrulysystems/rn-driver-lifecycle`                            | App lifecycle helpers                                 |
-| `@unrulysystems/rn-driver-touch`                                | Explicit lower-fidelity in-app touch injection        |
-| `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion config plugin |
-| `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS XCTest touch companion scaffold/plugin            |
+| Package                                                         | Purpose                                                                |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `@unrulysystems/rn-playwright-driver`                           | Driver + Playwright fixtures + harness                                 |
+| `@unrulysystems/rn-playwright-driver-runner`                    | `rn-driver` CLI: prebuild, Metro, build, launch, companion, Playwright |
+| `@unrulysystems/rn-driver-view-tree`                            | View tree queries (locators, bounds, visibility)                       |
+| `@unrulysystems/rn-driver-screenshot`                           | Screen/region capture                                                  |
+| `@unrulysystems/rn-driver-lifecycle`                            | App lifecycle helpers                                                  |
+| `@unrulysystems/rn-driver-touch`                                | Explicit lower-fidelity in-app touch injection                         |
+| `@unrulysystems/rn-playwright-driver-instrumentation-companion` | Android Instrumentation touch companion config plugin                  |
+| `@unrulysystems/rn-playwright-driver-xctest-companion`          | iOS XCTest touch companion scaffold/plugin                             |
 
 > Companion backends are the confidence path for pointer input. The native touch
 > module remains available for fast in-app loops, but it is scoped to the app
@@ -51,6 +52,12 @@ bun add @unrulysystems/rn-playwright-driver \
   @unrulysystems/rn-driver-screenshot \
   @unrulysystems/rn-driver-lifecycle \
   @unrulysystems/rn-driver-touch
+```
+
+Install the runner, which provides the `rn-driver` CLI every command below uses:
+
+```bash
+bun add -d @unrulysystems/rn-playwright-driver-runner
 ```
 
 For OS-level touch injection, install the platform companion packages:
@@ -246,6 +253,44 @@ Touch backend environment variables used by the Playwright fixture:
 | `RN_TOUCH_XCTEST_TOKEN_FILE`          | File containing the local XCTest companion auth token    | _unset_     |
 | `RN_TOUCH_XCTEST_TOKEN`               | Inline token fallback when a token file is not practical | _unset_     |
 
+## Runner Config
+
+`rn-driver` reads `rn-driver.config.ts` (also `.mts`, `.mjs`, `.js`), searching
+upward from the working directory. Without it the CLI exits 2 and names the
+directory it searched from. The config tells the runner what it cannot infer:
+which bundle to launch, which Xcode workspace to build, and which specs to run.
+
+```ts
+import { defineRnDriverConfig } from '@unrulysystems/rn-playwright-driver-runner'
+
+export default defineRnDriverConfig({
+  metro: { host: 'localhost', port: 8081 },
+  ios: {
+    bundleId: 'com.example.app',
+    workspace: 'ios/app.xcworkspace',
+    appScheme: 'app',
+    launch: { mode: 'attach', kind: 'plain' },
+  },
+  android: {
+    packageName: 'com.example.app',
+    activity: '.MainActivity',
+    launch: { mode: 'launch', kind: 'plain' },
+  },
+  playwright: { config: 'playwright.config.ts', specs: ['e2e'] },
+})
+```
+
+`launch.kind` must be `expo-dev-client` for an app that installs
+`expo-dev-client`; the runner rejects `plain` for such an app at config
+validation, because a plain launch lands on the dev-launcher home screen and
+never registers a Hermes target. Dev-client apps also need `appScheme` (iOS) and
+`scheme` (Android) so the runner can build the deep link.
+
+[`examples/basic-app/rn-driver.config.ts`](examples/basic-app/rn-driver.config.ts)
+is a complete worked example, and
+[`packages/runner/README.md`](packages/runner/README.md) documents every field,
+the target hooks, and the stage exit codes.
+
 ## Touch Backend Status
 
 The current source default is companion-first and fail-closed:
@@ -306,20 +351,25 @@ nub run test:e2e:android # Android instrumentation companion
 nub run test:e2e:ios     # iOS XCTest companion
 ```
 
-For your app, the same shape applies:
+For your app:
 
 1. Wrap your Metro config in `withRnDriverHarness` and list the driver and
    companion plugins (see App Setup).
-2. Run `expo prebuild` and start Metro with `RN_E2E=1` (`rn-driver test` does
-   both).
-3. Run the app with Hermes debugging enabled.
-4. Start the platform companion.
-5. Run Playwright with the matching backend:
+2. Add an `rn-driver.config.ts` (see Runner Config).
+3. Run the lane:
 
 ```bash
-RN_TOUCH_BACKEND=instrumentation nub run test:e2e # Android
-RN_TOUCH_BACKEND=xctest nub run test:e2e          # iOS
+rn-driver test --platform ios
+rn-driver test --platform android
+rn-driver test --platform all
 ```
+
+`rn-driver test` owns the whole lifecycle: it runs `expo prebuild` with
+`RN_E2E=1`, starts Metro with the marker, builds and installs the app, launches
+it, starts the platform companion, selects the matching touch backend, runs
+Playwright, and frees the ports it took. Add `--device <name-or-id>` to pin a
+simulator or emulator, `--skip-build` to reuse the installed app, and
+`--dry-run` to print the resolved plan without touching a device.
 
 See
 [`packages/instrumentation-companion/README.md`](packages/instrumentation-companion/README.md)
