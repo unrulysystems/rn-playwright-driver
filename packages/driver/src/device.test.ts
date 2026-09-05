@@ -147,6 +147,38 @@ describe('RNDevice Core Primitives', () => {
     await device.connect()
   })
 
+  describe('metro discovery startup window', () => {
+    it('rides out a refused Metro connection while the server is still binding', async () => {
+      // Regression for the Send lane's red run: the fixture connected in the
+      // window between Metro opening its port and answering /json, and the
+      // single-shot discovery surfaced the raw `TypeError: fetch failed`
+      // (cause ECONNREFUSED) as a failed run rather than waiting for the
+      // server the runner had just started.
+      const refused = Object.assign(new TypeError('fetch failed'), {
+        cause: Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:8084'), {
+          code: 'ECONNREFUSED',
+        }),
+      })
+      vi.mocked(discovery.discoverTargets)
+        .mockRejectedValueOnce(refused)
+        .mockRejectedValueOnce(refused)
+        .mockResolvedValue([mockSelectedTarget])
+
+      await expect(device.connect()).resolves.toBeUndefined()
+      expect(vi.mocked(discovery.discoverTargets).mock.calls.length).toBeGreaterThan(2)
+    })
+
+    it('waits for the app runtime to register instead of failing on an empty target list', async () => {
+      // Metro answers /json before the app's Hermes runtime registers, so an
+      // empty list is a startup window, not a missing app.
+      vi.mocked(discovery.discoverTargets)
+        .mockResolvedValueOnce([])
+        .mockResolvedValue([mockSelectedTarget])
+
+      await expect(device.connect()).resolves.toBeUndefined()
+    })
+  })
+
   describe('connect() target selection wiring', () => {
     it('routes target selection through selectTargetForConnect, forwarding the COMPLETE pinned target', async () => {
       // The confused-deputy guard lives in selectTargetForConnect; connect() must hand it
@@ -784,6 +816,19 @@ describe('RNDevice connection lifecycle', () => {
     expect(passedTarget?.bundleId).toBe('com.acme.app')
   })
 
+  it('reports the Metro URL and the wait when discovery never answers', async () => {
+    // The budget is bounded and the diagnosis names what was awaited, instead of
+    // the bare `TypeError: fetch failed` a consumer cannot act on.
+    vi.mocked(discovery.discoverTargets).mockRejectedValue(new TypeError('fetch failed'))
+    const device = new RNDevice({ timeout: 300, metroUrl: 'http://localhost:8084' })
+
+    try {
+      await expect(device.connect()).rejects.toThrow(/http:\/\/localhost:8084\/json/)
+    } finally {
+      vi.mocked(discovery.discoverTargets).mockResolvedValue([mockSelectedTarget])
+    }
+  })
+
   it('invalidates a device.files captured before a reconnect (no orphaned live token)', async () => {
     vi.clearAllMocks()
     mockSelectedTarget = defaultTarget()
@@ -866,8 +911,14 @@ describe('RNDevice connection lifecycle', () => {
     // The up-front teardown must precede discoverTargets()/selectTargetForConnect(), so a
     // reconnect that rejects THERE (network flake, or the confused-deputy guard throwing)
     // still fails the prior connection closed — not just a post-discovery cdp.connect().
-    vi.mocked(discovery.discoverTargets).mockRejectedValueOnce(new Error('metro unreachable'))
-    await expect(device.connect()).rejects.toThrow('metro unreachable')
+    // Persistent, not once: connect() now polls discovery through a startup
+    // window, so a single rejection is a retry rather than a failed connect.
+    vi.mocked(discovery.discoverTargets).mockRejectedValue(new Error('metro unreachable'))
+    try {
+      await expect(device.connect()).rejects.toThrow('metro unreachable')
+    } finally {
+      vi.mocked(discovery.discoverTargets).mockResolvedValue([mockSelectedTarget])
+    }
 
     await expect(stale.pull('obs.csv')).rejects.toMatchObject({
       code: 'UNAVAILABLE',

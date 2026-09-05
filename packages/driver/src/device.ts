@@ -1,5 +1,10 @@
 import { CDPClient, type CDPClientOptions } from './cdp/client'
-import { discoverTargets, selectTargetForConnect, titleParenthetical } from './cdp/discovery'
+import {
+  type DebugTarget,
+  discoverTargets,
+  selectTargetForConnect,
+  titleParenthetical,
+} from './cdp/discovery'
 import { parseConsoleEvent, parseExceptionEvent } from './cdp/runtime-events'
 import { createDeviceFiles } from './files/device-files'
 import { FileIoError } from './files/errors'
@@ -28,6 +33,9 @@ import type {
 
 const DEFAULT_METRO_URL = 'http://localhost:8081'
 const DEFAULT_WAIT_TIMEOUT = 30_000
+
+/** Delay between Metro target-discovery polls while a connection is coming up, in ms. */
+const DISCOVERY_POLL_INTERVAL = 250
 const DEFAULT_POLLING_INTERVAL = 100
 
 /**
@@ -116,7 +124,7 @@ export class RNDevice implements Device {
     await this.teardownConnection()
 
     const metroUrl = this.options.metroUrl ?? DEFAULT_METRO_URL
-    const targets = await discoverTargets(metroUrl)
+    const targets = await this.discoverTargetsUntilReady(metroUrl)
     // selectTargetForConnect derives the file-pin from target.udid/serial and
     // fails closed on the device.files confused-deputy (a pinned file target but
     // ambiguous CDP selection among multiple runtimes).
@@ -191,6 +199,41 @@ export class RNDevice implements Device {
       // fail-closed resets have already run, so the state is safe regardless.
       await this.teardownConnection().catch(() => {})
       throw error
+    }
+  }
+
+  /**
+   * Poll Metro's target list until it reports a React Native runtime.
+   *
+   * A single request makes an ordinary startup window fatal. The port opens
+   * before the server answers `/json` (a refused connection surfaces as the
+   * opaque `TypeError: fetch failed`), and `/json` answers before the app's
+   * Hermes runtime registers (an empty list). Both resolve on their own within
+   * seconds, so they are waited out rather than thrown, bounded by the device
+   * timeout. On expiry the last failure is reported with the URL that was
+   * polled, because the raw fetch rejection names neither.
+   */
+  private async discoverTargetsUntilReady(metroUrl: string): Promise<DebugTarget[]> {
+    const timeout = this.options.timeout ?? DEFAULT_WAIT_TIMEOUT
+    const deadline = Date.now() + timeout
+    let lastFailure = 'no debug targets were reported'
+
+    for (;;) {
+      try {
+        const targets = await discoverTargets(metroUrl)
+        if (targets.length > 0) return targets
+      } catch (error) {
+        lastFailure = error instanceof Error ? error.message : String(error)
+        const cause = error instanceof Error ? error.cause : undefined
+        if (cause instanceof Error) lastFailure = `${lastFailure} (${cause.message})`
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `No React Native debug target at ${metroUrl}/json after ${timeout}ms: ${lastFailure}. ` +
+            'Metro must be running with the app launched and its Hermes runtime connected.',
+        )
+      }
+      await new Promise((resolve) => setTimeout(resolve, DISCOVERY_POLL_INTERVAL))
     }
   }
 
