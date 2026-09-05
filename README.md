@@ -43,7 +43,7 @@ Drive a React Native app from a Playwright test the same way you'd drive a web p
 
 ## Installation
 
-Install driver and native modules in your app:
+Install the driver and its native modules in your app:
 
 ```bash
 bun add @unrulysystems/rn-playwright-driver \
@@ -53,23 +53,11 @@ bun add @unrulysystems/rn-playwright-driver \
   @unrulysystems/rn-driver-touch
 ```
 
-For OS-level touch injection, install the platform companion packages and add
-their Expo config plugins:
+For OS-level touch injection, install the platform companion packages:
 
 ```bash
 bun add -d @unrulysystems/rn-playwright-driver-instrumentation-companion \
   @unrulysystems/rn-playwright-driver-xctest-companion
-```
-
-```json
-{
-  "expo": {
-    "plugins": [
-      "@unrulysystems/rn-playwright-driver-instrumentation-companion",
-      "@unrulysystems/rn-playwright-driver-xctest-companion"
-    ]
-  }
-}
 ```
 
 Install Playwright in your test workspace:
@@ -78,55 +66,67 @@ Install Playwright in your test workspace:
 bun add -d @playwright/test
 ```
 
-## App Setup (Harness)
+## App Setup
 
-Import the harness once in your app entry:
+The driver's whole footprint in an app is one Metro line and an unconditional
+plugin list. App source never imports the driver and never reads an environment
+variable.
 
-```ts
-import '@unrulysystems/rn-playwright-driver/harness'
+`metro.config.js`:
+
+```js
+const { getDefaultConfig } = require('expo/metro-config')
+const { withRnDriverHarness } = require('@unrulysystems/rn-playwright-driver/metro')
+
+module.exports = withRnDriverHarness(getDefaultConfig(__dirname))
 ```
 
-Then build/run the app so the native modules are installed:
+`app.json`:
 
-```bash
-expo run:ios
-# or
-expo run:android
-```
-
-## Production-safe Setup (Required)
-
-Do **not** ship the harness in production builds. Use one of these patterns so it only loads for E2E/dev:
-
-### Option A: Dev-only entry (recommended)
-
-Use the `/harness/dev` entry point, which installs only when `__DEV__` is true. Metro inlines
-`__DEV__` and folds the branch out of release bundles, so a release build carries none of the
-harness. There is no release-build opt-in: the driver attaches through Metro's CDP endpoint,
-which only a dev bundle exposes.
-
-```ts
-// In your app entry (e.g., App.tsx or index.ts)
-import '@unrulysystems/rn-playwright-driver/harness/dev'
-```
-
-### Option B: Conditional import (explicit)
-
-```ts
-if (__DEV__) {
-  void import('@unrulysystems/rn-playwright-driver/harness')
+```json
+{
+  "expo": {
+    "plugins": [
+      "@unrulysystems/rn-playwright-driver",
+      "@unrulysystems/rn-playwright-driver-instrumentation-companion",
+      "@unrulysystems/rn-playwright-driver-xctest-companion"
+    ]
+  }
 }
 ```
 
-### Option C: Separate entry file (cleanest for CI)
+Everything keys off one marker, `RN_E2E=1`, which `rn-driver test` sets on the
+`expo prebuild` and the Metro it starts. A Metro you start yourself for a driver
+run needs the marker too.
+
+| Seam                                         | `RN_E2E` unset                                                                                                       | `RN_E2E=1`                                                                                           |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `withRnDriverHarness` (Metro)                | the default config                                                                                                   | serves a generated entry (`.expo/rn-driver-e2e-entry.js`) that loads the harness, then the app entry |
+| `@unrulysystems/rn-playwright-driver` plugin | excludes the four native modules from autolinking (Podfile `use_expo_modules!(exclude:)`, `expoAutolinking.exclude`) | removes that exclusion                                                                               |
+| companion plugins                            | no-op                                                                                                                | scaffold the instrumentation and XCTest companions                                                   |
+
+A release export (`expo export`, `export:embed`) bundles the project entry
+directly, so it never carries the harness in either state, and a prebuild without
+the marker links none of the driver's native code. The CI job **Release
+footprint** (`.github/workflows/ci.yml`) holds that promise on every push and
+pull request by running `nub run check:footprint` in `examples/basic-app`: a
+release export, a Metro-served bundle and a prebuild in both marker states, plus
+a grep of the app entry and config.
+
+### Legacy: importing the harness from app source
+
+Apps that cannot change their Metro config can still import the harness
+directly. `@unrulysystems/rn-playwright-driver/harness/dev` installs it only when
+`__DEV__` is true, and Metro folds that branch out of release bundles:
 
 ```ts
-// index.e2e.ts
-import './index'
-import '@unrulysystems/rn-playwright-driver/harness'
+import '@unrulysystems/rn-playwright-driver/harness/dev'
 ```
 
-Point your E2E build/profile at `index.e2e.ts` so production builds never include the harness.
+Importing `@unrulysystems/rn-playwright-driver/harness` unconditionally ships the
+harness in every build; keep that to a dedicated E2E entry file. Neither path
+excludes the native modules from a release build; that is the config plugin's
+job.
 
 ## Writing Tests
 
@@ -308,9 +308,11 @@ nub run test:e2e:ios     # iOS XCTest companion
 
 For your app, the same shape applies:
 
-1. Import `@unrulysystems/rn-playwright-driver/harness/dev` in the E2E/dev entry.
-2. Add the platform companion config plugin and regenerate native projects.
-3. Start Metro and run the app with Hermes debugging enabled.
+1. Wrap your Metro config in `withRnDriverHarness` and list the driver and
+   companion plugins (see App Setup).
+2. Run `expo prebuild` and start Metro with `RN_E2E=1` (`rn-driver test` does
+   both).
+3. Run the app with Hermes debugging enabled.
 4. Start the platform companion.
 5. Run Playwright with the matching backend:
 

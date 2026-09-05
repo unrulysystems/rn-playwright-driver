@@ -332,9 +332,10 @@ env, or docs.
 `expo prebuild` runs inside the runner process and inherits the runner process
 environment. The runner sets `RN_E2E=1` on every prebuild it plans and every
 Metro it starts (both show in `--dry-run`). That marker is the stable contract for
-test-only Expo config: the driver's Metro helper and every config plugin in this
-repo read it and stay inert without it, so an app lists them unconditionally and
-never reads the marker in its own source. A Metro the runner reuses
+test-only Expo config: the driver's Metro helper serves the harness only under
+it, the companion plugins scaffold only under it, and the driver's own plugin
+excludes its native modules without it, so an app lists every plugin
+unconditionally and never reads the marker in its own source. A Metro the runner reuses
 (`metro.reuseExisting`) is the operator's to start with the marker; the driver
 reports a missing harness by name when it is not.
 

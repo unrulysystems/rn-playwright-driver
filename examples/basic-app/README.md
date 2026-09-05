@@ -4,7 +4,7 @@ Minimal Expo app used to validate the RN Playwright Driver end-to-end. It ships 
 
 ## What's inside
 
-- Expo app entry: `index.ts` (installs the driver harness)
+- Expo app entry: `index.ts` (imports nothing from the driver; `metro.config.js` installs the harness)
 - UI under test: `App.tsx` (counter with testIDs)
 - E2E tests: `e2e/`
 - Playwright config: `playwright.config.ts`

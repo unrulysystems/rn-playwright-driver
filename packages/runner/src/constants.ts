@@ -70,10 +70,10 @@ export const DEFAULTS = {
 
 /**
  * The prebuild and Metro marker (REQ-SEAM-001). The runner sets it on every `expo prebuild`
- * it plans and every Metro it starts; the driver's Metro helper and every config plugin in
- * this repo read it and stay inert without it, so an app lists them unconditionally and its
- * source never reads the marker itself. A Metro the runner merely reuses is the operator's
- * to start with the marker.
+ * it plans and every Metro it starts. The driver's Metro helper serves the harness only under
+ * it, the companion plugins scaffold only under it, and the driver's own plugin excludes its
+ * native modules without it, so an app lists every plugin unconditionally and its source never
+ * reads the marker. A Metro the runner merely reuses is the operator's to start with the marker.
  */
 export const E2E_MARKER_ENV = { RN_E2E: '1' } as const
 

@@ -74,5 +74,6 @@ nub run test:e2e
 ## Constraints
 
 - Hermes CDP is required; Metro `/json` must be reachable.
-- The harness must be imported in the app: `@unrulysystems/rn-playwright-driver/harness`.
+- The harness reaches an app through `withRnDriverHarness` in `metro.config.js` under the
+  runner's `RN_E2E=1` marker; app source never imports it (`harness/dev` is the legacy path).
 - Native modules live in the app; the driver package contains no native code.
