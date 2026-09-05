@@ -125,6 +125,14 @@ uses `simctl launch --initialUrl`; Android uses the configured
 `android.scheme` to open
 `<scheme>://expo-development-client/?url=<resolved-metro-url>`.
 
+The runner starts Metro with `--dns-result-order=ipv4first` appended to
+`NODE_OPTIONS` (your own `NODE_OPTIONS` value is kept). Expo hands the app
+`127.0.0.1` URLs, while `expo start --localhost` binds the `localhost` hostname,
+which Node resolves to `::1` first on hosts whose resolver lists the IPv6
+loopback first; without the option the app reports "Could not connect to
+development server" and the Hermes wait times out. `--dry-run` prints the
+appended value as `NODE_OPTIONS+=…`.
+
 ### Physical iOS devices
 
 Physical iOS support is Expo-dev-client only in this release. Set
