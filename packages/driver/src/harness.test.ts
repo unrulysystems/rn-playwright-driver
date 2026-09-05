@@ -39,17 +39,21 @@ describe('Harness Core Primitives', () => {
   })
 
   describe('RAF Frame Counter', () => {
-    it('should increment frame count on requestAnimationFrame', async () => {
-      // Import harness to install
+    it('schedules no frame work on install (REQ-SEAM-006)', async () => {
       await import('../harness/index')
 
+      expect(globalThis.__RN_DRIVER__).toBeDefined()
+      expect(rafCallbacks).toHaveLength(0)
+    })
+
+    it('starts counting on the first getFrameCount call and advances once per frame', async () => {
+      await import('../harness/index')
       const harness = globalThis.__RN_DRIVER__
       expect(harness).toBeDefined()
 
       const initialCount = harness!.getFrameCount()
-      expect(typeof initialCount).toBe('number')
+      expect(rafCallbacks).toHaveLength(1)
 
-      // Simulate RAF ticks
       for (let i = 0; i < 3; i++) {
         const callbacks = [...rafCallbacks]
         rafCallbacks = []
@@ -58,8 +62,9 @@ describe('Harness Core Primitives', () => {
         }
       }
 
-      const newCount = harness!.getFrameCount()
-      expect(newCount).toBeGreaterThanOrEqual(initialCount)
+      expect(harness!.getFrameCount()).toBe(initialCount + 3)
+      // A second read reuses the running loop rather than scheduling another.
+      expect(rafCallbacks).toHaveLength(1)
     })
   })
 

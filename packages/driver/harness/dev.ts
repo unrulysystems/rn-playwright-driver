@@ -1,26 +1,21 @@
 /**
- * RN Driver Harness - Dev/E2E-only Entry Point
+ * RN Driver Harness - dev-only entry point.
  *
  * Usage:
  *   import '@unrulysystems/rn-playwright-driver/harness/dev';
  *
- * This conditionally installs the harness only when:
- * - __DEV__ is true (React Native dev mode), OR
- * - globalThis.__E2E__ is set to true (explicit E2E flag)
+ * Installs the harness only when `__DEV__` is true. Metro inlines `__DEV__`
+ * and constant-folds this branch out of a release graph before it collects
+ * dependencies, so a release bundle carries none of the harness. A runtime
+ * gate (the former `globalThis.__E2E__`) cannot be folded and kept the whole
+ * harness in release bundles; the driver attaches through Metro's CDP
+ * endpoint, which only a dev bundle exposes, so nothing reachable is lost.
  *
- * Use this entry point in production apps to avoid installing
- * the harness in production builds.
- *
- * For always-on harness (e.g., internal testing builds), use:
- *   import '@unrulysystems/rn-playwright-driver/harness';
+ * The Metro-level install (`@unrulysystems/rn-playwright-driver/metro`) needs
+ * no import in app code at all; this entry remains for apps that import the
+ * harness from their entry file.
  */
 
-// Check for dev mode or explicit E2E flag
-const isDev = typeof __DEV__ !== 'undefined' && __DEV__
-const isE2E =
-  typeof globalThis !== 'undefined' &&
-  (globalThis as unknown as { __E2E__?: boolean }).__E2E__ === true
-
-if (isDev || isE2E) {
-  require('./index')
+if (__DEV__) {
+  void import('./index')
 }

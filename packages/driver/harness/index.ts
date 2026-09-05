@@ -287,7 +287,8 @@ function installHarness(): void {
   let frameCount = 0
   let rafId: number | null = null
 
-  // Start the RAF counter loop
+  // The frame counter runs only once a driver asks for frame timing (REQ-SEAM-006):
+  // an installed harness schedules no per-frame work on its own.
   function startRafCounter(): void {
     if (rafId !== null) return
 
@@ -297,9 +298,6 @@ function installHarness(): void {
     }
     rafId = requestAnimationFrame(tick)
   }
-
-  // Start RAF counter immediately
-  startRafCounter()
 
   // Tracing state
   const MAX_TRACE_EVENTS = 1000
@@ -613,6 +611,7 @@ function installHarness(): void {
     },
 
     getFrameCount(): number {
+      startRafCounter()
       return frameCount
     },
 

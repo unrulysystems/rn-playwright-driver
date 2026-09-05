@@ -100,25 +100,20 @@ Do **not** ship the harness in production builds. Use one of these patterns so i
 
 ### Option A: Dev-only entry (recommended)
 
-Use the `/harness/dev` entry point which only installs when `__DEV__` is true or `globalThis.__E2E__` is set:
+Use the `/harness/dev` entry point, which installs only when `__DEV__` is true. Metro inlines
+`__DEV__` and folds the branch out of release bundles, so a release build carries none of the
+harness. There is no release-build opt-in: the driver attaches through Metro's CDP endpoint,
+which only a dev bundle exposes.
 
 ```ts
 // In your app entry (e.g., App.tsx or index.ts)
 import '@unrulysystems/rn-playwright-driver/harness/dev'
 ```
 
-To enable in production E2E builds, set the flag before the import:
-
-```ts
-// Set before import for prod E2E testing
-globalThis.__E2E__ = true
-import '@unrulysystems/rn-playwright-driver/harness/dev'
-```
-
 ### Option B: Conditional import (explicit)
 
 ```ts
-if (__DEV__ || globalThis.__E2E__ === true) {
+if (__DEV__) {
   void import('@unrulysystems/rn-playwright-driver/harness')
 }
 ```

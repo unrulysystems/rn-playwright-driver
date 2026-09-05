@@ -1,7 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022"]
+    "lib": ["ES2022"],
+    // Every file here is a module, including side-effect-only entries such as harness/dev.ts,
+    // so no file needs an empty `export {}` marker (which oxlint --fix removes).
+    "moduleDetection": "force"
   },
   "include": ["src/**/*", "harness/**/*"],
   "exclude": ["node_modules", "dist"]

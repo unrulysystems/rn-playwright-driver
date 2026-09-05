@@ -3,10 +3,10 @@ loop: 1
 id: clean-seam
 objective: Close upstream issues 44 through 51 so the driver installs from Metro config under a runner-emitted marker, excludes its native modules from production prebuilds, and proves both in a CI artifact check; the example app is the reference consumer.
 status: active
-phase: SPEC
-iteration: 0
+phase: DEV
+iteration: 1
 iteration_budget: 14
-updated_at: 2026-09-05T04:00:00Z
+updated_at: 2026-09-05T04:40:00Z
 mission: native-e2e-clean-seam
 targets:
   spec: [REQ-SEAM-001, REQ-SEAM-002, REQ-SEAM-003, REQ-SEAM-004, REQ-SEAM-005, REQ-SEAM-006, REQ-SEAM-007, REQ-SEAM-008, REQ-SEAM-009, REQ-SEAM-010, REQ-SEAM-011]
@@ -41,15 +41,15 @@ units:
   - id: U1
     title: Root SPEC and BRIEF ratify the footprint contract; mission and loop committed
     targets: [REQ-SEAM-011]
-    state: current
+    state: done
   - id: U2
     title: "harness/dev gates on __DEV__ alone; frame counter starts lazily (#44, #49)"
     targets: [REQ-SEAM-005, REQ-SEAM-006]
-    state: pending
+    state: done
   - id: U3
     title: "Runner emits RN_E2E=1 on prebuild and Metro steps; docs stop calling it planned (#46)"
     targets: [REQ-SEAM-001]
-    state: pending
+    state: current
   - id: U4
     title: "Metro helper withRnDriverHarness; example app moves the harness out of index.ts (#51, #48)"
     targets: [REQ-SEAM-002, REQ-SEAM-007, REQ-SEAM-011]
@@ -98,6 +98,8 @@ boundary:
 - Host aem5 is shared: another session runs an eight-process CPU load test (cos.worktrees/1785-shim-e2e-flake) that ends on its own; two booted simulators (`send-qa-bb-aem5`, `send-qa-pr6924`) belong to other lanes and are never touched. Metro ports 8081–8085 were free at authoring.
 - Issue drafts with the cited evidence are at `~/.handoffs/upstream-issues/1..8-*.md` on this host.
 - Sibling checkout for the Send campaign: `/Users/allen/0xbigboss/0xsend/sendapp.worktrees/bb/native-e2e-clean-seam` consumes this checkout through yarn `portal:` resolutions until publish.
+
+- U2 (2026-09-05): `harness/dev` now `if (__DEV__) void import(..)`; the RAF loop starts on first `getFrameCount()`. Red observed: `harness/dev.test.ts` ×2 and `harness.test.ts` "schedules no frame work on install" before the change; green after. `nub run check` green.
 
 ## Known pre-existing failures — do not chase (cited evidence only)
 

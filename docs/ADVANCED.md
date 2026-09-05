@@ -136,22 +136,17 @@ if (caps.lifecycle) {
 
 ### Dev-Only Harness
 
-Use the dev entry point for production-safe builds:
+The Metro install (README, "Installing the harness") needs no import in app code. Apps that
+still import the harness from their entry use the dev entry point, which installs only when
+`__DEV__` is true; Metro folds the branch out of release bundles:
 
 ```typescript
-// Only installs when __DEV__ or globalThis.__E2E__ is true
+// Installs only when __DEV__ is true; absent from release bundles
 import '@unrulysystems/rn-playwright-driver/harness/dev'
 ```
 
-### Explicit E2E Mode
-
-For production E2E testing:
-
-```typescript
-// Set before import
-globalThis.__E2E__ = true
-import '@unrulysystems/rn-playwright-driver/harness/dev'
-```
+There is no release-build opt-in: the driver attaches through Metro's CDP endpoint, which
+only a dev bundle exposes.
 
 ### Custom Touch Handler
 
