@@ -82,6 +82,18 @@ const SCROLL_SETTLE_TIMEOUT = 2_000
 const MIN_SCROLL_STEP = 64
 
 /**
+ * Consecutive no-progress scrolls that constitute a scroll boundary.
+ *
+ * A single swipe that moves nothing is not evidence the container is at its
+ * limit: an injected gesture is occasionally swallowed whole (a system gesture
+ * monitor claims it, or it races the app window taking input focus), which
+ * measures identically to a boundary. Requiring the no-progress observation to
+ * repeat keeps a real boundary cheap to detect — one extra swipe — while a lost
+ * swipe costs a retry instead of a failed run.
+ */
+const NO_PROGRESS_SCROLLS_FOR_BOUNDARY = 2
+
+/**
  * Locator implementation for finding and interacting with RN views.
  * Uses native modules via the harness bridge when available.
  */
@@ -375,6 +387,8 @@ export class LocatorImpl implements Locator {
     let last: { axis: 'vertical' | 'horizontal'; position: number } | null = null
     // Magnitude of the previous scroll request, reported when the loop gives up.
     let lastDelta = 0
+    // Consecutive scrolls that left the leading edge where it was.
+    let noProgressScrolls = 0
 
     for (let attempt = 0; ; attempt++) {
       const result = await this.query()
@@ -412,17 +426,24 @@ export class LocatorImpl implements Locator {
         )
       }
 
-      // Boundary detection: if the previous scroll on this axis did not move the
-      // element, the container is at its limit — stop rather than spin.
+      // Boundary detection: when consecutive scrolls on this axis leave the
+      // element where it was, the container is at its limit — stop rather than
+      // spin. One such scroll only means this swipe did nothing, which a
+      // swallowed gesture does too, so the loop retries before concluding.
       if (
         last !== null &&
         last.axis === step.axis &&
         isSamePosition(step.position, last.position)
       ) {
-        throw new LocatorError(
-          `scrollIntoView: reached scroll boundary before ${this.toString()} was fully visible: ${step.axis} leading edge ${step.position} did not move after a scroll of ${lastDelta}; ${describeGeometry(step, result.data.bounds, metrics)}`,
-          'TIMEOUT',
-        )
+        noProgressScrolls += 1
+        if (noProgressScrolls >= NO_PROGRESS_SCROLLS_FOR_BOUNDARY) {
+          throw new LocatorError(
+            `scrollIntoView: reached scroll boundary before ${this.toString()} was fully visible: ${step.axis} leading edge ${step.position} did not move after ${noProgressScrolls} scrolls of ${lastDelta}; ${describeGeometry(step, result.data.bounds, metrics)}`,
+            'TIMEOUT',
+          )
+        }
+      } else {
+        noProgressScrolls = 0
       }
       last = { axis: step.axis, position: step.position }
 

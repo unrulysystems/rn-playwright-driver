@@ -85,6 +85,13 @@ class FakeDevice {
      * synchronous default fake cannot reproduce.
      */
     private readonly momentum = false,
+    /**
+     * Predicate over the 1-based scroll-call index: when it returns true the
+     * scroll is accepted but moves nothing. Models a swipe the device swallowed
+     * (an injected gesture lost to a system gesture monitor or an input race),
+     * which is indistinguishable from a boundary in a single measurement.
+     */
+    private readonly swallowScroll?: (call: number) => boolean,
   ) {}
 
   private queries = 0
@@ -126,6 +133,7 @@ class FakeDevice {
 
   async scroll(options: ScrollOptions): Promise<void> {
     this.scrollCalls.push(options)
+    if (this.swallowScroll?.(this.scrollCalls.length)) return
     if (options.dy !== undefined) {
       const step = clamp(options.dy, -this.model.maxStep, this.model.maxStep)
       if (Math.abs(step) >= this.model.slop) {
@@ -320,6 +328,36 @@ describe('Locator.scrollIntoView', () => {
     expect(device.boundsY() + 50).toBeLessThanOrEqual(METRICS.height)
   })
 
+  it('retries a swipe the device swallowed instead of reporting a false boundary', async () => {
+    // Regression for the Android e2e flake: an injected swipe is occasionally
+    // lost (system gesture monitor, input-injection race), so the element does
+    // not move even though the container is far from its limit. One no-progress
+    // measurement is not evidence of a boundary — the loop must try again.
+    const device = new FakeDevice(
+      defaultModel({ contentY: 2000, height: 50, maxStep: 400 }),
+      undefined,
+      false,
+      (call) => call === 1,
+    )
+
+    await locatorFor(device).scrollIntoView()
+
+    expect(device.boundsY()).toBeGreaterThanOrEqual(0)
+    expect(device.boundsY() + 50).toBeLessThanOrEqual(METRICS.height)
+  })
+
+  it('reports the boundary when consecutive swipes both fail to move the element', async () => {
+    // The container is genuinely at its limit: every swipe is a no-op, so the
+    // retry does not mask it and the loop still stops early with the diagnosis.
+    const device = new FakeDevice(defaultModel({ contentY: 2000, maxOffsetY: 0, maxStep: 400 }))
+
+    await expectLocatorError(locatorFor(device).scrollIntoView(), 'TIMEOUT')
+
+    // Confirmed over consecutive attempts, still far below the maxScrolls cap.
+    expect(device.scrollCalls.length).toBeGreaterThanOrEqual(2)
+    expect(device.scrollCalls.length).toBeLessThan(10)
+  })
+
   it('scrolls up to reach an element above the fold', async () => {
     // Element starts scrolled past the top: offsetY > contentY → negative bounds.y.
     const device = new FakeDevice(
@@ -343,7 +381,7 @@ describe('Locator.scrollIntoView', () => {
     // The failure is diagnosable from the message alone: the stuck edge, the
     // scroll that did nothing, the element's bounds, and the window it had to fit.
     await expect(locatorFor(device).scrollIntoView()).rejects.toThrow(
-      /vertical leading edge 1700 did not move after a scroll of \d+; bounds x\d+ y1700 w\d+ h\d+, \d+ still needed along vertical, viewport 400x800/,
+      /vertical leading edge 1700 did not move after \d+ scrolls of \d+; bounds x\d+ y1700 w\d+ h\d+, \d+ still needed along vertical, viewport 400x800/,
     )
   })
 
