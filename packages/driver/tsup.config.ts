@@ -6,7 +6,11 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     test: 'src/test.ts',
+    // Metro config helper: runs in the app's metro.config.js (Node), never in the bundle.
+    metro: 'src/metro.ts',
   },
+  // metro.ts resolves the harness from __dirname; the shim keeps that valid in the ESM build.
+  shims: true,
   format: ['esm', 'cjs'],
   dts: true,
   sourcemap: true,

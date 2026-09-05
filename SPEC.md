@@ -39,9 +39,9 @@ directions.
 - **Marker** — `RN_E2E=1` in the process environment of `expo prebuild` and of
   the Metro that serves the e2e bundle. Emitted by the runner; readable by the
   helper and the plugins; never read by app source.
-- **Metro seam** — `serializer.getModulesRunBeforeMainModule`, the list Expo's
-  Metro config already uses to prepend its runtime modules. The helper appends the
-  harness module's absolute path there.
+- **Metro seam** — `server.rewriteRequestUrl`, the hook Expo already uses to map its
+  dev clients' virtual-entry request to the project entry. The helper composes after
+  it and serves a generated entry that loads the harness first.
 - **Autolinking exclude** — `use_expo_modules!(exclude: [...])` on iOS and the
   Gradle settings extension's `exclude` on Android, both written into generated
   native files by a config plugin.
@@ -58,11 +58,16 @@ directions.
   start is the operator's responsibility; the driver's connect reports a named
   diagnostic when the harness global is absent.
 - **REQ-SEAM-002** `@unrulysystems/rn-playwright-driver/metro` exports
-  `withRnDriverHarness(config)`. With `RN_E2E=1` it appends the harness module's
-  absolute path to `serializer.getModulesRunBeforeMainModule` and adds
-  `rn-driver-e2e` to `cacheVersion`; without the marker it adds `rn-driver-off`
-  to `cacheVersion` and leaves the serializer untouched. The helper is pure over
-  `(config, env)` and is unit-tested in both states.
+  `withRnDriverHarness(config)`. With `RN_E2E=1` it writes a static entry to
+  `.expo/rn-driver-e2e-entry.js` that loads the harness and then the project entry,
+  composes after Expo's `server.rewriteRequestUrl` so a request for the virtual or
+  project entry is served that file, resolves the two specifiers the file uses only
+  from that file, and adds `rn-driver-e2e` to `cacheVersion`; without the marker it
+  adds `rn-driver-off` to `cacheVersion` and touches nothing else. Metro only runs
+  `getModulesRunBeforeMainModule` entries already in the graph
+  (`metro/src/lib/getAppendScripts.js`), so an entry swap is the seam. `expo export`
+  and `export:embed` bundle the project entry directly, so no export carries the
+  harness. The helper is unit-tested in both marker states.
 - **REQ-SEAM-003** Every config plugin in this repo (`instrumentation-companion`,
   `xctest-companion`, and the native-module plugin below) is a no-op unless
   `RN_E2E=1`, so a consumer lists them unconditionally.

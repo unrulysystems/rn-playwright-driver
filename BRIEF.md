@@ -79,10 +79,14 @@ that mentions e2e.
 
 ## Decisions
 
-- **The seam is `getModulesRunBeforeMainModule`, not `getPolyfills` and not an
-  entry import.** Polyfills run before `InitializeCore`, too early for
-  `requireNativeModule`; Expo has no per-run entry override. (2026-09-04,
-  provisional — driver; from #51.)
+- **The seam is a request-time entry swap through `server.rewriteRequestUrl`, not
+  `getModulesRunBeforeMainModule`, `getPolyfills`, or an entry import.** Metro runs
+  a run-before-main module only if something already imports it
+  (`metro/src/lib/getAppendScripts.js`); polyfills run before `InitializeCore`;
+  Expo has no per-run entry override. Expo's dev clients request a virtual entry
+  that Expo rewrites, so composing after that rewrite is the one place the entry
+  can change without app source. (2026-09-05, provisional — driver; supersedes
+  #51's proposed mechanism.)
 - **The marker is `RN_E2E=1`, emitted by the runner.** It is the name the runner
   README already reserved. (2026-09-04, provisional — driver; from #46.)
 - **The Metro helper and the native-module plugin live in the driver package**

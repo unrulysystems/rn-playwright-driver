@@ -1,6 +1,3 @@
-// Install the RN Driver harness for E2E testing
-import '@unrulysystems/rn-playwright-driver/harness'
-
 import { registerRootComponent } from 'expo'
 
 import App from './App'

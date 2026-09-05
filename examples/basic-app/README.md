@@ -131,9 +131,9 @@ physical iOS config uses Expo dev-client launch semantics because real iPhones
 need a device-reachable Metro URL and an app URL scheme.
 
 `expo prebuild` runs inside the runner process and inherits that process
-environment. The intended stable marker for test-only app config is `RN_E2E=1`,
-but the runner does not emit it yet; do not rely on it as implemented behavior in
-this example.
+environment. The runner sets `RN_E2E=1` on every prebuild and on the Metro it
+starts; the driver's Metro helper and config plugins read that marker, so this app
+lists them unconditionally and never reads the marker itself.
 
 `rn-driver.config.ts` also demonstrates `hooks.configureTarget`. The example
 sets harmless target metadata env for Metro and Playwright; real apps can use the
@@ -143,7 +143,7 @@ hook env.
 
 ## Notes
 
-- The app entry (`index.ts`) installs the driver harness unconditionally for convenience in this example. In real apps, follow the dev-only harness pattern described in the root README.
+- The app entry (`index.ts`) imports nothing from the driver. `metro.config.js` wraps the default config in `withRnDriverHarness`, which serves the harness before the app entry only while the runner's `RN_E2E=1` marker is set; a release export never contains it.
 - Native modules are pulled in via workspace dependencies; if you remove a module, related tests will skip based on reported capabilities.
 - SDK 56 iOS builds set `expo.ios.deploymentTarget` to `16.4`.
 - `npx expo-doctor@latest --verbose` should pass Expo SDK schema/version/native

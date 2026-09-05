@@ -11,6 +11,8 @@
     "@unrulysystems/rn-driver-screenshot",
     "@unrulysystems/rn-driver-lifecycle",
     "expo-updates",
-    "expo-system-ui"
+    "expo-system-ui",
+    "@expo/metro-config",
+    "metro-minify-terser"
   ]
 }
