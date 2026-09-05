@@ -392,3 +392,11 @@ describe('planIos', () => {
     expect(planIos(inputFor('expo-dev-client'))).toEqual(planIos(inputFor('expo-dev-client')))
   })
 })
+
+describe('prebuild marker (REQ-SEAM-001)', () => {
+  it('runs expo prebuild with RN_E2E=1 so marker-gated plugins apply', () => {
+    const plan = planIos(inputFor('plain'))
+    const prebuild = plan.steps.find((s) => s.id === 'ios.prebuild')?.action
+    expect(prebuild?.type === 'command' && prebuild.command.env).toMatchObject({ RN_E2E: '1' })
+  })
+})

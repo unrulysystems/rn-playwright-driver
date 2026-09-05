@@ -1,5 +1,5 @@
 import type { IosConfig, PlaywrightConfig } from '../config'
-import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
+import { COMPANION_FAILURE_MARKERS, DEFAULTS, E2E_MARKER_ENV } from '../constants'
 import { buildIosDriverEnv } from './env'
 import type { ResolvedIosTarget, ResolvedMetro } from './resolved'
 import { cmd, metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
@@ -74,7 +74,11 @@ export function planIos(input: PlanIosInput): Plan {
     description: 'Generate iOS project (expo prebuild)',
     action: {
       type: 'command',
-      command: packageBin('expo', ['prebuild', '--platform', 'ios', '--no-install'], projectCwd),
+      // The marker lets marker-gated config plugins apply (REQ-SEAM-001).
+      command: {
+        ...packageBin('expo', ['prebuild', '--platform', 'ios', '--no-install'], projectCwd),
+        env: E2E_MARKER_ENV,
+      },
     },
     skippable: true,
   })

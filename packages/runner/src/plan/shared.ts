@@ -1,5 +1,6 @@
 import path from 'node:path'
 import type { PlaywrightConfig } from '../config'
+import { E2E_MARKER_ENV } from '../constants'
 import type { ResolvedMetro } from './resolved'
 import type { CommandSpec, Step } from './types'
 
@@ -38,11 +39,12 @@ export function metroStartStep(metro: ResolvedMetro, cwd?: string): Step {
       type: 'command',
       background: true,
       processKey: 'metro',
+      // Either form carries the e2e marker so the Metro seam installs the harness (REQ-SEAM-001).
       command: metro.command
-        ? shell(metro.command, cwd)
+        ? { ...shell(metro.command, cwd), env: E2E_MARKER_ENV }
         : {
             ...packageBin('expo', ['start', '--localhost', '--port', String(metro.port)], cwd),
-            env: { CI: '1', EXPO_NO_TELEMETRY: '1' },
+            env: { CI: '1', EXPO_NO_TELEMETRY: '1', ...E2E_MARKER_ENV },
           },
     },
   }

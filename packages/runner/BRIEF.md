@@ -136,9 +136,10 @@ failure, a message that names the stage that broke.
   `android.scheme` and opens
   `<scheme>://expo-development-client/?url=<resolved-metro-url>`; `initialUrl`
   defaults to the resolved Metro URL on both platforms.
-- **`RN_E2E=1` is the intended prebuild/app-config marker, not current runtime
-  behavior.** `expo prebuild` inherits the runner process env today; the runner
-  must explicitly emit `RN_E2E=1` before docs can claim it is implemented.
+- **`RN_E2E=1` is the prebuild and Metro marker, emitted by the runner.** Every
+  planned prebuild and Metro start step carries it (REQ-PREBUILD-002, root
+  REQ-SEAM-001); the driver's Metro helper and this repo's config plugins gate on
+  it, so app config lists them unconditionally.
 - **Priming knobs are future design space.** `RN_E2E_PRIMED=1` and
   `prebuild.clean` are not available runner flags unless a later SPEC/API change
   adds them.

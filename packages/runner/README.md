@@ -329,10 +329,14 @@ env, or docs.
 
 ### Prebuild environment and priming
 
-`expo prebuild` runs inside the runner process, so it inherits the runner
-process environment. The intended stable marker for test-only Expo config,
-plugins, or native settings is `RN_E2E=1`; this package does not emit that marker
-yet, so treat it as the planned contract rather than current behavior.
+`expo prebuild` runs inside the runner process and inherits the runner process
+environment. The runner sets `RN_E2E=1` on every prebuild it plans and every
+Metro it starts (both show in `--dry-run`). That marker is the stable contract for
+test-only Expo config: the driver's Metro helper and every config plugin in this
+repo read it and stay inert without it, so an app lists them unconditionally and
+never reads the marker in its own source. A Metro the runner reuses
+(`metro.reuseExisting`) is the operator's to start with the marker; the driver
+reports a missing harness by name when it is not.
 
 The implemented lifecycle already covers prebuild, Metro, app launch, companion
 startup, Hermes waits, Playwright env, and cleanup. Priming controls such as

@@ -1,5 +1,5 @@
 import type { AndroidConfig, PlaywrightConfig } from '../config'
-import { COMPANION_FAILURE_MARKERS, DEFAULTS } from '../constants'
+import { COMPANION_FAILURE_MARKERS, DEFAULTS, E2E_MARKER_ENV } from '../constants'
 import { buildAndroidDriverEnv } from './env'
 import type { ResolvedAndroidTarget, ResolvedMetro } from './resolved'
 import { metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
@@ -58,11 +58,11 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     description: 'Generate Android project (expo prebuild)',
     action: {
       type: 'command',
-      command: packageBin(
-        'expo',
-        ['prebuild', '--platform', 'android', '--no-install'],
-        projectCwd,
-      ),
+      // The marker lets marker-gated config plugins apply (REQ-SEAM-001).
+      command: {
+        ...packageBin('expo', ['prebuild', '--platform', 'android', '--no-install'], projectCwd),
+        env: E2E_MARKER_ENV,
+      },
     },
     skippable: true,
   })

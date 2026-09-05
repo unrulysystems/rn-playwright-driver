@@ -169,11 +169,11 @@ values never enter env.
 ### Prebuild and app-config environment
 
 `expo prebuild` is a runner-owned build step. It executes inside the runner
-process and therefore inherits the runner process environment. The intended
-stable marker for app config that conditionally includes test-only plugins or
-native settings is `RN_E2E=1`; this is a documented future contract, not current
-runtime behavior until the runner emits it explicitly. Apps must not depend on
-transient Playwright setup state for prebuild decisions.
+process and therefore inherits the runner process environment. The runner sets
+`RN_E2E=1` on every prebuild step and every Metro start step it plans; that marker
+is the stable contract for test-only app config, read by the driver's Metro helper
+and by this repo's config plugins (root `SPEC.md`, REQ-SEAM-001). Apps must not
+depend on transient Playwright setup state for prebuild decisions.
 
 ## Requirements
 
@@ -236,9 +236,9 @@ transient Playwright setup state for prebuild decisions.
 - **REQ-PREBUILD-001** `expo prebuild --platform <ios|android>` runs as a
   runner-owned build step inside the runner process and inherits the runner
   process environment.
-- **REQ-PREBUILD-002** The stable app-config marker for test-only Expo
-  config/plugins is intended to be `RN_E2E=1`. Until the runner explicitly emits
-  it, this is a planned contract, not an implemented env var.
+- **REQ-PREBUILD-002** The runner sets `RN_E2E=1` in the environment of every
+  `expo prebuild` step and every Metro start step it plans, and `--dry-run` shows
+  it. It is the stable app-config marker for test-only Expo config and plugins.
 - **REQ-PREBUILD-003** Prebuild-time app configuration must not rely on
   Playwright `globalSetup` or `globalTeardown`, because those hooks run after the
   runner has already resolved and executed pre-Playwright lifecycle steps.
@@ -541,8 +541,8 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 - Whether the iOS scheme-env injection and runtime-config copy can be replaced by
   a single companion-side config mechanism is a future simplification, out of
   scope for v1.
-- Emitting `RN_E2E=1` from the runner is the intended stable prebuild/app-config
-  contract, but the current runtime does not implement that env injection yet.
+- Verifying that a reused Metro (`metro.reuseExisting`) was started with
+  `RN_E2E=1` is out of scope; the driver reports the missing harness by name.
 
 ## Traceability
 

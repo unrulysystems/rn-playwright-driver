@@ -83,3 +83,27 @@ describe('playwrightCommand (REQ-CLI-005)', () => {
     expect(cmd.args.join(' ')).toContain('--workers 1')
   })
 })
+
+describe('metroStartStep marker (REQ-SEAM-001)', () => {
+  const metro = {
+    url: 'http://localhost:8083',
+    host: 'localhost',
+    port: 8083,
+    reuseExisting: false,
+    readyTimeoutMs: 90_000,
+  }
+
+  it('starts the default Expo Metro with RN_E2E=1 so the Metro seam installs the harness', () => {
+    const step = metroStartStep({ ...metro, command: undefined })
+    expect(step.action.type === 'command' && step.action.command.env).toMatchObject({
+      RN_E2E: '1',
+    })
+  })
+
+  it('starts a custom metro.command with RN_E2E=1 in its environment', () => {
+    const step = metroStartStep({ ...metro, command: 'my-metro --port 8083' })
+    expect(step.action.type === 'command' && step.action.command.env).toMatchObject({
+      RN_E2E: '1',
+    })
+  })
+})

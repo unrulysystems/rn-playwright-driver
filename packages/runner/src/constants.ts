@@ -68,6 +68,15 @@ export const DEFAULTS = {
   xctestTokenResourceName: 'RNDriverTouchCompanionToken',
 } as const
 
+/**
+ * The prebuild and Metro marker (REQ-SEAM-001). The runner sets it on every `expo prebuild`
+ * it plans and every Metro it starts; the driver's Metro helper and every config plugin in
+ * this repo read it and stay inert without it, so an app lists them unconditionally and its
+ * source never reads the marker itself. A Metro the runner merely reuses is the operator's
+ * to start with the marker.
+ */
+export const E2E_MARKER_ENV = { RN_E2E: '1' } as const
+
 /** Placeholder shown in `--dry-run` output wherever a secret file path appears. */
 export const SECRET_PLACEHOLDER = '<token-file>'
 

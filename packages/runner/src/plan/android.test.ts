@@ -232,3 +232,11 @@ describe('planAndroid', () => {
     expect(planAndroid(inputFor())).toEqual(planAndroid(inputFor()))
   })
 })
+
+describe('prebuild marker (REQ-SEAM-001)', () => {
+  it('runs expo prebuild with RN_E2E=1 so marker-gated plugins apply', () => {
+    const plan = planAndroid(inputFor())
+    const prebuild = plan.steps.find((s) => s.id === 'android.prebuild')?.action
+    expect(prebuild?.type === 'command' && prebuild.command.env).toMatchObject({ RN_E2E: '1' })
+  })
+})
