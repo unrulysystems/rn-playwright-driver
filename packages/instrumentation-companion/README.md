@@ -38,6 +38,23 @@ the app package. In the commands below, `<app>` is that Android application id
 `${applicationId}` as the target package placeholder; if a consuming build cannot
 resolve that placeholder, copy the manifest below and replace it with the app id.
 
+## Native project requirements
+
+The plugin owns every native-project change the companion needs; a consumer
+writes no plugin of its own.
+
+- `MainApplication`: nothing. The companion is an instrumentation APK that drives
+  the app through `UiAutomation.injectInputEvent` and never touches the app's
+  `ReactHost`; the driver's native modules link through Expo autolinking. No
+  package in this repository requires or asserts `ExpoReactHostFactory`.
+- App manifest: nothing. The plugin's `androidx.test:runner` and
+  `androidx.test:core` manifests declare no storage permission. A
+  `WRITE_EXTERNAL_STORAGE` `maxSdkVersion` merge conflict seen while adopting the
+  companion on an Expo SDK 54 app came from two app dependencies (Expo FileSystem
+  and Intercom); the SDK 55+ template resolves it with
+  `tools:replace="android:maxSdkVersion"` on that permission. An app on an older
+  template adds that attribute to its own manifest.
+
 ## Manual Device Flow
 
 Regenerate the native project:

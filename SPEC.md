@@ -102,10 +102,12 @@ directions.
 ### Companion side effects — `REQ-SEAM-*` (continued)
 
 - **REQ-SEAM-008** The instrumentation companion plugin owns every native-project
-  change its dependencies require on the current Expo template: the
-  `WRITE_EXTERNAL_STORAGE` manifest-merge fix and any `MainApplication`
-  requirement, each either applied by the plugin or shown unnecessary against the
-  example app on the pinned SDK. A consumer writes no plugin of its own.
+  change the companion needs, and its README states what it does not need: no
+  `MainApplication` requirement (no package here reads the app's `ReactHost`), and
+  no app-manifest change (its `androidx.test` dependencies declare no storage
+  permission; the `WRITE_EXTERNAL_STORAGE` `maxSdkVersion` conflict seen on an
+  SDK 54 consumer was between app dependencies and the SDK 55+ template's
+  `tools:replace` resolves it). A consumer writes no plugin of its own.
 
 ### Release-artifact check — `REQ-SEAM-*` (continued)
 
@@ -155,7 +157,8 @@ directions.
 - REQ-SEAM-007: no `resolveRequest` override for the harness in the example app
   or in a hoisted Yarn 4 consumer (Send's `apps/expo`).
 - REQ-SEAM-008: the example app's Android prebuild and companion run succeed with
-  no consumer plugin; the plugin's tests cover the manifest merge.
+  no consumer plugin; the plugin's tests cover the androidTest manifest merge and
+  assert the app manifest is returned untouched.
 - REQ-SEAM-011: `rn-driver test --platform ios` and `--platform android` green
   on the example app.
 

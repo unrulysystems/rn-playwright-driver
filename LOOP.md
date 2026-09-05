@@ -4,9 +4,9 @@ id: clean-seam
 objective: Close upstream issues 44 through 51 so the driver installs from Metro config under a runner-emitted marker, excludes its native modules from production prebuilds, and proves both in a CI artifact check; the example app is the reference consumer.
 status: active
 phase: DEV
-iteration: 4
+iteration: 5
 iteration_budget: 14
-updated_at: 2026-09-05T07:30:00Z
+updated_at: 2026-09-05T08:00:00Z
 mission: native-e2e-clean-seam
 targets:
   spec:
@@ -74,11 +74,11 @@ units:
   - id: U6
     title: 'Instrumentation companion owns manifest-merge and MainApplication requirements (#47)'
     targets: [REQ-SEAM-008]
-    state: current
+    state: done
   - id: U7
     title: 'check:footprint script, both directions, observed red then green; CI job (#50)'
     targets: [REQ-SEAM-009, REQ-SEAM-010]
-    state: pending
+    state: current
   - id: U8
     title: README and runner docs describe the Metro install; changesets authored
     targets: [REQ-SEAM-011]
@@ -92,6 +92,11 @@ units:
     targets: [REQ-SEAM-011]
     state: pending
 decisions:
+  - {
+      date: 2026-09-05,
+      call: "Issue 47's two consumer plugins retire without replacement: the WRITE_EXTERNAL_STORAGE maxSdkVersion conflict was between Expo FileSystem and Intercom on an SDK 54 template (PixelProton codex session ad7b68c2, 2026-07-02) and the SDK 55+ template carries tools:replace; no package in this repo reads the app ReactHost, so nothing asserts ExpoReactHostFactory.",
+      status: provisional,
+    }
   - {
       date: 2026-09-05,
       call: "The Metro seam is a request-time entry swap through server.rewriteRequestUrl with a generated .expo/rn-driver-e2e-entry.js; Metro runs getModulesRunBeforeMainModule entries only when something already imports them (metro/src/lib/getAppendScripts.js), so issue 51's proposed mechanism cannot work as written.",
@@ -131,6 +136,8 @@ boundary:
 - U4 (2026-09-05): `withRnDriverHarness` in `packages/driver/src/metro.ts` (11 unit tests). Live probe on the example app (`/tmp/rnpd/probe-seam.out`): with the marker Metro bundled `.expo/rn-driver-e2e-entry.js` (714 modules) and the bundle had 2 `HARNESS_API_VERSION` hits; without it Metro bundled `index.ts` (711 modules) and 0 hits. `index.ts` imports nothing from the driver.
 
 - U5 (2026-09-05): `packages/driver/src/plugin.ts` (`withRnDriverNativeModules`, 13 unit tests through the real `withPodfile`/`withSettingsGradle` mods) shipped as `app.plugin.js`; both companion `app.plugin.js` files return the config untouched unless `RN_E2E=1` (tests added, 8+8 green). Exclusion keys by npm package name (`expo-modules-autolinking` `findModules.js`), so the list is the four `@unrulysystems/rn-driver-*` names; SPEC REQ-SEAM-003/004 corrected. Live on the example app (SDK 56): marker off → Podfile `use_expo_modules!(exclude: [...])` and a generated `expoAutolinking.exclude` block, no companion scaffolds; marker on (non-clean prebuild) → bare call, block removed, scaffolds present; marker off again → exclusion back. `expo-modules-autolinking resolve --exclude <names>` drops all four on apple and android; `react-native-config` never lists them. `nub run check` and `nub run knip` green.
+
+- U6 (2026-09-05): #47 traced to its source. The manifest conflict was `processDebugMainManifest` on Send's SDK 54 template (template lacked `tools:replace`; SDK 55/56 templates carry it, verified from expo/expo `sdk-54`/`sdk-55`/`sdk-56` template manifests); `androidx.test` core 1.6.1 / runner 1.6.2 / monitor 1.7.2 AAR manifests declare no storage permission. No `packages/*/android/src` file references `ReactHost`, `ReactApplication`, or `MainApplication`. Companion README gained "Native project requirements"; a test asserts the plugin returns the app manifest untouched (9 green). SPEC REQ-SEAM-008 restated accordingly. Live proof (example Android prebuild + companion run with no consumer plugin) lands with U9.
 
 ## Known pre-existing failures — do not chase (cited evidence only)
 

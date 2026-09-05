@@ -71,6 +71,40 @@ describe('withRNDriverTouchCompanion plugin helpers', () => {
     }
   })
 
+  test('leaves the app manifest untouched (REQ-SEAM-008: the plugin owns no app permission)', async () => {
+    process.env.RN_E2E = '1'
+    const config = appPlugin({
+      name: 'Example',
+      slug: 'example',
+      android: { package: 'com.example.app' },
+    })
+    const manifest = {
+      manifest: {
+        $: { 'xmlns:android': 'http://schemas.android.com/apk/res/android' },
+        'uses-permission': [
+          { $: { 'android:name': 'android.permission.INTERNET' } },
+          {
+            $: {
+              'android:name': 'android.permission.WRITE_EXTERNAL_STORAGE',
+              'android:maxSdkVersion': '32',
+              'tools:replace': 'android:maxSdkVersion',
+            },
+          },
+        ],
+        application: [{ $: { 'android:name': '.MainApplication' } }],
+      },
+    }
+    const before = JSON.stringify(manifest)
+
+    const result = await config.mods.android.manifest({
+      ...config,
+      modRequest: { platformProjectRoot: '/app/android' },
+      modResults: manifest,
+    })
+
+    assert.equal(JSON.stringify(result.modResults), before)
+  })
+
   test('generates an androidTest manifest for the companion without taking over the app runner', () => {
     const manifest = plugin.androidTestManifest('com.example.app')
 
