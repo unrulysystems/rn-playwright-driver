@@ -191,8 +191,8 @@ function validateIos(ios: unknown, errors: string[]): void {
     if (!isRecord(ios.defaults)) {
       errors.push('config.ios.defaults: expected an object of key -> string|number|boolean')
     } else {
-      // planIos feeds each value into `simctl defaults write`; a non-primitive
-      // would stringify to `[object Object]` and write a bogus default.
+      // planIos feeds each value into `defaults write` with a type flag; a
+      // non-primitive would stringify to `[object Object]` and write a bogus default.
       for (const [key, value] of Object.entries(ios.defaults)) {
         const kind = typeof value
         if (kind !== 'string' && kind !== 'number' && kind !== 'boolean') {

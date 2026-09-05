@@ -69,8 +69,10 @@ export default defineRnDriverConfig({
       // initialUrl defaults to the resolved Metro URL on simulators. Physical
       // iOS devices require an explicit LAN/tunnel URL reachable from the phone.
     },
-    // App-specific pre-launch seeds (simctl defaults write):
-    // defaults: { EXDevMenuIsOnboardingFinished: true },
+    // App-specific pre-launch seeds, written into the app container's
+    // NSUserDefaults after the install (typed: boolean, number, or string).
+    // Dev-client apps get the expo-dev-menu onboarding seeds automatically.
+    // defaults: { MyFeatureFlag: true },
   },
   android: {
     packageName: 'com.company.app',
@@ -126,6 +128,12 @@ export default defineRnDriverConfig({
 uses `simctl launch --initialUrl`; Android uses the configured
 `android.scheme` to open
 `<scheme>://expo-development-client/?url=<resolved-metro-url>`.
+
+For a dev client the runner also marks the expo-dev-menu onboarding finished
+before the launch (iOS: `EXDevMenuIsOnboardingFinished`/`EXDevMenuShowsAtLaunch`
+in the app container; Android: `expo.modules.devmenu.sharedpreferences.xml`).
+Without it the dev menu opens over the app at launch and takes the suite's first
+taps.
 
 The runner starts Metro with `--dns-result-order=ipv4first` appended to
 `NODE_OPTIONS` (your own `NODE_OPTIONS` value is kept). Expo hands the app

@@ -57,10 +57,9 @@ describe('planIos', () => {
       'ios.pods',
       'metro.start',
       'metro.ready',
-      'ios.packager-host-location',
-      'ios.packager-host-scheme',
       'ios.build-app',
       'ios.install-app',
+      'ios.packager-host',
       'ios.free-port',
       'ios.companion-start',
       'ios.companion-ready',
@@ -85,6 +84,70 @@ describe('planIos', () => {
         },
       })
     }
+  })
+
+  it('seeds the packager host into the app container after the install, loudly (REQ-IOS-005)', () => {
+    const input = inputFor('plain')
+    const plan = planIos(input)
+    const ids = stepIds(plan)
+    expect(ids.indexOf('ios.packager-host')).toBe(ids.indexOf('ios.install-app') + 1)
+    const step = plan.steps.find((s) => s.id === 'ios.packager-host')
+    expect(step?.stage).toBe('device')
+    expect(step?.skippable).toBeUndefined()
+    expect(step?.action).toEqual({
+      type: 'seed-ios-defaults',
+      spec: {
+        udid: '<sim-udid>',
+        bundleId: 'com.unrulyfall.example',
+        entries: [
+          { key: 'RCT_jsLocation', value: `${input.metro.host}:${input.metro.port}` },
+          { key: 'RCT_packager_scheme', value: 'http' },
+        ],
+      },
+    })
+  })
+
+  it('seeds the dev-menu onboarding flags for a dev client so the menu never opens over the app (REQ-IOS-016)', () => {
+    expect(stepIds(planIos(inputFor('plain')))).not.toContain('ios.dev-menu')
+    const plan = planIos(inputFor('expo-dev-client'))
+    const ids = stepIds(plan)
+    expect(ids.indexOf('ios.dev-menu')).toBeGreaterThan(ids.indexOf('ios.install-app'))
+    expect(ids.indexOf('ios.dev-menu')).toBeLessThan(ids.indexOf('ios.free-port'))
+    const step = plan.steps.find((s) => s.id === 'ios.dev-menu')
+    expect(step?.stage).toBe('device')
+    expect(step?.action).toEqual({
+      type: 'seed-ios-defaults',
+      spec: {
+        udid: '<sim-udid>',
+        bundleId: 'com.unrulyfall.example',
+        entries: [
+          { key: 'EXDevMenuIsOnboardingFinished', value: true },
+          { key: 'EXDevMenuShowsAtLaunch', value: false },
+        ],
+      },
+    })
+  })
+
+  it('seeds ios.defaults as one app-container step in config order, and emits none without config (REQ-IOS-010)', () => {
+    expect(stepIds(planIos(inputFor('plain')))).not.toContain('ios.defaults')
+    const ios = iosConfigFixture({ defaults: { Greeting: 'hi', Count: 2, Flag: true } })
+    const plan = planIos(inputFor('plain', { ios }))
+    const ids = stepIds(plan)
+    expect(ids.indexOf('ios.defaults')).toBeGreaterThan(ids.indexOf('ios.install-app'))
+    expect(ids.indexOf('ios.defaults')).toBeLessThan(ids.indexOf('ios.free-port'))
+    const step = plan.steps.find((s) => s.id === 'ios.defaults')
+    expect(step?.action).toEqual({
+      type: 'seed-ios-defaults',
+      spec: {
+        udid: '<sim-udid>',
+        bundleId: 'com.unrulyfall.example',
+        entries: [
+          { key: 'Greeting', value: 'hi' },
+          { key: 'Count', value: 2 },
+          { key: 'Flag', value: true },
+        ],
+      },
+    })
   })
 
   it('plain apps do NOT host-launch (the companion launch mode owns it)', () => {
@@ -136,8 +199,9 @@ describe('planIos', () => {
     const ids = stepIds(plan)
     expect(ids).not.toContain('ios.boot')
     expect(ids).not.toContain('ios.boot-wait')
-    expect(ids).not.toContain('ios.packager-host-location')
-    expect(ids).not.toContain('ios.packager-host-scheme')
+    expect(ids).not.toContain('ios.packager-host')
+    expect(ids).not.toContain('ios.dev-menu')
+    expect(ids).not.toContain('ios.defaults')
     expect(ids).not.toContain('ios.terminate-before-launch')
     expect(ids).toContain('ios.runtime-token')
     expect(ids).toContain('ios.port-forward')

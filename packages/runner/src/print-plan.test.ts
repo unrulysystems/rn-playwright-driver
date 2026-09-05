@@ -22,6 +22,19 @@ describe('renderPlan', () => {
     expect(text).toContain('install-ios-app example -> simulator <sim-udid>')
   })
 
+  it('renders the app-container seeds with their keys and typed values so the dry run shows what the app will read (REQ-IOS-005, REQ-IOS-016)', () => {
+    const text = renderPlan(
+      buildDryRunPlan(configFixture({ ios: iosDevClientConfigFixture() }), 'ios'),
+    )
+    expect(text).toContain('ios.packager-host')
+    expect(text).toContain(
+      'seed-ios-defaults com.unrulyfall.example on <sim-udid>: RCT_jsLocation=127.0.0.1:8081 RCT_packager_scheme=http  (app-container plist)',
+    )
+    expect(text).toContain(
+      'seed-ios-defaults com.unrulyfall.example on <sim-udid>: EXDevMenuIsOnboardingFinished=true EXDevMenuShowsAtLaunch=false  (app-container plist)',
+    )
+  })
+
   it('renders appended env as KEY+=value so the dry run shows the Metro loopback binding (REQ-METRO-005)', () => {
     const text = renderPlan(buildDryRunPlan(configFixture(), 'ios'))
     expect(text).toContain('NODE_OPTIONS+=--dns-result-order=ipv4first')

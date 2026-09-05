@@ -285,7 +285,12 @@ depend on transient Playwright setup state for prebuild decisions.
   the generic-Unix `LD=ld` link failure.
 - **REQ-IOS-005** Point the app at this Metro via the app's `NSUserDefaults`
   (`RCT_jsLocation`, `RCT_packager_scheme`) and build the app scheme with
-  `RCT_METRO_PORT`.
+  `RCT_METRO_PORT`. On a simulator the seed is written into the app's data
+  container (`simctl get_app_container <udid> <bundleId> data` →
+  `simctl spawn <udid> defaults write <container>/Library/Preferences/<bundleId>.plist
+<key> <typed value>`), after the install created the container. `simctl spawn
+  defaults write <bundleId>` targets the simulator-wide domain a sandboxed app
+  never reads. A failed write fails the run; it is not best-effort.
 - **REQ-IOS-006** Free the companion port (`lsof -iTCP:<port> -sTCP:LISTEN -t |
 kill`) **before** starting the companion, then start the companion UI test
   (`xcodebuild test -only-testing:<UITests>/RNDriverTouchCompanionTests/testRunServer`)
@@ -307,9 +312,10 @@ kill`) **before** starting the companion, then start the companion UI test
   `deviceName`; physical-device runs omit the device-name filter because Metro
   physical target labels are not stable across CoreDevice display names. Emit
   diagnostics (Metro `/json`, companion log tail) on timeout.
-- **REQ-IOS-010** App-specific pre-launch seeds (e.g. dev-menu onboarding
-  defaults) are expressed as config (`ios.defaults` → `simctl spawn defaults
-write`), not hard-coded.
+- **REQ-IOS-010** App-specific pre-launch seeds are expressed as config
+  (`ios.defaults`), written as one `ios.defaults` step into the app container
+  the same way as REQ-IOS-005, in config order, with explicit `-bool`/`-int`/
+  `-float`/`-string` types.
 - **REQ-IOS-011** Physical iOS devices are selected only when
   `ios.target === "device"`. The resolver uses
   `xcrun devicectl list devices --json-output <file>`, filters paired available
@@ -326,8 +332,8 @@ write`), not hard-coded.
 - **REQ-IOS-013** Physical iOS dev-client launch uses
   `xcrun devicectl device process launch --device <core-device-id>
 --terminate-existing --payload-url <dev-client-url> <bundleId>`. Simulator-only
-  `simctl boot`, `simctl defaults`, and `ios.defaults` steps are not emitted for
-  physical devices.
+  `simctl boot` and app-container seed steps (REQ-IOS-005, REQ-IOS-010,
+  REQ-IOS-016) are not emitted for physical devices.
 - **REQ-IOS-014** `ios.allowProvisioningUpdates` is an explicit boolean opt-in
   that appends `-allowProvisioningUpdates` to iOS `xcodebuild build` and
   `xcodebuild test` commands. It defaults to false because provisioning changes
@@ -340,6 +346,12 @@ write`), not hard-coded.
   only when the companion launches it, so `attach` mode on a fresh simulator
   otherwise fails `simctl launch` with "not installed". The step runs on every
   launch mode and under `--skip-build`; a failure is a `build`-stage failure.
+
+- **REQ-IOS-016** A simulator `expo-dev-client` app gets an `ios.dev-menu` step
+  after the install that seeds `EXDevMenuIsOnboardingFinished=true` and
+  `EXDevMenuShowsAtLaunch=false` into the app container. expo-dev-menu otherwise
+  opens its onboarding sheet over the app at launch, and the suite's first taps
+  land on that sheet.
 
 ### Android instrumentation lifecycle — `REQ-AND-*`
 
@@ -373,6 +385,14 @@ android`), configure JDK 17 if `JAVA_HOME` is unset, and build the app +
   force-stops the package before `am start -a android.intent.action.VIEW -d
 <url>`; later retry/second launches re-issue the deep link without the
   force-stop. `android.launch.initialUrl` defaults to the resolved Metro URL.
+- **REQ-AND-010** An `expo-dev-client` app gets an `android.dev-menu` step
+  between `android.debug-host` and `android.launch-1` that writes
+  `shared_prefs/expo.modules.devmenu.sharedpreferences.xml` (`run-as`, stdin)
+  with `isOnboardingFinished=true` and `showsAtLaunch=false`. expo-dev-menu
+  otherwise opens its onboarding sheet, a dialog window over `MainActivity`,
+  at every launch until the user finishes it; the suite's first injected tap
+  only dismissed that dialog (observed on an API 35 emulator: two
+  `MainActivity` windows before the tap, one after, counter still 0).
 
 ### Target-aware project hooks — `REQ-HOOK-*`
 

@@ -46,6 +46,10 @@ function renderAction(action: StepAction): string {
       return `free-port ${action.port}`
     case 'install-ios-app':
       return `install-ios-app ${action.spec.scheme} -> ${action.spec.target.kind} ${action.spec.target.udid}  (product from xcodebuild -showBuildSettings)`
+    case 'seed-ios-defaults': {
+      const entries = action.spec.entries.map((e) => `${e.key}=${String(e.value)}`).join(' ')
+      return `seed-ios-defaults ${action.spec.bundleId} on ${action.spec.udid}: ${entries}  (app-container plist)`
+    }
     case 'probe': {
       // Fast-fail markers change what the probe DOES (abort early instead of waiting out the
       // timeout), so the audited dry-run plan must show them to stay faithful (REQ-CLI-002,

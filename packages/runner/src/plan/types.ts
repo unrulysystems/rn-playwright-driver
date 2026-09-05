@@ -65,6 +65,20 @@ export interface InstallIosAppSpec {
   readonly cwd?: string
 }
 
+export type IosDefaultValue = string | number | boolean
+
+/**
+ * Write `NSUserDefaults` entries into the app's data-container preferences
+ * domain on a simulator (REQ-IOS-005, REQ-IOS-010, REQ-IOS-016). The container
+ * path is resolved at execution time (`simctl get_app_container`), so the step
+ * must follow the install; each entry is written with an explicit type flag.
+ */
+export interface SeedIosDefaultsSpec {
+  readonly udid: string
+  readonly bundleId: string
+  readonly entries: ReadonlyArray<{ readonly key: string; readonly value: IosDefaultValue }>
+}
+
 export type StepAction =
   | {
       readonly type: 'command'
@@ -89,6 +103,7 @@ export type StepAction =
     }
   | { readonly type: 'free-port'; readonly port: number }
   | { readonly type: 'install-ios-app'; readonly spec: InstallIosAppSpec }
+  | { readonly type: 'seed-ios-defaults'; readonly spec: SeedIosDefaultsSpec }
   | {
       readonly type: 'probe'
       readonly probe: ReadinessProbe
@@ -195,6 +210,8 @@ export interface ProcessRunner {
   freePort(port: number): Promise<void>
   /** Resolve the scheme's built application and install it on the target (REQ-IOS-015). */
   installIosApp(spec: InstallIosAppSpec): Promise<void>
+  /** Write typed entries into the installed app's container preferences (REQ-IOS-005). */
+  seedIosDefaults(spec: SeedIosDefaultsSpec): Promise<void>
   /**
    * Poll a readiness probe; resolves true when ready, false on timeout. When `watch` is given, the
    * probe also scans the backing process's log each poll and THROWS {@link ProbeFailure} the moment

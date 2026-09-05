@@ -172,9 +172,9 @@ export interface IosConfig {
   launch: LaunchConfig
   companion?: CompanionConfig
   /**
-   * App-specific pre-launch seeds written via `simctl spawn defaults write`
-   * (e.g. dev-menu onboarding flags). Keeps app-specific facts out of the
-   * generic lifecycle.
+   * App-specific pre-launch seeds written into the app container's
+   * `NSUserDefaults` after the install (simulator only). Dev-client apps get the
+   * expo-dev-menu onboarding seeds without listing them here.
    */
   defaults?: Record<string, string | number | boolean>
 }

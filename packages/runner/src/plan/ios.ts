@@ -3,7 +3,7 @@ import { COMPANION_FAILURE_MARKERS, DEFAULTS, E2E_MARKER_ENV } from '../constant
 import { buildIosDriverEnv } from './env'
 import type { ResolvedIosTarget, ResolvedMetro } from './resolved'
 import { cmd, metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
-import type { CleanupAction, CommandSpec, Plan, Step } from './types'
+import type { CleanupAction, CommandSpec, Plan, SeedIosDefaultsSpec, Step } from './types'
 
 export interface PlanIosInput {
   readonly ios: IosConfig
@@ -157,48 +157,6 @@ export function planIos(input: PlanIosInput): Plan {
     },
   })
 
-  if (resolved.kind === 'simulator') {
-    // device — point the app at this Metro via NSUserDefaults (best-effort).
-    push({
-      id: 'ios.packager-host-location',
-      stage: 'device',
-      description: 'Point app at Metro (RCT_jsLocation)',
-      action: {
-        type: 'command',
-        command: xcrun([
-          'simctl',
-          'spawn',
-          resolved.simUdid,
-          'defaults',
-          'write',
-          ios.bundleId,
-          'RCT_jsLocation',
-          `${metro.host}:${metro.port}`,
-        ]),
-        allowFailure: true,
-      },
-    })
-    push({
-      id: 'ios.packager-host-scheme',
-      stage: 'device',
-      description: 'Point app at Metro (RCT_packager_scheme)',
-      action: {
-        type: 'command',
-        command: xcrun([
-          'simctl',
-          'spawn',
-          resolved.simUdid,
-          'defaults',
-          'write',
-          ios.bundleId,
-          'RCT_packager_scheme',
-          'http',
-        ]),
-        allowFailure: true,
-      },
-    })
-  }
-
   // build — compile the app scheme. `env -u LD` avoids the generic-Unix LD=ld
   // link failure (REQ-IOS-004).
   push({
@@ -251,26 +209,35 @@ export function planIos(input: PlanIosInput): Plan {
   })
 
   if (resolved.kind === 'simulator') {
-    // device — app-specific pre-launch seeds (e.g. onboarding flags).
-    for (const [key, value] of Object.entries(ios.defaults ?? {})) {
+    // device — seed the app's own NSUserDefaults domain. The install above created
+    // the data container; `simctl spawn defaults write <bundleId>` would land in the
+    // simulator-wide domain the sandboxed app never reads (REQ-IOS-005).
+    const seed = (id: string, description: string, entries: SeedIosDefaultsSpec['entries']) =>
       push({
-        id: `ios.seed.${key}`,
+        id,
         stage: 'device',
-        description: `Seed default ${key}`,
+        description,
         action: {
-          type: 'command',
-          command: xcrun([
-            'simctl',
-            'spawn',
-            resolved.simUdid,
-            'defaults',
-            'write',
-            ios.bundleId,
-            ...defaultsArgs(key, value),
-          ]),
-          allowFailure: true,
+          type: 'seed-ios-defaults',
+          spec: { udid: resolved.simUdid, bundleId: ios.bundleId, entries },
         },
       })
+    seed('ios.packager-host', 'Point app at Metro (RCT_jsLocation, RCT_packager_scheme)', [
+      { key: 'RCT_jsLocation', value: `${metro.host}:${metro.port}` },
+      { key: 'RCT_packager_scheme', value: 'http' },
+    ])
+    if (isDevClient) {
+      // expo-dev-menu opens its onboarding sheet over the app at launch until the
+      // user finishes it; that sheet would take the suite's first taps (REQ-IOS-016).
+      seed('ios.dev-menu', 'Mark the dev-menu onboarding finished', [
+        { key: 'EXDevMenuIsOnboardingFinished', value: true },
+        { key: 'EXDevMenuShowsAtLaunch', value: false },
+      ])
+    }
+    const configured = Object.entries(ios.defaults ?? {}).map(([key, value]) => ({ key, value }))
+    if (configured.length > 0) {
+      // App-specific pre-launch seeds from config (REQ-IOS-010).
+      seed('ios.defaults', `Seed ${configured.map((e) => e.key).join(', ')}`, configured)
     }
   }
 
@@ -473,12 +440,6 @@ function runtimeConfigJson(resolved: ResolvedIosTarget, ios: IosConfig): string 
       : { authTokenFile: resolved.tokenFile }),
     launch: ios.launch.mode,
   })
-}
-
-function defaultsArgs(key: string, value: string | number | boolean): string[] {
-  if (typeof value === 'boolean') return [key, '-bool', value ? 'YES' : 'NO']
-  if (typeof value === 'number') return [key, '-int', String(value)]
-  return [key, value]
 }
 
 function allowProvisioningUpdatesArgs(ios: IosConfig): string[] {

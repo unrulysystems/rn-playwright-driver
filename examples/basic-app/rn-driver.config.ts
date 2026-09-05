@@ -28,9 +28,6 @@ export default defineRnDriverConfig({
     workspace: 'ios/example.xcworkspace',
     appScheme: 'example',
     launch: { mode: 'attach', kind: 'expo-dev-client' },
-    // expo-dev-menu shows a first-launch onboarding sheet over the app on a fresh
-    // simulator; it would swallow the suite's first taps.
-    defaults: { EXDevMenuIsOnboardingFinished: true },
   },
   android: {
     packageName: 'com.unrulyfall.example',

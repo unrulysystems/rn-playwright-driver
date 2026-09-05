@@ -16,8 +16,10 @@ import type {
   ReadinessProbe,
   SpawnHandle,
   InstallIosAppSpec,
+  SeedIosDefaultsSpec,
 } from '../plan/types'
 import { builtApplicationPath } from './built-product'
+import { appPreferencesPlist, defaultsWriteArgs } from './ios-defaults'
 import { findFailureMarker, ProbeFailure } from './probe-failure'
 
 const PROBE_INTERVAL_MS = 1_000
@@ -196,6 +198,37 @@ export class NodeProcessRunner implements ProcessRunner {
     const result = await this.exec({ command: 'xcrun', args })
     if (result.code !== 0) {
       throw new Error(`xcrun ${args[0]} install exited ${result.code} for ${product}`)
+    }
+  }
+
+  async seedIosDefaults(spec: SeedIosDefaultsSpec): Promise<void> {
+    const container = await this.capture('xcrun', [
+      'simctl',
+      'get_app_container',
+      spec.udid,
+      spec.bundleId,
+      'data',
+    ])
+    if (container.code !== 0) {
+      throw new Error(
+        `${spec.bundleId} has no data container on ${spec.udid} (is it installed?): ${tail(container.stderr)}`,
+      )
+    }
+    const plist = appPreferencesPlist(container.stdout, spec.bundleId)
+    for (const entry of spec.entries) {
+      // Run `defaults` inside the simulator so its cfprefsd sees the write.
+      const args = [
+        'simctl',
+        'spawn',
+        spec.udid,
+        ...defaultsWriteArgs(plist, entry.key, entry.value),
+      ]
+      const result = await this.capture('xcrun', args)
+      if (result.code !== 0) {
+        throw new Error(
+          `defaults write ${entry.key} into ${plist} exited ${result.code}: ${tail(result.stderr)}`,
+        )
+      }
     }
   }
 

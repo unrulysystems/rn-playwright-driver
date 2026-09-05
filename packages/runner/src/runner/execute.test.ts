@@ -1,12 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { buildDryRunPlan } from '../build-plan'
-import { configFixture } from '../fixtures'
+import { configFixture, iosDevClientConfigFixture } from '../fixtures'
 import type { CommandSpec, ProbeWatch, ProcessRunner, ReadinessProbe } from '../plan/types'
 import { executePlan, StageError } from './execute'
 import { ProbeFailure } from './probe-failure'
 
 interface Recorded {
-  readonly type: 'exec' | 'spawn' | 'kill' | 'write' | 'copy' | 'rm' | 'free' | 'install' | 'probe'
+  readonly type:
+    | 'exec'
+    | 'spawn'
+    | 'kill'
+    | 'write'
+    | 'copy'
+    | 'rm'
+    | 'free'
+    | 'install'
+    | 'seed'
+    | 'probe'
   readonly label: string
   readonly spec?: CommandSpec
   /** The probe's early-abort watch, recorded so tests can assert the executor wired it through. */
@@ -20,6 +30,7 @@ function makeRunner(
     writeFileError?: (path: string) => Error | null
     freePortError?: (port: number) => Error | null
     installError?: () => Error | null
+    seedError?: (stepEntries: string) => Error | null
     probeResult?: (probe: ReadinessProbe) => boolean
     /** Simulate the real probe's fast-fail: return a marker for a probe to throw ProbeFailure. */
     probeFailure?: (probe: ReadinessProbe) => string | null
@@ -73,6 +84,13 @@ function makeRunner(
         label: `${spec.scheme} -> ${spec.target.kind} ${spec.target.udid}`,
       })
       const error = opts.installError?.()
+      if (error) return Promise.reject(error)
+      return Promise.resolve()
+    },
+    seedIosDefaults(spec) {
+      const label = `${spec.bundleId}: ${spec.entries.map((e) => `${e.key}=${String(e.value)}`).join(' ')}`
+      calls.push({ type: 'seed', label })
+      const error = opts.seedError?.(label)
       if (error) return Promise.reject(error)
       return Promise.resolve()
     },
@@ -204,6 +222,35 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     ).catch((e: unknown) => e)
     expect(freePortFailure).toBeInstanceOf(StageError)
     expect(freePortFailure).toMatchObject({ stage: 'companion', stepId: 'ios.free-port' })
+  })
+
+  it('seeds the app container through the runner after the install and before the companion, attributing failures to the device stage (REQ-IOS-005, REQ-IOS-016)', async () => {
+    const { runner, calls } = makeRunner()
+    await executePlan(
+      buildDryRunPlan(configFixture({ ios: iosDevClientConfigFixture() }), 'ios'),
+      runner,
+      { logDir: '/tmp/logs' },
+    )
+    expect(labels(calls, 'seed')).toEqual([
+      'com.unrulyfall.example: RCT_jsLocation=127.0.0.1:8081 RCT_packager_scheme=http',
+      'com.unrulyfall.example: EXDevMenuIsOnboardingFinished=true EXDevMenuShowsAtLaunch=false',
+    ])
+    const firstSeedAt = order(calls, (c) => c.type === 'seed')
+    expect(firstSeedAt).toBeGreaterThan(order(calls, (c) => c.type === 'install'))
+    expect(firstSeedAt).toBeLessThan(
+      order(calls, (c) => c.type === 'spawn' && c.label === 'companion'),
+    )
+
+    const failing = makeRunner({
+      seedError: (label) => (label.includes('EXDevMenu') ? new Error('not installed') : null),
+    })
+    const failure = await executePlan(
+      buildDryRunPlan(configFixture({ ios: iosDevClientConfigFixture() }), 'ios'),
+      failing.runner,
+      { logDir: '/tmp/logs' },
+    ).catch((e: unknown) => e)
+    expect(failure).toBeInstanceOf(StageError)
+    expect(failure).toMatchObject({ stage: 'device', stepId: 'ios.dev-menu' })
   })
 
   it('installs the built app through the runner between the build and the companion, attributing failures to the build stage (REQ-IOS-015)', async () => {

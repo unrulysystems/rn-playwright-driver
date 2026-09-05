@@ -132,6 +132,10 @@ async function runStep(
         await runner.installIosApp(action.spec)
         return
       }
+      case 'seed-ios-defaults': {
+        await runner.seedIosDefaults(action.spec)
+        return
+      }
       case 'probe': {
         const key = processKeyForProbe(action.probe)
         const aliveFn = key === null ? () => true : () => isAlive(key)

@@ -204,6 +204,30 @@ describe('planAndroid', () => {
     expect(remote).toContain("-d 'boss://expo-development-client/?url=http://127.0.0.1:8081'")
   })
 
+  it('seeds the dev-menu shared prefs for a dev client before the first launch (REQ-AND-010)', () => {
+    expect(stepIds(planAndroid(inputFor()))).not.toContain('android.dev-menu')
+    const android = androidDevClientConfigFixture()
+    const plan = planAndroid(
+      inputFor({ android, resolved: placeholderAndroid(android, resolveMetro(undefined)) }),
+    )
+    const ids = stepIds(plan)
+    expect(ids.indexOf('android.dev-menu')).toBe(ids.indexOf('android.debug-host') + 1)
+    expect(ids.indexOf('android.launch-1')).toBe(ids.indexOf('android.dev-menu') + 1)
+    const step = plan.steps.find((s) => s.id === 'android.dev-menu')
+    expect(step?.stage).toBe('device')
+    const command = commandFor(plan, 'android.dev-menu')
+    // Same single-arg run-as shape as the other shared_prefs writes.
+    expect(command.args).toEqual([
+      '-s',
+      '<android-serial>',
+      'shell',
+      "run-as com.unrulyfall.example sh -c 'mkdir -p /data/data/com.unrulyfall.example/shared_prefs && cat > /data/data/com.unrulyfall.example/shared_prefs/expo.modules.devmenu.sharedpreferences.xml'",
+    ])
+    expect(command.stdinContents).toContain('<boolean name="isOnboardingFinished" value="true" />')
+    expect(command.stdinContents).toContain('<boolean name="showsAtLaunch" value="false" />')
+    expect(step?.action.type === 'command' && step.action.allowFailure).toBeFalsy()
+  })
+
   it('dev-client launch-1 force-stops before deep-linking, but launch-2 does not', () => {
     const android = androidDevClientConfigFixture()
     const plan = planAndroid(
