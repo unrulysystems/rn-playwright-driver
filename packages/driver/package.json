@@ -1,6 +1,6 @@
 {
   "name": "@unrulysystems/rn-playwright-driver",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "Playwright-compatible E2E test driver for React Native",
   "keywords": [
     "automation",

@@ -1,5 +1,11 @@
 # @unrulysystems/rn-playwright-driver-instrumentation-companion
 
+## 0.3.0
+
+### Minor Changes
+
+- [`5e7d593`](https://github.com/unrulysystems/rn-playwright-driver/commit/5e7d593659bd32f0b9a3c771aa238f410947d5f0) Thanks [@alleneubank](https://github.com/alleneubank)! - The companion config plugins are inert unless `RN_E2E=1` is set for the prebuild (`rn-driver test` sets it), so an app lists them unconditionally and a production prebuild scaffolds nothing. The instrumentation companion README states its native-project requirements: no `MainApplication` change and no app-manifest change.
+
 ## 0.2.2
 
 ### Patch Changes
