@@ -131,6 +131,17 @@ describe('run() --dry-run (REQ-CLI-002)', () => {
     expect(stdout).not.toContain('Plan (ios)')
   })
 
+  it('reports an unparseable config as a config-stage failure, not a raw crash (REQ-CLI-006)', async () => {
+    await writeFile(configPath, 'export default { this is not valid syntax ::: }\n')
+    const code = await run(['test', '--platform', 'ios', '--config', configPath, '--dry-run'])
+    // Exit 1 here would be Playwright's own code, making a broken config
+    // indistinguishable from a failing test run, and named no stage.
+    expect(code).toBe(10)
+    expect(code).not.toBe(1)
+    expect(stderr).toContain('FAILED at stage [config]')
+    expect(stderr).toContain('could not load the rn-driver config')
+  })
+
   it('reports dry-run hook validation failures as config-stage failures', async () => {
     await writeFile(configPath, INVALID_HOOK_CONFIG_SRC)
     const code = await run(['test', '--platform', 'ios', '--config', configPath, '--dry-run'])

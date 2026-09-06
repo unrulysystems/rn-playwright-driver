@@ -83,7 +83,16 @@ export async function run(argv: string[]): Promise<number> {
       process.stderr.write(`${error.message}\n`)
       return 2
     }
-    throw error
+    // Anything else the loader threw is still a config-stage failure: an unparseable
+    // config, a module that throws at import, a bad default export. Rethrowing let it
+    // reach Node's default handler, which prints an internal stack and exits 1 — the
+    // Playwright exit code, so a broken config was indistinguishable from a failing
+    // test and named no stage, against REQ-CLI-006 (a distinct code per pre-Playwright
+    // failure class) and REQ-DIAG-001.
+    process.stderr.write(
+      `\nFAILED at stage [config]: could not load the rn-driver config: ${(error as Error).message}\n`,
+    )
+    return STAGE_EXIT_CODES.config
   }
 
   if (flags.dryRun) {
