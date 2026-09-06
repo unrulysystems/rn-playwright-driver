@@ -4,9 +4,9 @@ id: clean-seam
 objective: Close upstream issues 44 through 51 so the driver installs from Metro config under a runner-emitted marker, excludes its native modules from production prebuilds, and proves both in a CI artifact check; the example app is the reference consumer.
 status: active
 phase: DEV
-iteration: 11
+iteration: 12
 iteration_budget: 14
-updated_at: 2026-09-06T15:05:00Z
+updated_at: 2026-09-06T16:20:00Z
 mission: native-e2e-clean-seam
 targets:
   spec:
@@ -187,6 +187,13 @@ boundary:
   - Both fixed in `3710cf1`. New CLI test observed red on the pre-fix tree (1 failed | 191 passed), green after (192 passed); `nub run check` and `nub run build` green. Changeset `dry-run-device-honesty` (runner patch).
   - Eight below-floor items in `~/.handoffs/rnpd-clean-seam-bugbash-findings-round2.md`. Headlines: an unparseable config exits 1 with a raw Node stack and no stage name, colliding with Playwright's own exit code, while every config that _parses_ exits 2 with a named message; a `MODULE_TYPELESS_PACKAGE_JSON` warning on every `rn-driver` invocation; companion scaffolding is sticky (marker-off restores the autolinking exclusion but leaves `ios/exampleUITests` and the `androidTest/` sources — test-only, nothing reaches a release artifact, but `check:footprint` structurally cannot catch it because it only asserts scaffold-absence on a fresh tree); and `check:footprint` destroys a developer's local native project and `Podfile.lock` without warning.
   - The participant left the worktree clean and the same five simulators booted.
+
+- U10 bug bash round 3 (2026-09-06, fresh participant, HEAD `c437660`, iOS `rnpd-clean-seam`, six tasks): verdict `findings`, 6 of 6 run in ~12 min. Round 2's fixes held -- the participant confirmed all 14 README-linked paths exist, all 8 package names match, every driver subpath export and both CLI bins are declared, and every device API the README promises exists in the published `.d.ts`, without reading driver source. iOS e2e 62 passed / 4 skipped exit 0 twice. Release export: 0 hits for six driver strings across the 1.6 MB `.hbc` (the one `RN_DRIVER` hit is the example's own app-owned `__RN_DRIVER_EXAMPLE__`). Production prebuild, now measured on **both** platforms via the autolinking resolver: 21 modules including all 4 driver modules without the exclusion, **17 and zero with it**. Bad device: exit 12 at stage `device` in under a second.
+  - **One major**: root `README.md`'s canonical Runner Config example -- the one config the CLI requires a consumer to create -- carried `launch: { mode: 'attach', kind: 'plain' }`, which `validate.ts:219` rejects (`mode "attach" requires kind "expo-dev-client"`). `packages/runner/README.md:104` states the correct shape, so the two READMEs contradicted each other, and the prose under the example warns only about the opposite mistake. Changing that one field makes the same file exit 0.
+  - Fixed in `701d5a9`, **as a floor rather than a patch**: `docs-examples.test.ts` could not catch it because it hand-writes a README-style config instead of reading the README, and only typechecks -- it never calls `assertValid`. New `docs-config-examples.test.ts` extracts every complete `defineRnDriverConfig` block from the three shipped READMEs and asserts each passes `assertValid` for the platforms it declares, with a guard against vacuous passing. Observed red on the pre-fix README (`README.md:266` failed, the three runner-README examples passed), green after.
+  - Also fixed, from round 3's below-floor list, because it violates the runner's own stated contract rather than a preference: a config that throws at import escaped to Node's default handler with an internal stack and **exit 1 -- Playwright's own code** -- so a broken config was indistinguishable from a failing test run and named no stage, against REQ-CLI-006 and REQ-DIAG-001. `7f583e7` maps it to stage `config`; test red then green (198 runner tests).
+  - Author sweep alongside round 3 (discovery, not the gate): every `nub run <script>` named in the three READMEs resolves to a real script in the root or example `package.json`; no drift found.
+  - Remaining below-floor items in `~/.handoffs/rnpd-clean-seam-bugbash-findings-round3.md`: a config missing `export default` reports `config.notDefault: unknown key` before the real cause; `withRnDriverHarness` changes `cacheVersion` even when unmarked (deliberate -- the two states must not share a transform cache -- so adoption costs one Metro cache invalidation the README does not mention); `packages/runner/README.md:26` links `SPEC.md`/`BRIEF.md` and `../../LICENSE`, none of which `files` ships; the example app's own unconditional `__RN_DRIVER_EXAMPLE__` global ships to production (app-owned, not a driver footprint breach, but the README calls this example the model to copy); three unlinked internal planning docs sit in the published `docs/`.
 
 ## Known pre-existing failures — do not chase (cited evidence only)
 
