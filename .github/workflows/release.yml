@@ -28,12 +28,17 @@ jobs:
       - name: Build packages
         run: nub run build
 
-      # Auth for the PUBLIC npm registry. Requires an NPM_TOKEN repo secret: a
-      # granular automation token with publish scope (2FA-bypass for CI). Until
-      # that secret is set this step writes an empty token and automated publish
-      # is inert — the first public publish is run manually (`npm publish`) by a
-      # maintainer with npm 2FA. Scoped packages publish public via each
-      # package's publishConfig.access = "public".
+      # Auth for the PUBLIC npm registry is OIDC trusted publishing: all nine
+      # packages name this repo and this workflow (release.yml) as their trusted
+      # publisher on npmjs.com, and the job's `id-token: write` lets npm >= 11.5.1
+      # exchange the Actions OIDC token for a short-lived publish credential. No
+      # NPM_TOKEN is needed, and npm is retiring 2FA-bypass tokens anyway
+      # (account changes Aug 2026, direct publishing Jan 2027).
+      #
+      # The step below stays only as an escape hatch: set an NPM_TOKEN secret and
+      # it takes over. With the secret unset it writes nothing and OIDC is used.
+      # Scoped packages publish public via each package's
+      # publishConfig.access = "public".
       - name: Configure npm for public registry
         run: |
           if [ -n "${NPM_TOKEN}" ]; then
