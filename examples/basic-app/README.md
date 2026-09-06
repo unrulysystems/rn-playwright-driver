@@ -98,7 +98,9 @@ RN_DRIVER_IOS_DEVICE_METRO_URL=https://<tunnel-host> \
   nub exec rn-driver test --platform ios --config rn-driver.ios-device.config.ts --device <ios-udid-or-device-name>
 ```
 
-Use `--dry-run` first. The iOS physical-device plan should show
+Use `--dry-run` first to inspect the plan. It does not verify the device exists —
+it takes no device I/O at all — so check the `--device` value yourself with
+`xcrun devicectl list devices`. The iOS physical-device plan should show
 `devicectl device process launch`, `RN_IOS_TARGET_KIND=device`, and the
 same LAN/tunnel URL in both the app `initialUrl` and `RN_METRO_URL`.
 

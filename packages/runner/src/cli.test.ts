@@ -69,6 +69,32 @@ describe('run() --dry-run (REQ-CLI-002)', () => {
     expect(stdout).toContain(`(cwd: ${path.dirname(configPath)})`)
   })
 
+  it('says the device is unresolved when --device is given, so a typo does not read as a passing pre-flight', async () => {
+    const code = await run([
+      'test',
+      '--platform',
+      'ios',
+      '--config',
+      configPath,
+      '--device',
+      'no-such-simulator-xyz',
+      '--dry-run',
+    ])
+    // REQ-CLI-002 forbids device I/O here, so exit 0 is correct — but the output
+    // must not let the caller believe the device was checked. Without the notice
+    // this run is byte-identical to one naming a real device.
+    expect(code).toBe(0)
+    expect(stdout).toContain('does not resolve or validate --device no-such-simulator-xyz')
+    expect(stdout).toContain('fails at stage [device]')
+    expect(stdout).toContain('<sim-udid>')
+  })
+
+  it('prints no such note when --device is absent', async () => {
+    const code = await run(['test', '--platform', 'ios', '--config', configPath, '--dry-run'])
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('does not resolve or validate')
+  })
+
   it('forwards passthrough flags while keeping config specs (REQ-CLI-005)', async () => {
     const code = await run([
       'test',

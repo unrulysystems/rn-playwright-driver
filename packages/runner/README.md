@@ -286,14 +286,14 @@ rn-driver test --platform android -- --grep @smoke
 
 ### Options
 
-| Option           | Description                                            |
-| ---------------- | ------------------------------------------------------ |
-| `-p, --platform` | `ios` \| `android` \| `all` (required)                 |
-| `-c, --config`   | Path to the config (default: searched upward from cwd) |
-| `-d, --device`   | Simulator/device id or name / Android serial override  |
-| `--dry-run`      | Print the resolved plan and exit; no side effects      |
-| `--skip-build`   | Reuse an already-built native project                  |
-| `--verbose`      | Stream per-step progress                               |
+| Option           | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `-p, --platform` | `ios` \| `android` \| `all` (required)                  |
+| `-c, --config`   | Path to the config (default: searched upward from cwd)  |
+| `-d, --device`   | Simulator/device id or name / Android serial override   |
+| `--dry-run`      | Print the plan and exit; no side effects, no device I/O |
+| `--skip-build`   | Reuse an already-built native project                   |
+| `--verbose`      | Stream per-step progress                                |
 
 On failure before Playwright, the runner names the stage that broke
 (`config` / `metro` / `device` / `build` / `companion` / `app-launch` /
@@ -309,6 +309,14 @@ rn-driver.config.ts
             └─ plan      ──► an ordered, pure list of lifecycle Steps  (--dry-run shows this)
                  └─ execute  ──► run steps, gate on readiness probes, run Playwright, clean up
 ```
+
+`--dry-run` enters at the **plan** step and skips **resolve** entirely, because
+REQ-CLI-002 requires it to exit 0 with no device touch — that is what lets it run
+offline, on a machine with no Xcode or Android SDK. The consequence is that it does
+not check `--device`: device ids print as `<sim-udid>`/`<android-serial>` placeholders
+whatever you pass, and a name that matches no device still exits 0. It prints a note
+saying so when `--device` is given. Only a real run resolves the device, and it fails
+at stage `device` (exit 12) when nothing matches.
 
 Token material always travels by `0600` file path (the driver's
 `RN_TOUCH_*_TOKEN_FILE` contract); the value never enters argv, env, logs, or

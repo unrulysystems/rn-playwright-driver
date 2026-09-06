@@ -87,6 +87,17 @@ export async function run(argv: string[]): Promise<number> {
   }
 
   if (flags.dryRun) {
+    // REQ-CLI-002 keeps this path free of device I/O ("no device touch"), so a
+    // `--device` value is neither resolved nor validated here and the plan below
+    // renders placeholder ids for it. Say so explicitly: the example app documents
+    // `--dry-run` as the pre-flight to run first, and a typo'd `--device` would
+    // otherwise print a plausible plan and exit 0, reading as a passing check.
+    if (flags.device) {
+      process.stdout.write(
+        `Note: --dry-run does not resolve or validate --device ${flags.device} (REQ-CLI-002: no device touch). ` +
+          `Device ids below are placeholders; the real run resolves them and fails at stage [device] if none matches.\n\n`,
+      )
+    }
     try {
       for (const platform of platforms) {
         process.stdout.write(

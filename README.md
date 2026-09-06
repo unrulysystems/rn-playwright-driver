@@ -38,7 +38,9 @@ Drive a React Native app from a Playwright test the same way you'd drive a web p
 
 ## Requirements
 
-- Node.js **>= 18**
+- Node.js **>= 18** for the driver library. The `rn-driver` CLI needs **Node >= 22**
+  or bun: its readiness probes use the global `WebSocket`/`fetch`, and
+  `@unrulysystems/rn-playwright-driver-runner` declares `engines.node >= 22`.
 - React Native app running **Hermes** with Metro debug endpoints enabled
 - Expo Modules API for native modules (iOS + Android)
 
@@ -369,7 +371,8 @@ rn-driver test --platform all
 it, starts the platform companion, selects the matching touch backend, runs
 Playwright, and frees the ports it took. Add `--device <name-or-id>` to pin a
 simulator or emulator, `--skip-build` to reuse the installed app, and
-`--dry-run` to print the resolved plan without touching a device.
+`--dry-run` to print the plan without touching a device. `--dry-run` does not
+resolve `--device`; only a real run does.
 
 See
 [`packages/instrumentation-companion/README.md`](packages/instrumentation-companion/README.md)
