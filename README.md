@@ -271,7 +271,7 @@ export default defineRnDriverConfig({
     bundleId: 'com.example.app',
     workspace: 'ios/app.xcworkspace',
     appScheme: 'app',
-    launch: { mode: 'attach', kind: 'plain' },
+    launch: { mode: 'launch', kind: 'plain' },
   },
   android: {
     packageName: 'com.example.app',
