@@ -2,11 +2,11 @@
 loop: 1
 id: clean-seam
 objective: Close upstream issues 44 through 51 so the driver installs from Metro config under a runner-emitted marker, excludes its native modules from production prebuilds, and proves both in a CI artifact check; the example app is the reference consumer.
-status: active
+status: done
 phase: DEV
-iteration: 12
+iteration: 13
 iteration_budget: 14
-updated_at: 2026-09-06T16:20:00Z
+updated_at: 2026-09-06T16:45:00Z
 mission: native-e2e-clean-seam
 targets:
   spec:
@@ -49,7 +49,7 @@ gates:
   - id: bugbash
     run: fresh-participant bug bash of the consumer install per BRIEF Oracle (six tasks, severity floor major, one round)
     green: no finding at or above major
-    state: unknown
+    state: green
 units:
   - id: U1
     title: Root SPEC and BRIEF ratify the footprint contract; mission and loop committed
@@ -90,7 +90,7 @@ units:
   - id: U10
     title: Fresh-participant bug bash of the consumer install; handoff
     targets: [REQ-SEAM-011]
-    state: current
+    state: done
 decisions:
   - {
       date: 2026-09-05,
@@ -194,6 +194,16 @@ boundary:
   - Also fixed, from round 3's below-floor list, because it violates the runner's own stated contract rather than a preference: a config that throws at import escaped to Node's default handler with an internal stack and **exit 1 -- Playwright's own code** -- so a broken config was indistinguishable from a failing test run and named no stage, against REQ-CLI-006 and REQ-DIAG-001. `7f583e7` maps it to stage `config`; test red then green (198 runner tests).
   - Author sweep alongside round 3 (discovery, not the gate): every `nub run <script>` named in the three READMEs resolves to a real script in the root or example `package.json`; no drift found.
   - Remaining below-floor items in `~/.handoffs/rnpd-clean-seam-bugbash-findings-round3.md`: a config missing `export default` reports `config.notDefault: unknown key` before the real cause; `withRnDriverHarness` changes `cacheVersion` even when unmarked (deliberate -- the two states must not share a transform cache -- so adoption costs one Metro cache invalidation the README does not mention); `packages/runner/README.md:26` links `SPEC.md`/`BRIEF.md` and `../../LICENSE`, none of which `files` ships; the example app's own unconditional `__RN_DRIVER_EXAMPLE__` global ships to production (app-owned, not a driver footprint breach, but the README calls this example the model to copy); three unlinked internal planning docs sit in the published `docs/`.
+
+- U10 bug bash round 4 (2026-09-06, fresh participant, HEAD `aa5249f`, iOS `rnpd-clean-seam`, six tasks): **verdict `green`** -- 6 of 6 tasks run in 14 min of a 90-min budget, no finding at or above major. **The gate closes.**
+  - Install from the docs alone passed with no findings at all: the root README's Installation -> App Setup -> Runner Config -> Running E2E path is complete and self-contained, all 13 root-README relative links and both example links resolve, all 8 named packages return 200 from `registry.npmjs.org`, and every documented import path exists in `packages/driver/package.json#exports`. Round 3's config-example fix held: the participant reached a working lane without reading driver source.
+  - iOS e2e exit 0, 62 passed / 4 skipped in 32.4 s, correct device in the xcodebuild destination, ports 8083/9999 freed.
+  - Release footprint measured harder than any prior round: `expo export` Hermes **source hash identical** across marker states (`efc47f53e1148e83612ceaee70a9994fcf03361c`), the only byte difference an embedded bundler temp path; `expo export:embed --dev false` produced **byte-identical** 1,045,379-byte bundles across marker states (`cmp` clean); 0 hits for nine driver strings.
+  - Marker-off prebuild: 0 of 246 pods match the driver, no UITests target, no scheme, and the only driver reference outside `Pods/`/`build/` is the exclusion line itself.
+  - All five failure probes failed closed in under a second with the documented stage and code, including the two fixed this iteration: bad device exit 12 at stage `device`, and the syntax-broken config now `FAILED at stage [config]` exit 10 rather than a raw exit 1.
+  - Idle cost verified with a positive control: marker-off served bundle has 0 harness hits and does not recreate the generated entry, while the `RN_E2E=1` control has `__RN_DRIVER__` x4 and writes the entry -- so the detector is faithful rather than merely silent.
+  - Six below-floor items in `~/.handoffs/rnpd-clean-seam-bugbash-findings-round4.md`. Two worth carrying: every **direct** `rn-driver` invocation (what an npm/bun consumer gets; hidden under `nub run`) prints a `MODULE_TYPELESS_PACKAGE_JSON` warning whose suggested fix would break the CommonJS `metro.config.js` the driver's own App Setup prescribes; and the exit-code contract is still uneven -- config *schema* failures exit 2 with no stage prefix while config *load* failures exit 10 with one, and 2 also means "no config found", so a script cannot distinguish "no config" from "invalid config".
+  - Not exercised: Android (out of charter, covered incidentally by `check:footprint`), and the Node-<22 `config`-stage guard, which needs an older runtime than this host provides.
 
 ## Known pre-existing failures — do not chase (cited evidence only)
 
