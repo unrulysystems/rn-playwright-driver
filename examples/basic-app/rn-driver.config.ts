@@ -23,16 +23,21 @@ export default defineRnDriverConfig({
     host: 'localhost',
     port: 8083,
   },
+  // The example runs on a single-user machine, so it opts into adopting whatever
+  // simulator/emulator is booted when `--device` is absent. On a shared host leave
+  // this off and pass `--device`: the booted device may belong to another run.
   ios: {
     bundleId: 'com.unrulyfall.example',
     workspace: 'ios/example.xcworkspace',
     appScheme: 'example',
+    adoptUnownedDevice: true,
     launch: { mode: 'attach', kind: 'expo-dev-client' },
   },
   android: {
     packageName: 'com.unrulyfall.example',
     activity: '.MainActivity',
     scheme: 'exp+example',
+    adoptUnownedDevice: true,
     launch: { mode: 'launch', kind: 'expo-dev-client' },
   },
   playwright: {

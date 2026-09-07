@@ -668,4 +668,20 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
 
 ## Traceability
 
-Added during/after TDD: `REQ-* → test file:line`. Empty at SPEC authoring time.
+Added during/after TDD: `REQ-* → test file:line`.
+
+- REQ-OWN-001 → `src/runner/resolve.test.ts` (`pickSimulator` and `pickSerial`
+  "refuses to adopt" cases, and the explicit `--device` cases)
+- REQ-OWN-002 / REQ-IOS-002 → `src/plan/ios.test.ts` ("no cross-simulator
+  terminate is planned by default", "with terminateOnOtherSimulators")
+- REQ-OWN-003 → `src/runner/port-ownership.test.ts` (`classifyPortHolders`,
+  `PortOwnershipError`), `src/plan/ios.test.ts` and `src/plan/android.test.ts`
+  ("every free-port carries the selected target as owner", `freeUnownedPort`,
+  `--no-rebind`), `src/runner/execute.test.ts` ("cleanup frees the companion port
+  with the selected target as owner")
+- REQ-OWN-004 → `src/plan/ios.test.ts`, `src/plan/android.test.ts` ("the first
+  step is an ownership-scoped port preflight"), `src/runner/execute.test.ts` ("a
+  foreign companion-port holder fails the port preflight at the device stage
+  before any build or spawn")
+- REQ-OWN-005 → `src/validate.test.ts` (ownership keys), `src/print-plan.test.ts`
+  ("renders every free-port with its owner")
