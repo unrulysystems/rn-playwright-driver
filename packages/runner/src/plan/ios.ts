@@ -3,7 +3,14 @@ import { COMPANION_FAILURE_MARKERS, DEFAULTS, E2E_MARKER_ENV } from '../constant
 import { buildIosDriverEnv } from './env'
 import type { ResolvedIosTarget, ResolvedMetro } from './resolved'
 import { cmd, metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
-import type { CleanupAction, CommandSpec, Plan, SeedIosDefaultsSpec, Step } from './types'
+import type {
+  CleanupAction,
+  CommandSpec,
+  FreePortSpec,
+  Plan,
+  SeedIosDefaultsSpec,
+  Step,
+} from './types'
 
 export interface PlanIosInput {
   readonly ios: IosConfig
@@ -35,8 +42,29 @@ export function planIos(input: PlanIosInput): Plan {
   const isDevClient = ios.launch.kind === 'expo-dev-client'
   const runtimeConfigFile = projectPath(projectCwd, resolved.runtimeConfigFile)
 
+  // The companion port is owned by the selected target: the sim-hosted companion's
+  // command line carries the simulator UDID; a device-hosted one (or this run's
+  // usbmux forward) carries the CoreDevice identifier (REQ-OWN-003).
+  const freePort: FreePortSpec = {
+    port: resolved.touchPort,
+    owner: {
+      platform: 'ios',
+      targetId: resolved.kind === 'device' ? resolved.coreDeviceIdentifier : resolved.simUdid,
+    },
+    freeUnowned: resolved.freeUnownedPort,
+  }
+
   const steps: Step[] = []
   const push = (step: Step) => steps.push(step)
+
+  // device — a foreign holder of the companion port fails here, before prebuild
+  // and xcodebuild spend minutes (REQ-OWN-004); an owned stale holder is reaped.
+  push({
+    id: 'ios.port-preflight',
+    stage: 'device',
+    description: `Check companion port ${resolved.touchPort} is free or owned by this target`,
+    action: { type: 'free-port', spec: freePort },
+  })
 
   if (resolved.kind === 'simulator') {
     // device — boot (and wait for) the target simulator. `pickSimulator` can pick a
@@ -63,6 +91,21 @@ export function planIos(input: PlanIosInput): Plan {
         command: xcrun(['simctl', 'bootstatus', resolved.simUdid, '-b']),
       },
     })
+    // REQ-IOS-002 behind `ios.terminateOnOtherSimulators` (REQ-OWN-002): the
+    // resolver lists the other booted sims only when opted in, so this is empty
+    // by default and the plan never writes to a simulator it did not select.
+    for (const udid of resolved.otherBootedSimUdids) {
+      push({
+        id: `ios.terminate-other.${udid}`,
+        stage: 'device',
+        description: `Terminate stale ${ios.bundleId} on other booted simulator ${udid}`,
+        action: {
+          type: 'command',
+          command: xcrun(['simctl', 'terminate', udid, ios.bundleId]),
+          allowFailure: true,
+        },
+      })
+    }
   }
 
   // build — regenerate the project, scaffold the companion target, write the
@@ -248,8 +291,8 @@ export function planIos(input: PlanIosInput): Plan {
   push({
     id: 'ios.free-port',
     stage: 'companion',
-    description: `Free stale listener on port ${resolved.touchPort}`,
-    action: { type: 'free-port', port: resolved.touchPort },
+    description: `Free stale listener on port ${resolved.touchPort} (owned by this target)`,
+    action: { type: 'free-port', spec: freePort },
   })
   if (resolved.kind === 'device') {
     push({
@@ -403,8 +446,8 @@ export function planIos(input: PlanIosInput): Plan {
     { type: 'kill-process', processKey: 'companion', description: 'Stop XCTest companion' },
     {
       type: 'free-port',
-      port: resolved.touchPort,
-      description: 'Free companion port (reap sim-hosted child)',
+      spec: freePort,
+      description: "Free companion port (reap this target's sim-hosted child)",
     },
     { type: 'kill-process', processKey: 'metro', description: 'Stop runner-owned Metro' },
     { type: 'remove-file', path: resolved.tokenFile, description: 'Remove per-run token file' },

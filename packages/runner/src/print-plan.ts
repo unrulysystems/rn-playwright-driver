@@ -1,4 +1,11 @@
-import type { CleanupAction, CommandSpec, Plan, ReadinessProbe, StepAction } from './plan/types'
+import type {
+  CleanupAction,
+  CommandSpec,
+  FreePortSpec,
+  Plan,
+  ReadinessProbe,
+  StepAction,
+} from './plan/types'
 
 /**
  * Render a {@link Plan} as auditable text for `--dry-run`. Token material appears
@@ -34,6 +41,14 @@ export function renderPlan(plan: Plan): string {
   return lines.join('\n')
 }
 
+/** Ownership scope is what the free DOES, so the audited plan shows it (REQ-OWN-005). */
+function renderFreePort(spec: FreePortSpec): string {
+  const owner =
+    spec.owner.platform === 'ios' ? `ios ${spec.owner.targetId}` : `android ${spec.owner.serial}`
+  const force = spec.freeUnowned ? ', freeUnownedPort: kills any holder' : ''
+  return `free-port ${spec.port} (owner: ${owner}${force})`
+}
+
 function renderAction(action: StepAction): string {
   switch (action.type) {
     case 'command':
@@ -43,7 +58,7 @@ function renderAction(action: StepAction): string {
     case 'copy-file':
       return `copy ${action.from} -> ${action.to}${action.mode ? ` (mode ${action.mode.toString(8)})` : ''}`
     case 'free-port':
-      return `free-port ${action.port}`
+      return renderFreePort(action.spec)
     case 'install-ios-app':
       return `install-ios-app ${action.spec.scheme} -> ${action.spec.target.kind} ${action.spec.target.udid}  (product from xcodebuild -showBuildSettings)`
     case 'seed-ios-defaults': {
@@ -71,7 +86,7 @@ function renderCleanup(action: CleanupAction): string {
     case 'kill-process':
       return `kill ${action.processKey}`
     case 'free-port':
-      return `free-port ${action.port}`
+      return renderFreePort(action.spec)
     case 'remove-file':
       return `rm ${action.path}`
     case 'command':

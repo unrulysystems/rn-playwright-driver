@@ -25,7 +25,7 @@ const IOS_TARGET_KINDS = ['simulator', 'device'] as const
 const TOP_LEVEL_KEYS = new Set(['metro', 'ios', 'android', 'playwright', 'hooks', 'timeoutMs'])
 const METRO_KEYS = new Set(['url', 'command', 'host', 'port', 'reuseExisting', 'readyTimeoutMs'])
 const LAUNCH_KEYS = new Set(['mode', 'kind', 'initialUrl'])
-const COMPANION_KEYS = new Set(['port', 'readyTimeoutMs'])
+const COMPANION_KEYS = new Set(['port', 'readyTimeoutMs', 'freeUnownedPort'])
 const HOOK_KEYS = new Set(['configureTarget'])
 const IOS_KEYS = new Set([
   'bundleId',
@@ -36,6 +36,8 @@ const IOS_KEYS = new Set([
   'destination',
   'target',
   'allowProvisioningUpdates',
+  'adoptUnownedDevice',
+  'terminateOnOtherSimulators',
   'launch',
   'companion',
   'defaults',
@@ -48,6 +50,7 @@ const ANDROID_KEYS = new Set([
   'appApkPath',
   'testApkPath',
   'instrumentationTarget',
+  'adoptUnownedDevice',
   'launch',
   'companion',
 ])
@@ -186,6 +189,8 @@ function validateIos(ios: unknown, errors: string[]): void {
   ) {
     errors.push('config.ios.allowProvisioningUpdates: expected a boolean')
   }
+  optionalBoolean('config.ios.adoptUnownedDevice', ios.adoptUnownedDevice, errors)
+  optionalBoolean('config.ios.terminateOnOtherSimulators', ios.terminateOnOtherSimulators, errors)
   validateCompanion('config.ios.companion', ios.companion, errors)
   if (ios.defaults !== undefined) {
     if (!isRecord(ios.defaults)) {
@@ -251,6 +256,7 @@ function validateAndroid(android: unknown, errors: string[]): void {
     return
   }
   reportUnknownKeys('config.android', android, ANDROID_KEYS, errors)
+  optionalBoolean('config.android.adoptUnownedDevice', android.adoptUnownedDevice, errors)
   // packageName/activity are interpolated into `adb shell run-as <pkg> sh -c '…'`
   // and `am start -n <pkg>/<activity>`; a value with shell metacharacters (e.g.
   // a quote) could break out of the single-quoted remote script and inject
@@ -292,6 +298,11 @@ function validateCompanion(path: string, companion: unknown, errors: string[]): 
   if (companion.readyTimeoutMs !== undefined && !isPositiveNumber(companion.readyTimeoutMs)) {
     errors.push(`${path}.readyTimeoutMs: expected a positive number`)
   }
+  optionalBoolean(`${path}.freeUnownedPort`, companion.freeUnownedPort, errors)
+}
+
+function optionalBoolean(path: string, value: unknown, errors: string[]): void {
+  if (value !== undefined && typeof value !== 'boolean') errors.push(`${path}: expected a boolean`)
 }
 
 function validateLaunch(

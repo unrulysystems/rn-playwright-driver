@@ -135,6 +135,12 @@ export interface CompanionConfig {
   /** Local port the touch companion listens on. Defaults to 9999. */
   port?: number
   /**
+   * Free the companion port even when its holder cannot be attributed to the
+   * selected target (REQ-OWN-003). Defaults to false: on a shared host the
+   * holder is another lane's companion, so the run fails naming it instead.
+   */
+  freeUnownedPort?: boolean
+  /**
    * Bound for the companion to accept its first authenticated request. Defaults
    * to 300_000ms on iOS to cover a cold `xcodebuild test` build (FU-2).
    */
@@ -169,6 +175,18 @@ export interface IosConfig {
    * development provisioning profiles. Defaults to false.
    */
   allowProvisioningUpdates?: boolean
+  /**
+   * Adopt a booted simulator when `--device` is absent (REQ-OWN-001). Defaults
+   * to false: on a shared host the booted simulator belongs to another run, so
+   * the runner fails at stage `device` naming the candidates instead.
+   */
+  adoptUnownedDevice?: boolean
+  /**
+   * Terminate the app bundle on every OTHER booted simulator before launch
+   * (REQ-IOS-002). Defaults to false: those simulators belong to other runs
+   * (REQ-OWN-002); the device-name pin already disambiguates Hermes targets.
+   */
+  terminateOnOtherSimulators?: boolean
   launch: LaunchConfig
   companion?: CompanionConfig
   /**
@@ -198,6 +216,11 @@ export interface AndroidConfig {
    * Defaults to `${packageName}.test/com.rndriver.touchcompanion.RNDriverTouchCompanion`.
    */
   instrumentationTarget?: string
+  /**
+   * Adopt the first booted emulator when `--device` is absent (REQ-OWN-001).
+   * Defaults to false: on a shared host that emulator belongs to another run.
+   */
+  adoptUnownedDevice?: boolean
   launch: LaunchConfig
   companion?: CompanionConfig
 }

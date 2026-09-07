@@ -11,6 +11,7 @@ import path from 'node:path'
 import type {
   CommandSpec,
   ExecResult,
+  FreePortSpec,
   ProbeWatch,
   ProcessRunner,
   ReadinessProbe,
@@ -20,6 +21,12 @@ import type {
 } from '../plan/types'
 import { builtApplicationPath } from './built-product'
 import { appPreferencesPlist, defaultsWriteArgs } from './ios-defaults'
+import {
+  classifyPortHolders,
+  parseAdbForwardList,
+  type PortListener,
+  PortOwnershipError,
+} from './port-ownership'
 import { findFailureMarker, ProbeFailure } from './probe-failure'
 
 const PROBE_INTERVAL_MS = 1_000
@@ -124,21 +131,28 @@ export class NodeProcessRunner implements ProcessRunner {
     await rm(path, { force: true })
   }
 
-  async freePort(port: number): Promise<void> {
+  async freePort(spec: FreePortSpec): Promise<void> {
     // The sim/device-hosted companion binds the host loopback, so it is visible
-    // and killable via lsof on the host even though it runs "inside" the device.
-    // This SIGTERMs whatever LISTENs on the port — the companion port is assumed
-    // DEDICATED to the runner's companion (config `*.companion.port`, default
-    // 9999). Do not point it at a port shared with an unrelated service.
-    const pids = await this.lsofPids(port)
-    for (const pid of pids) {
+    // and killable via lsof on the host even though it runs "inside" the device;
+    // an Android companion is reached through the shared adb server's forward.
+    // Only holders the selected target can claim are freed (REQ-OWN-003): a
+    // foreign holder belongs to another lane on this host and fails the step.
+    const listeners = await this.listenersOn(spec.port)
+    const forwards = parseAdbForwardList(await this.adbForwardList(), spec.port)
+    const plan = classifyPortHolders(spec, { listeners, forwards })
+    if (plan.foreign.length > 0) throw new PortOwnershipError(spec, plan.foreign)
+
+    for (const serial of plan.removeForwardSerials) {
+      await this.capture('adb', ['-s', serial, 'forward', '--remove', `tcp:${spec.port}`])
+    }
+    for (const pid of plan.killPids) {
       try {
         process.kill(pid, 'SIGTERM')
       } catch {
         // already gone
       }
     }
-    if (pids.length > 0) await delay(1_000)
+    if (plan.killPids.length > 0) await delay(1_000)
   }
 
   probe(probe: ReadinessProbe, isAlive: () => boolean, watch?: ProbeWatch): Promise<boolean> {
@@ -251,6 +265,24 @@ export class NodeProcessRunner implements ProcessRunner {
       child.on('error', reject)
       child.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }))
     })
+  }
+
+  /** LISTEN holders of `port` with their command lines; a pid that exits between the two reads is dropped. */
+  private async listenersOn(port: number): Promise<PortListener[]> {
+    const pids = await this.lsofPids(port)
+    const listeners: PortListener[] = []
+    for (const pid of pids) {
+      const ps = await this.capture('ps', ['-o', 'args=', '-p', String(pid)]).catch(() => null)
+      if (ps === null || ps.code !== 0) continue
+      listeners.push({ pid, args: ps.stdout.trim() })
+    }
+    return listeners
+  }
+
+  /** `adb forward --list` output, or "" when adb is absent or has no server (nothing forwarded). */
+  private async adbForwardList(): Promise<string> {
+    const result = await this.capture('adb', ['forward', '--list']).catch(() => null)
+    return result !== null && result.code === 0 ? result.stdout : ''
   }
 
   private lsofPids(port: number): Promise<number[]> {
