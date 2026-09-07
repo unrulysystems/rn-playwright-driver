@@ -685,3 +685,12 @@ Added during/after TDD: `REQ-* → test file:line`.
   before any build or spawn")
 - REQ-OWN-005 → `src/validate.test.ts` (ownership keys), `src/print-plan.test.ts`
   ("renders every free-port with its owner")
+
+## Decisions
+
+- 2026-09-07 — Knob names: ios.adoptUnownedDevice, android.adoptUnownedDevice, ios.terminateOnOtherSimulators, <platform>.companion.freeUnownedPort (flat booleans, like allowProvisioningUpdates). **provisional (driver)**
+- 2026-09-07 — Port-holder attribution: iOS holder argv carries the target UDID/CoreDevice id; Android ownership is the adb forward row for the serial; the adb server is never a kill target; foreign holder fails the step, nothing killed. **provisional (driver)**
+- 2026-09-07 — REQ-IOS-002's cross-sim terminate moves from the resolver into plan steps (ios.terminate-other.<udid>) so --dry-run shows the cross-device write when opted in. **provisional (driver)**
+- 2026-09-07 — Port ownership is checked as a device-stage preflight step before prebuild/xcodebuild/Gradle (REQ-OWN-004); android.forward uses --no-rebind. **provisional (driver)**
+- 2026-09-07 — The example app opts into adoptUnownedDevice on both platforms (single-user recipe) so its live gates keep running without --device. **provisional (driver)**
+- 2026-09-07 — Busy companion port or unowned device fails by default; one named opt-in knob per resource restores today's behaviour (house style of metro.reuseExisting). **ratified (human)**
