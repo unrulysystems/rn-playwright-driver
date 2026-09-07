@@ -100,6 +100,10 @@ failure, a message that names the stage that broke.
 - Project env overriding runner-owned `RN_*` control-plane variables.
 - The core driver package acquiring a dependency on the runner or the companions.
 - Cleanup terminating a Metro the runner did not start.
+- Adopting a device the run was not given, writing to a device the run did not
+  select, or killing a companion-port holder the run cannot attribute to its own
+  target. On a shared host those belong to another lane; each is opt-in by a
+  named config key, never a default.
 - Publishing, version-bumping, opening PRs, or filing/closing issues from the
   loop.
 
@@ -118,10 +122,23 @@ failure, a message that names the stage that broke.
 - **Companion readiness default 300s, configurable.** _Why:_ FU-2 — the iOS
   companion binds its port only after `xcodebuild test` finishes _building_
   (JS bundle + codesign every run); 60s expires mid-build on non-trivial apps.
-- **Free the companion port (`lsof`+kill) at startup _and_ cleanup.** _Why:_ FU-3
-  — killing the `xcodebuild`/`am instrument` parent does not always reap the
-  sim/device-hosted child that holds the port; idempotent startup-free matters
-  because a crashed run never reaches cleanup.
+- **Free the companion port at startup _and_ cleanup, scoped to holders the
+  selected target owns.** _Why:_ FU-3 — killing the `xcodebuild`/`am instrument`
+  parent does not always reap the sim/device-hosted child that holds the port;
+  idempotent startup-free matters because a crashed run never reaches cleanup.
+  The scope (iOS: holder argv carries the target UDID; Android: `adb forward`
+  row for the serial) keeps re-run idempotency for this lane without killing
+  another lane's companion; a foreign holder fails naming pid/command or serial.
+  `companion.freeUnownedPort` restores the unconditional kill. _(Ratified
+  2026-09-07: fail-closed default + opt-in knob; the attribution rule is the
+  driver's provisional call, pending the shared-host Boundary gate.)_
+- **Ownership is fail-closed with one named opt-in key per resource.**
+  `adoptUnownedDevice` (auto-pick), `terminateOnOtherSimulators` (REQ-IOS-002),
+  `companion.freeUnownedPort` (unconditional free). _Why:_ house style of
+  `metro.reuseExisting`: verify, fail fast, never mutate what you did not start
+  — extended from Metro to devices and the companion port after a run on a
+  shared host adopted and terminated another lane's simulators. _(Ratified
+  2026-09-07; key names provisional.)_
 - **Explicit config over magic discovery (v1).** Prefer actionable validation
   errors to auto-detection of bundle id / schemes / Gradle tasks.
 - **Tokens by file, never inline.** Emit `RN_TOUCH_*_TOKEN_FILE`, never
