@@ -3,10 +3,10 @@ loop: 1
 id: hermetic-devices
 objective: The runner never adopts, writes to, or frees a device or companion port it does not own (fail-closed, one opt-in knob per resource), and sendapp gives each worktree lane its own device identity and companion port, consuming the local runner.
 status: active
-phase: TDD
-iteration: 1
+phase: DEV
+iteration: 2
 iteration_budget: 12
-updated_at: 2026-09-07T18:40:00Z
+updated_at: 2026-09-07T20:10:00Z
 targets:
   spec:
     [REQ-IOS-001, REQ-IOS-002, REQ-IOS-006, REQ-AND-001, REQ-CLEAN-002, REQ-CLI-007, REQ-METRO-003]
@@ -14,7 +14,7 @@ gates:
   - id: runner-check
     run: cd /home/ae/0xbigboss/0xsend/_work/hermetic-devices/rn-playwright-driver && nub run check
     green: typecheck + lint + format + unit tests pass for every package, including the new ownership tests
-    state: unknown
+    state: green
   - id: sendapp-e2e-unit
     run: cd /home/ae/0xbigboss/0xsend/_work/hermetic-devices/sendapp/apps/expo && yarn test:e2e:rn:unit
     green: lane-identity determinism (acceptance 4), AVD-home-inside-worktree (acceptance 5 by construction), plan tests pass against the portal-linked local runner
@@ -35,25 +35,31 @@ units:
   - id: U2
     title: Device adoption is fail-closed - no --device fails at stage device naming candidates; adoptUnownedDevice restores auto-pick (TDD on pickSimulator/pickSerial)
     targets: [REQ-IOS-001, REQ-AND-001, REQ-CLI-007]
-    state: current
+    state: done
   - id: U3
     title: No cross-device write - terminate-on-other-simulators is opt-in (ios.terminateOnOtherSimulators)
     targets: [REQ-IOS-002]
-    state: pending
+    state: done
   - id: U4
     title: Companion port ownership - free-port carries the owner, frees only an attributable holder, fails naming a foreign holder; preflight before build; freeUnownedPort restores the kill (mock-runner TDD)
     targets: [REQ-IOS-006, REQ-CLEAN-002, REQ-METRO-003]
-    state: pending
+    state: done
   - id: U5
     title: Runner docs and example config aligned (README knobs, SPEC traceability, example app opts in with a comment)
-    state: pending
+    state: done
   - id: U6
     title: sendapp lane identity - pure module (worktree hash to AVD/sim name, console port, serial, companion port; loud collision failure; LANE_PORT_BASE-style override) with bun tests
-    state: pending
+    state: current
   - id: U7
     title: sendapp wiring - lane script boots/creates the lane device and execs the runner with --device; companion port from the lane; ANDROID_AVD_HOME in-worktree and gitignored; portal to the local runner; sendapp gates green
     state: pending
 decisions:
+  - { date: 2026-09-07, call: "Knob names: ios.adoptUnownedDevice, android.adoptUnownedDevice, ios.terminateOnOtherSimulators, <platform>.companion.freeUnownedPort (flat booleans, like allowProvisioningUpdates).", status: provisional }
+  - { date: 2026-09-07, call: "Port-holder attribution: iOS holder argv carries the target UDID/CoreDevice id; Android ownership is the adb forward row for the serial; the adb server is never a kill target; foreign holder fails the step, nothing killed.", status: provisional }
+  - { date: 2026-09-07, call: "REQ-IOS-002's cross-sim terminate moves from the resolver into plan steps (ios.terminate-other.<udid>) so --dry-run shows the cross-device write when opted in.", status: provisional }
+  - { date: 2026-09-07, call: "Port ownership is checked as a device-stage preflight step before prebuild/xcodebuild/Gradle (REQ-OWN-004); android.forward uses --no-rebind.", status: provisional }
+  - { date: 2026-09-07, call: "The example app opts into adoptUnownedDevice on both platforms (single-user recipe) so its live gates keep running without --device.", status: provisional }
+  - { date: 2026-09-07, call: "The sendapp portal resolution stays uncommitted (working tree only); the consumer commit keeps ^0.5.0 and bumps after publish.", status: provisional }
   - {
       date: 2026-09-07,
       call: "Busy companion port or unowned device fails by default; one named opt-in knob per resource restores today's behaviour (house style of metro.reuseExisting).",
@@ -102,6 +108,13 @@ branch name: this repo off `main` 91b250b, sendapp off `bb/native-e2e-clean-seam
 - Nothing pushed. Both repos installed in their worktrees (`nub ci`, `yarn install`);
   sendapp's root `package.json` carries the uncommitted portal resolution and
   `node_modules/@unrulysystems/rn-playwright-driver-runner` symlinks to this package.
+- Iteration 2: U2-U5 done at cdaac43 (impl) and the docs commit after it. runner-check
+  gate: `nub run typecheck` + `oxlint` green, `nub run test` 228/228 (runner) with the
+  driver/companion suites green, format green except the known CHANGELOG file; knip
+  clean; cpd 5 clones (base had 6). `pickSimulator`/`pickSerial` are pure and refuse
+  adoption without `--device`; `free-port` carries an owner everywhere; the real
+  `NodeProcessRunner.freePort` (lsof+ps+adb forward --list) is exercised only at the
+  Boundary on a Mac.
 - Iteration 1: U1 done — SPEC gained REQ-OWN-001..005 and amended REQ-IOS-001/002/006,
   REQ-AND-001/006, REQ-CLEAN-002/004, invariants, non-goals, acceptance; BRIEF gained a
   Never row and two Decisions rows.
