@@ -186,5 +186,8 @@ nub run cpd
 
 ## Troubleshooting
 
+- If Android's Expo Gradle configuration fails under Nub's augmented Node runtime
+  with a missing `expo-module-scripts/tsconfig.base` error, use native Node for the
+  same platform gate: `nub run --node test:e2e:android --device '<android-serial>'`.
 - If tests can’t connect, make sure Metro is running and the app is built with Hermes.
 - If locators or screenshots don’t work, ensure the corresponding native module is installed and rebuilt.
