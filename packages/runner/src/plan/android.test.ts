@@ -31,6 +31,7 @@ function commandFor(plan: Plan, id: string): CommandSpec {
 describe('planAndroid', () => {
   it('produces the Android lifecycle stages in order', () => {
     expect(stepIds(planAndroid(inputFor()))).toEqual([
+      'android.port-preflight',
       'android.prebuild',
       'android.gradle',
       'android.install-app',
@@ -42,7 +43,7 @@ describe('planAndroid', () => {
       'android.debug-host',
       'android.launch-1',
       'android.hermes-1',
-      'android.forward-clean',
+      'android.free-port',
       'android.forward',
       'android.instrument-start',
       'android.instrument-ready',
@@ -111,13 +112,77 @@ describe('planAndroid', () => {
     expect(plan.driverEnv).not.toHaveProperty('RN_TOUCH_INSTRUMENTATION_TOKEN')
   })
 
+  it('REQ-OWN-004: the first step is an ownership-scoped port preflight at the device stage', () => {
+    const plan = planAndroid(inputFor())
+    const first = plan.steps[0]!
+    expect(first.id).toBe('android.port-preflight')
+    expect(first.stage).toBe('device')
+    expect(first.skippable).toBeFalsy()
+    expect(first.action).toEqual({
+      type: 'free-port',
+      spec: {
+        port: 9999,
+        owner: { platform: 'android', serial: '<android-serial>' },
+        freeUnowned: false,
+      },
+    })
+  })
+
+  it('REQ-OWN-003 / REQ-AND-006: the pre-companion free is serial-scoped and the forward refuses to rebind', () => {
+    const plan = planAndroid(inputFor())
+    const free = plan.steps.find((s) => s.id === 'android.free-port')?.action
+    expect(free).toEqual({
+      type: 'free-port',
+      spec: {
+        port: 9999,
+        owner: { platform: 'android', serial: '<android-serial>' },
+        freeUnowned: false,
+      },
+    })
+    expect(commandFor(plan, 'android.forward').args).toEqual([
+      '-s',
+      '<android-serial>',
+      'forward',
+      '--no-rebind',
+      'tcp:9999',
+      'tcp:9999',
+    ])
+  })
+
+  it('REQ-OWN-003: cleanup frees the companion port through the serial-scoped free-port, and freeUnownedPort propagates', () => {
+    const android = androidConfigFixture({ companion: { port: 9973, freeUnownedPort: true } })
+    const metro = resolveMetro({ command: 'npx expo start' })
+    const plan = planAndroid(inputFor({ android, resolved: placeholderAndroid(android, metro) }))
+    expect(plan.cleanup).toContainEqual(
+      expect.objectContaining({
+        type: 'free-port',
+        spec: {
+          port: 9973,
+          owner: { platform: 'android', serial: '<android-serial>' },
+          freeUnowned: true,
+        },
+      }),
+    )
+    const cleanupCmds = plan.cleanup.flatMap((c) =>
+      c.type === 'command' ? [c.command.args.join(' ')] : [],
+    )
+    expect(cleanupCmds.some((c) => c.includes('forward --remove'))).toBe(false)
+  })
+
   it('cleanup removes adb mappings, the device token file, and force-stops the app', () => {
     const plan = planAndroid(inputFor())
     const cleanupCmds = plan.cleanup.flatMap((c) =>
       c.type === 'command' ? [c.command.args.join(' ')] : [],
     )
     expect(cleanupCmds.some((c) => c.includes('reverse --remove'))).toBe(true)
-    expect(cleanupCmds.some((c) => c.includes('forward --remove'))).toBe(true)
+    expect(plan.cleanup).toContainEqual(
+      expect.objectContaining({
+        type: 'free-port',
+        spec: expect.objectContaining({
+          owner: { platform: 'android', serial: '<android-serial>' },
+        }),
+      }),
+    )
     expect(cleanupCmds.some((c) => c.includes('rm -f files/rn-driver-touch-token'))).toBe(true)
     expect(cleanupCmds.some((c) => c.includes('force-stop'))).toBe(true)
     expect(plan.cleanup).toContainEqual(

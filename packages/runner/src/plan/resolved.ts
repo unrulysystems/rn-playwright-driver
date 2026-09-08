@@ -18,7 +18,7 @@ export interface ResolvedMetro {
   readonly readyTimeoutMs: number
 }
 
-interface ResolvedIosTargetBase {
+export interface ResolvedIosTargetBase {
   readonly kind: 'simulator' | 'device'
   readonly id: string
   readonly deviceName: string
@@ -39,12 +39,19 @@ interface ResolvedIosTargetBase {
   readonly scaffoldBin: string
   /** Metro URL handed to the dev launcher (`simctl launch --initialUrl`). */
   readonly initialUrl: string
+  /** `companion.freeUnownedPort`: free the port even for a holder this target cannot claim. */
+  readonly freeUnownedPort: boolean
 }
 
 interface ResolvedIosSimulatorTarget extends ResolvedIosTargetBase {
   readonly kind: 'simulator'
   readonly simUdid: string
   readonly simName: string
+  /**
+   * Other booted simulators to terminate the app on before launch. Non-empty
+   * only under `ios.terminateOnOtherSimulators` (REQ-IOS-002, REQ-OWN-002).
+   */
+  readonly otherBootedSimUdids: readonly string[]
 }
 
 interface ResolvedIosDeviceTarget extends ResolvedIosTargetBase {
@@ -69,6 +76,8 @@ export interface ResolvedAndroidTarget {
   readonly instrumentationTarget: string
   /** Metro URL handed to the dev launcher deep link. */
   readonly initialUrl: string
+  /** `companion.freeUnownedPort`: free the port even for a holder this serial cannot claim. */
+  readonly freeUnownedPort: boolean
 }
 
 export function resolveMetro(
@@ -130,6 +139,7 @@ export function placeholderIos(ios: IosConfig, metro: ResolvedMetro): ResolvedIo
     runtimeConfigFile: '<runtime-config>',
     scaffoldBin: '<scaffold-bin>',
     initialUrl: ios.launch.initialUrl ?? metro.url,
+    freeUnownedPort: ios.companion?.freeUnownedPort ?? false,
   }
   if (kind === 'device') {
     return {
@@ -148,6 +158,9 @@ export function placeholderIos(ios: IosConfig, metro: ResolvedMetro): ResolvedIo
     deviceName: '<sim-name>',
     simUdid: '<sim-udid>',
     simName: '<sim-name>',
+    // The real resolver lists other booted sims only under the opt-in; the dry
+    // run shows one placeholder so the audited plan reveals the cross-sim write.
+    otherBootedSimUdids: ios.terminateOnOtherSimulators ? ['<other-booted-sim>'] : [],
   }
 }
 
@@ -165,5 +178,6 @@ export function placeholderAndroid(
     deviceTokenFileName: DEFAULTS.androidTokenFileName,
     instrumentationTarget: instrumentationTarget(android),
     initialUrl: android.launch.initialUrl ?? metro.url,
+    freeUnownedPort: android.companion?.freeUnownedPort ?? false,
   }
 }

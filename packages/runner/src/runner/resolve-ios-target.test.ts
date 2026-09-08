@@ -58,6 +58,9 @@ describe('resolveIosTarget', () => {
       workspace: 'ios/App.xcworkspace',
       appScheme: 'App',
       launch: { mode: 'launch', kind: 'plain' },
+      // REQ-OWN-001: the mocked simctl lists a booted iPhone, but nothing explicit
+      // selects it, so the resolver must be told to adopt it.
+      adoptUnownedDevice: true,
     }
 
     const resolved = await resolveIosTarget(ios, resolveMetro({}), { projectCwd })

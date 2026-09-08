@@ -8,10 +8,11 @@ Instead of copying ~400-line per-app shell recipes, you describe your app's fact
 once in `rn-driver.config.ts` and run:
 
 ```bash
-rn-driver test --platform ios
-rn-driver test --platform android
-rn-driver test --platform all
+rn-driver test --platform ios --device <simulator-id>
+rn-driver test --platform android --device <android-serial>
 ```
+
+Run the platforms separately to supply each lane's device explicitly.
 
 The runner owns the generic lifecycle — simulator/emulator selection, Metro
 ownership, touch-companion startup, secure token passing, cold-launch semantics,
@@ -58,6 +59,10 @@ export default defineRnDriverConfig({
     // target: 'device',
     // Human-attended physical-device signing opt-in:
     // allowProvisioningUpdates: true,
+    // Shared-host ownership (see "Shared hosts" below). Each defaults to false:
+    // adoptUnownedDevice: true,          // auto-pick a booted sim when --device is absent
+    // terminateOnOtherSimulators: true,  // kill the app on OTHER booted sims before launch
+    // companion: { port: 9999, freeUnownedPort: true }, // reclaim the port from any holder
     // uitestScheme defaults to `${appScheme}UITests`
     launch: {
       // expo-dev-client REQUIRES attach mode: the host owns the launch and
@@ -77,6 +82,7 @@ export default defineRnDriverConfig({
   android: {
     packageName: 'com.company.app',
     activity: '.MainActivity',
+    // adoptUnownedDevice: true,   // auto-pick the first booted emulator when --device is absent
     // Required only for expo-dev-client launch:
     // scheme: 'companyapp',
     launch: { mode: 'launch', kind: 'plain' },
@@ -273,27 +279,27 @@ defaults.
 rn-driver test --platform ios --dry-run
 
 # Run the full lifecycle + Playwright:
-rn-driver test --platform ios
-rn-driver test --platform android
+rn-driver test --platform ios --device <simulator-id>
+rn-driver test --platform android --device <android-serial>
 
 # Reuse an already-built native project (skip prebuild/pods/gradle/install):
-rn-driver test --platform ios --skip-build
+rn-driver test --platform ios --device <simulator-id> --skip-build
 
 # Forward specs / Playwright args:
-rn-driver test --platform ios e2e/integration/counter.spec.ts
-rn-driver test --platform android -- --grep @smoke
+rn-driver test --platform ios --device <simulator-id> e2e/integration/counter.spec.ts
+rn-driver test --platform android --device <android-serial> -- --grep @smoke
 ```
 
 ### Options
 
-| Option           | Description                                             |
-| ---------------- | ------------------------------------------------------- |
-| `-p, --platform` | `ios` \| `android` \| `all` (required)                  |
-| `-c, --config`   | Path to the config (default: searched upward from cwd)  |
-| `-d, --device`   | Simulator/device id or name / Android serial override   |
-| `--dry-run`      | Print the plan and exit; no side effects, no device I/O |
-| `--skip-build`   | Reuse an already-built native project                   |
-| `--verbose`      | Stream per-step progress                                |
+| Option           | Description                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| `-p, --platform` | `ios` \| `android` \| `all` (required)                                              |
+| `-c, --config`   | Path to the config (default: searched upward from cwd)                              |
+| `-d, --device`   | Simulator/device id or name / Android serial (required unless `adoptUnownedDevice`) |
+| `--dry-run`      | Print the plan and exit; no side effects, no device I/O                             |
+| `--skip-build`   | Reuse an already-built native project                                               |
+| `--verbose`      | Stream per-step progress                                                            |
 
 On failure before Playwright, the runner names the stage that broke
 (`config` / `metro` / `device` / `build` / `companion` / `app-launch` /
@@ -321,7 +327,48 @@ at stage `device` (exit 12) when nothing matches.
 Token material always travels by `0600` file path (the driver's
 `RN_TOUCH_*_TOKEN_FILE` contract); the value never enters argv, env, logs, or
 `--dry-run` output. Cleanup is defensive and idempotent — a crashed prior run
-never wedges the next (stale companion ports are freed at startup and teardown).
+never wedges the next (this run's stale companion is reaped from the port at
+startup and teardown).
+
+### Shared hosts: device and port ownership
+
+The runner owns what it starts or is explicitly told to use, and nothing else —
+the same rule it applies to Metro (`metro.reuseExisting`: verify, fail fast, never
+kill what you did not start). Several runs can coexist on one host, one per
+worktree, each with its own simulator/emulator and its own `companion.port`.
+By default:
+
+- **No `--device` means no device.** The run fails at stage `device` naming the
+  booted candidates instead of adopting one that may belong to another run.
+  Pass `--device <id|name>` (iOS) / `--device <serial>` (Android), or set
+  `<platform>.adoptUnownedDevice: true` on a single-user machine to restore
+  auto-selection (newest booted iPhone / first booted emulator).
+- **Only the selected device is written to.** The app is never terminated on
+  other booted simulators; `ios.terminateOnOtherSimulators: true` restores that
+  pre-launch sweep. The execution plan lists one `ios.terminate-other.<udid>`
+  step per other booted simulator; `--dry-run` shows the action with a placeholder
+  simulator ID.
+- **The companion port is freed only of holders this target owns.** A
+  `port-preflight` step runs before the build: on iOS a recognized XCTest
+  companion for the configured UI-test scheme on the selected simulator, or a
+  recognized `pymobiledevice3 usbmux forward` for the selected physical device,
+  can be reaped. The device identifier must match exactly in the simulator
+  executable path or the forward's `--serial` argument; merely mentioning the
+  identifier in another command does not establish ownership. Physical forwards
+  use the hardware UDID, matching `--serial`. On Android the `adb forward` row for the
+  selected serial is removed (`adb forward --list`, then `adb -s <serial>
+forward --remove`), and the forward is re-registered with `--no-rebind`. Any
+  other holder fails the step naming its pid and command (or its serial) with
+  nothing killed. `<platform>.companion.freeUnownedPort: true` restores the
+  unconditional free; the better fix is a port of your own.
+
+"Unowned" means not owned by this run; another lane may own the resource.
+Each lane supplies its own device. Port attribution does not lock a device
+against concurrent runs deliberately targeting it.
+
+Every `free-port` in `--dry-run` shows its owner
+(`free-port 9999 (owner: ios simulator <sim-udid> (exampleUITests-Runner))`),
+so the audited plan is the real plan.
 
 ### Playwright lifecycle boundary
 

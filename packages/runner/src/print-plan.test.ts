@@ -61,6 +61,24 @@ describe('renderPlan', () => {
     expect(android).toContain('Process crashed')
   })
 
+  it('renders every free-port with its owner so the dry run shows the ownership scope (REQ-OWN-005)', () => {
+    const ios = renderPlan(buildDryRunPlan(configFixture(), 'ios'))
+    expect(ios).toContain(
+      'free-port 9999 (owner: ios simulator <sim-udid> (exampleUITests-Runner))',
+    )
+    const android = renderPlan(buildDryRunPlan(configFixture(), 'android'))
+    expect(android).toContain('free-port 9999 (owner: android <android-serial>)')
+    const forced = renderPlan(
+      buildDryRunPlan(
+        configFixture({ ios: iosDevClientConfigFixture({ companion: { freeUnownedPort: true } }) }),
+        'ios',
+      ),
+    )
+    expect(forced).toContain(
+      'free-port 9999 (owner: ios simulator <sim-udid> (exampleUITests-Runner), freeUnownedPort: kills any holder)',
+    )
+  })
+
   it('never prints a secret value — only the placeholder token-file path', () => {
     const text = renderPlan(buildDryRunPlan(configFixture(), 'android'))
     expect(text).toContain('<token-file>')

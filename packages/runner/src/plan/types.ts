@@ -101,7 +101,7 @@ export type StepAction =
       readonly to: string
       readonly mode?: number
     }
-  | { readonly type: 'free-port'; readonly port: number }
+  | { readonly type: 'free-port'; readonly spec: FreePortSpec }
   | { readonly type: 'install-ios-app'; readonly spec: InstallIosAppSpec }
   | { readonly type: 'seed-ios-defaults'; readonly spec: SeedIosDefaultsSpec }
   | {
@@ -121,6 +121,44 @@ export type StepAction =
        */
       readonly failureMarkers?: readonly string[]
     }
+
+/**
+ * Who may hold the companion port (REQ-OWN-003).
+ *
+ * iOS simulator: the sim-hosted XCTest companion, recognized by an OS-observed executable
+ * mapping: the configured `<uitestScheme>-Runner` executable inside the selected
+ * simulator's CoreSimulator device path. iOS physical device: the host-side
+ * `pymobiledevice3 usbmux forward` process this runner emits, recognized by its command shape
+ * (direct script, Python entry-point script, or `python -m`), the exact `--serial` hardware
+ * UDID, and the local port argument. Android: the `adb forward` mapping for the serial.
+ */
+export type PortOwner =
+  | {
+      readonly platform: 'ios'
+      readonly kind: 'simulator'
+      /** The selected simulator's UDID — matched as an exact CoreSimulator device path component. */
+      readonly simUdid: string
+      /** Basename of the XCTest runner executable derived from the resolved UI-test scheme. */
+      readonly runnerExecutable: string
+    }
+  | {
+      readonly platform: 'ios'
+      readonly kind: 'device'
+      /** Hardware UDID passed to `pymobiledevice3 usbmux forward --serial` (NOT the CoreDevice identifier). */
+      readonly serial: string
+    }
+  | { readonly platform: 'android'; readonly serial: string }
+
+/**
+ * An ownership-scoped port free. The executor frees only holders attributable
+ * to `owner` and fails naming any other holder; `freeUnowned` (config
+ * `companion.freeUnownedPort`) restores the unconditional free.
+ */
+export interface FreePortSpec {
+  readonly port: number
+  readonly owner: PortOwner
+  readonly freeUnowned: boolean
+}
 
 /** The lifecycle stage a step belongs to. A failure is attributed to its stage. */
 export type Stage =
@@ -150,7 +188,7 @@ export interface Step {
  */
 export type CleanupAction =
   | { readonly type: 'kill-process'; readonly processKey: string; readonly description: string }
-  | { readonly type: 'free-port'; readonly port: number; readonly description: string }
+  | { readonly type: 'free-port'; readonly spec: FreePortSpec; readonly description: string }
   | { readonly type: 'remove-file'; readonly path: string; readonly description: string }
   | { readonly type: 'command'; readonly command: CommandSpec; readonly description: string }
 
@@ -206,8 +244,11 @@ export interface ProcessRunner {
   copyFile(from: string, to: string, mode?: number): Promise<void>
   /** Remove a file (idempotent). */
   removeFile(path: string): Promise<void>
-  /** Free a TCP listener bound to `port` (lsof + kill). Idempotent. */
-  freePort(port: number): Promise<void>
+  /**
+   * Free the companion port of holders the spec's owner can claim (REQ-OWN-003).
+   * Idempotent. Rejects with {@link PortOwnershipError} naming a foreign holder.
+   */
+  freePort(spec: FreePortSpec): Promise<void>
   /** Resolve the scheme's built application and install it on the target (REQ-IOS-015). */
   installIosApp(spec: InstallIosAppSpec): Promise<void>
   /** Write typed entries into the installed app's container preferences (REQ-IOS-005). */

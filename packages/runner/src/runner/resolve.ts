@@ -12,6 +12,7 @@ import {
   uitestScheme,
   type ResolvedAndroidTarget,
   type ResolvedIosTarget,
+  type ResolvedIosTargetBase,
   type ResolvedMetro,
 } from '../plan/resolved'
 
@@ -46,33 +47,42 @@ export async function resolveIosTarget(
     const tokenFile = await mintTokenFile()
 
     return {
+      ...iosTargetBase(ios, metro, scheme, tokenFile, scaffoldBin),
       kind: 'device',
       id: device.udid,
       deviceName: device.name,
       coreDeviceIdentifier: device.identifier,
       destination: ios.destination ?? `platform=iOS,id=${device.udid}`,
-      uitestScheme: scheme,
-      touchPort: ios.companion?.port ?? DEFAULTS.companionPort,
-      companionReadyTimeoutMs: ios.companion?.readyTimeoutMs ?? DEFAULTS.iosCompanionReadyTimeoutMs,
-      hermesTimeoutMs: DEFAULTS.hermesTargetTimeoutMs,
-      tokenFile,
-      runtimeConfigFile: path.join('ios', scheme, 'RNDriverTouchCompanionRuntimeConfig.json'),
       runtimeTokenFile: path.join('ios', scheme, DEFAULTS.xctestTokenResourceName),
-      scaffoldBin,
-      initialUrl: ios.launch.initialUrl ?? metro.url,
     }
   }
   const { udid, name } = await selectSimulator(ios, opts.device)
-  await terminateStaleOnOtherSims(udid, ios.bundleId)
+  // REQ-IOS-002 is opt-in (REQ-OWN-002): the other booted sims belong to other
+  // runs; only when asked are they listed for the planner to terminate the app on.
+  const otherBootedSimUdids = ios.terminateOnOtherSimulators ? await otherBootedSims(udid) : []
   const tokenFile = await mintTokenFile()
 
   return {
+    ...iosTargetBase(ios, metro, scheme, tokenFile, scaffoldBin),
     kind: 'simulator',
     id: udid,
     deviceName: name,
     simUdid: udid,
     simName: name,
+    otherBootedSimUdids,
     destination: ios.destination ?? `platform=iOS Simulator,id=${udid}`,
+  }
+}
+
+/** The target-kind-independent half of a resolved iOS target (ports, timeouts, per-run files). */
+function iosTargetBase(
+  ios: IosConfig,
+  metro: ResolvedMetro,
+  scheme: string,
+  tokenFile: string,
+  scaffoldBin: string,
+): Omit<ResolvedIosTargetBase, 'kind' | 'id' | 'deviceName' | 'destination'> {
+  return {
     uitestScheme: scheme,
     touchPort: ios.companion?.port ?? DEFAULTS.companionPort,
     companionReadyTimeoutMs: ios.companion?.readyTimeoutMs ?? DEFAULTS.iosCompanionReadyTimeoutMs,
@@ -81,6 +91,7 @@ export async function resolveIosTarget(
     runtimeConfigFile: path.join('ios', scheme, 'RNDriverTouchCompanionRuntimeConfig.json'),
     scaffoldBin,
     initialUrl: ios.launch.initialUrl ?? metro.url,
+    freeUnownedPort: ios.companion?.freeUnownedPort ?? false,
   }
 }
 
@@ -123,7 +134,7 @@ export async function resolveAndroidTarget(
   metro: ResolvedMetro,
   opts: ResolveOptions,
 ): Promise<{ resolved: ResolvedAndroidTarget; deviceName: string }> {
-  const serial = await selectSerial(opts.device)
+  const serial = await selectSerial(android, opts.device)
   await requireBooted(serial)
   const deviceName = (
     await capture('adb', ['-s', serial, 'shell', 'getprop', 'ro.product.model'])
@@ -141,6 +152,7 @@ export async function resolveAndroidTarget(
       deviceTokenFileName: DEFAULTS.androidTokenFileName,
       instrumentationTarget: instrumentationTarget(android),
       initialUrl: android.launch.initialUrl ?? metro.url,
+      freeUnownedPort: android.companion?.freeUnownedPort ?? false,
     },
     deviceName,
   }
@@ -173,35 +185,62 @@ async function selectSimulator(
   const all: SimDevice[] = Object.entries(data.devices ?? {})
     .flatMap(([runtime, list]) => list.map((device) => ({ ...device, runtime })))
     .filter((device) => device.isAvailable !== false)
-  return pickSimulator(all, deviceOverride, ios.destination)
+  return pickSimulator(all, {
+    ...(deviceOverride ? { device: deviceOverride } : {}),
+    ...(ios.destination ? { destination: ios.destination } : {}),
+    adoptUnownedDevice: ios.adoptUnownedDevice ?? false,
+  })
+}
+
+export interface SimulatorSelection {
+  /** `--device`: UDID or name. */
+  readonly device?: string
+  /** `ios.destination`: may carry an explicit `id=<udid>`. */
+  readonly destination?: string
+  /** `ios.adoptUnownedDevice`: allow auto-selection when nothing explicit is given. */
+  readonly adoptUnownedDevice: boolean
 }
 
 /**
- * Pure simulator selection (REQ-IOS-001 / REQ-CLI-007). Precedence:
+ * Pure simulator selection (REQ-IOS-001 / REQ-CLI-007 / REQ-OWN-001). Precedence:
  *   1. an explicit UDID (from `--device` or `ios.destination`) — ANY device type,
  *      so an explicitly-named iPad/non-iPhone sim is honored, not filtered out;
  *   2. `--device <name>` matched by exact then substring name (also any type);
- *   3. auto-select: the newest booted iPhone, else the newest available iPhone.
+ *   3. nothing explicit: refuse — a booted simulator on a shared host belongs to
+ *      another run — unless `adoptUnownedDevice`, then the newest booted iPhone,
+ *      else the newest available iPhone.
  * The iPhone-only filter applies ONLY to step 3's auto-selection.
  */
 export function pickSimulator(
   devices: readonly SimDevice[],
-  deviceOverride: string | undefined,
-  destination: string | undefined,
+  selection: SimulatorSelection,
 ): { udid: string; name: string } {
-  const explicitUdid = parseUdid(deviceOverride) ?? parseUdid(destination)
+  const explicitUdid = parseUdid(selection.device) ?? parseUdid(selection.destination)
   if (explicitUdid) {
     const match = devices.find((device) => device.udid === explicitUdid)
     if (!match) throw new Error(`requested iOS simulator not found: ${explicitUdid}`)
     return { udid: match.udid, name: match.name }
   }
 
+  const deviceOverride = selection.device
   if (deviceOverride) {
     const byName =
       devices.find((device) => device.name === deviceOverride) ??
       devices.find((device) => device.name.includes(deviceOverride))
     if (!byName) throw new Error(`requested iOS simulator not found by name: ${deviceOverride}`)
     return { udid: byName.udid, name: byName.name }
+  }
+
+  if (!selection.adoptUnownedDevice) {
+    const booted = devices
+      .filter((device) => device.state === 'Booted')
+      .map((device) => `${device.name} (${device.udid})`)
+    throw new Error(
+      `no --device given and ios.adoptUnownedDevice is off, so no booted simulator is adopted ` +
+        `(on a shared host it belongs to another run). Booted: ${
+          booted.length > 0 ? booted.join(', ') : 'none'
+        }. Pass --device <id|name>, or set ios.adoptUnownedDevice: true to auto-select.`,
+    )
   }
 
   const byNewest = (a: SimDevice, b: SimDevice): number =>
@@ -336,27 +375,52 @@ function physicalDeviceMatches(device: PhysicalIosDevice, value: string): boolea
   )
 }
 
-async function terminateStaleOnOtherSims(keepUdid: string, bundleId: string): Promise<void> {
+async function otherBootedSims(keepUdid: string): Promise<string[]> {
   const booted = await capture('xcrun', ['simctl', 'list', 'devices', 'booted'])
   const udids = booted.match(/[0-9A-Fa-f-]{36}/g) ?? []
-  for (const udid of udids) {
-    if (udid === keepUdid) continue
-    await capture('xcrun', ['simctl', 'terminate', udid, bundleId]).catch(() => '')
-  }
+  return udids.filter((udid) => udid !== keepUdid)
 }
 
-async function selectSerial(deviceOverride?: string): Promise<string> {
+async function selectSerial(android: AndroidConfig, deviceOverride?: string): Promise<string> {
   await capture('adb', ['start-server']).catch(() => '')
   if (deviceOverride) {
     await run('adb', ['-s', deviceOverride, 'get-state'])
     return deviceOverride
   }
-  const devices = await capture('adb', ['devices'])
-  const serial = devices
+  return pickSerial(await capture('adb', ['devices']), {
+    adoptUnownedDevice: android.adoptUnownedDevice ?? false,
+  })
+}
+
+export interface SerialSelection {
+  /** `--device`: adb serial. */
+  readonly device?: string
+  /** `android.adoptUnownedDevice`: allow adopting the first booted emulator. */
+  readonly adoptUnownedDevice: boolean
+}
+
+/**
+ * Pure serial selection (REQ-AND-001 / REQ-OWN-001): an explicit `--device` wins;
+ * otherwise refuse — a booted emulator on a shared host belongs to another run —
+ * unless `adoptUnownedDevice`, then the first booted `emulator-*` in `adb devices`.
+ */
+export function pickSerial(adbDevicesOutput: string, selection: SerialSelection): string {
+  if (selection.device) return selection.device
+  const bootedEmulators = adbDevicesOutput
     .split('\n')
     .slice(1)
     .map((line) => line.trim().split(/\s+/))
-    .find((cols) => cols[1] === 'device' && cols[0]?.startsWith('emulator-'))?.[0]
+    .filter((cols) => cols[1] === 'device' && cols[0]?.startsWith('emulator-'))
+    .map((cols) => cols[0] as string)
+  if (!selection.adoptUnownedDevice) {
+    throw new Error(
+      `no --device given and android.adoptUnownedDevice is off, so no booted emulator is adopted ` +
+        `(on a shared host it belongs to another run). Booted: ${
+          bootedEmulators.length > 0 ? bootedEmulators.join(', ') : 'none'
+        }. Pass --device <serial>, or set android.adoptUnownedDevice: true to auto-select.`,
+    )
+  }
+  const serial = bootedEmulators[0]
   if (!serial) throw new Error('no booted emulator found in `adb devices`')
   return serial
 }

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { pickSimulator, resolveScaffoldBin, type SimDevice } from './resolve'
+import { pickSerial, pickSimulator, resolveScaffoldBin, type SimDevice } from './resolve'
 
 const RT = (v: string) => `com.apple.CoreSimulator.SimRuntime.iOS-${v}`
 
@@ -19,8 +19,30 @@ const DEVICES: SimDevice[] = [
 ]
 
 describe('pickSimulator', () => {
-  it('auto-selects the newest booted iPhone', () => {
-    expect(pickSimulator(DEVICES, undefined, undefined)).toEqual({
+  it('REQ-OWN-001: without --device and without adoptUnownedDevice it refuses to adopt, naming the booted candidates and both remedies', () => {
+    let message = ''
+    try {
+      pickSimulator(DEVICES, { adoptUnownedDevice: false })
+    } catch (error) {
+      message = (error as Error).message
+    }
+    expect(message).toContain('no --device given')
+    expect(message).toContain(`iPhone 17 (${IPHONE_17})`)
+    expect(message).toContain(`iPhone 16 Pro (${IPHONE_16})`)
+    expect(message).not.toContain(IPHONE_15)
+    expect(message).toContain('--device <id|name>')
+    expect(message).toContain('ios.adoptUnownedDevice')
+  })
+
+  it('REQ-OWN-001: an explicit --device is honored without adoptUnownedDevice', () => {
+    expect(pickSimulator(DEVICES, { device: IPHONE_15, adoptUnownedDevice: false })).toEqual({
+      udid: IPHONE_15,
+      name: 'iPhone 15',
+    })
+  })
+
+  it('auto-selects the newest booted iPhone (adoptUnownedDevice)', () => {
+    expect(pickSimulator(DEVICES, { adoptUnownedDevice: true })).toEqual({
       udid: IPHONE_17,
       name: 'iPhone 17',
     })
@@ -33,58 +55,112 @@ describe('pickSimulator', () => {
       ...d,
       state: 'Shutdown',
     }))
-    expect(pickSimulator(shutdown, undefined, undefined)).toEqual({
+    expect(pickSimulator(shutdown, { adoptUnownedDevice: true })).toEqual({
       udid: IPHONE_16,
       name: 'iPhone 16 Pro',
     })
   })
 
   it('honors an explicit UDID from --device, overriding the booted-newest default', () => {
-    expect(pickSimulator(DEVICES, IPHONE_16, undefined)).toEqual({
+    expect(pickSimulator(DEVICES, { device: IPHONE_16, adoptUnownedDevice: false })).toEqual({
       udid: IPHONE_16,
       name: 'iPhone 16 Pro',
     })
   })
 
   it('honors an explicit UDID from ios.destination', () => {
-    expect(pickSimulator(DEVICES, undefined, `platform=iOS Simulator,id=${IPHONE_15}`)).toEqual({
+    expect(
+      pickSimulator(DEVICES, {
+        destination: `platform=iOS Simulator,id=${IPHONE_15}`,
+        adoptUnownedDevice: false,
+      }),
+    ).toEqual({
       udid: IPHONE_15,
       name: 'iPhone 15',
     })
   })
 
   it('REQ-CLI-007: honors an explicit NON-iPhone UDID (not filtered out by auto-select)', () => {
-    expect(pickSimulator(DEVICES, IPAD, undefined)).toEqual({
+    expect(pickSimulator(DEVICES, { device: IPAD, adoptUnownedDevice: false })).toEqual({
       udid: IPAD,
       name: 'iPad Pro 11-inch',
     })
   })
 
   it('REQ-CLI-007: honors --device given as a NAME (exact then substring)', () => {
-    expect(pickSimulator(DEVICES, 'iPhone 16 Pro', undefined)).toEqual({
+    expect(pickSimulator(DEVICES, { device: 'iPhone 16 Pro', adoptUnownedDevice: false })).toEqual({
       udid: IPHONE_16,
       name: 'iPhone 16 Pro',
     })
     // Substring match still resolves a unique device.
-    expect(pickSimulator(DEVICES, 'iPad', undefined)).toEqual({
+    expect(pickSimulator(DEVICES, { device: 'iPad', adoptUnownedDevice: false })).toEqual({
       udid: IPAD,
       name: 'iPad Pro 11-inch',
     })
   })
 
   it('throws on an explicit UDID that is not present', () => {
-    expect(() => pickSimulator(DEVICES, '99999999-9999-9999-9999-999999999999', undefined)).toThrow(
-      /not found/,
-    )
+    expect(() =>
+      pickSimulator(DEVICES, {
+        device: '99999999-9999-9999-9999-999999999999',
+        adoptUnownedDevice: false,
+      }),
+    ).toThrow(/not found/)
   })
 
   it('throws on a --device name that matches nothing', () => {
-    expect(() => pickSimulator(DEVICES, 'Pixel 9', undefined)).toThrow(/not found by name/)
+    expect(() => pickSimulator(DEVICES, { device: 'Pixel 9', adoptUnownedDevice: false })).toThrow(
+      /not found by name/,
+    )
   })
 
   it('throws when no iPhone is available and no explicit selection is given', () => {
     const onlyIpad = DEVICES.filter((d) => d.name.startsWith('iPad'))
-    expect(() => pickSimulator(onlyIpad, undefined, undefined)).toThrow(/no available iPhone/)
+    expect(() => pickSimulator(onlyIpad, { adoptUnownedDevice: true })).toThrow(
+      /no available iPhone/,
+    )
+  })
+})
+
+const ADB_DEVICES = [
+  'List of devices attached',
+  'emulator-5554\tdevice',
+  'emulator-5580\tdevice',
+  'emulator-5600\toffline',
+  'R58M123ABC\tdevice',
+  '',
+].join('\n')
+
+describe('pickSerial', () => {
+  it('honors an explicit --device serial without reading `adb devices`', () => {
+    expect(pickSerial('', { device: 'emulator-5580', adoptUnownedDevice: false })).toBe(
+      'emulator-5580',
+    )
+  })
+
+  it('REQ-OWN-001: without --device and without adoptUnownedDevice it refuses to adopt, naming the booted emulators and both remedies', () => {
+    let message = ''
+    try {
+      pickSerial(ADB_DEVICES, { adoptUnownedDevice: false })
+    } catch (error) {
+      message = (error as Error).message
+    }
+    expect(message).toContain('no --device given')
+    expect(message).toContain('emulator-5554')
+    expect(message).toContain('emulator-5580')
+    expect(message).not.toContain('emulator-5600')
+    expect(message).toContain('--device <serial>')
+    expect(message).toContain('android.adoptUnownedDevice')
+  })
+
+  it('adopts the first booted emulator only with adoptUnownedDevice (REQ-AND-001)', () => {
+    expect(pickSerial(ADB_DEVICES, { adoptUnownedDevice: true })).toBe('emulator-5554')
+  })
+
+  it('adoptUnownedDevice with no booted emulator still fails', () => {
+    expect(() =>
+      pickSerial('List of devices attached\nR58M123ABC\tdevice\n', { adoptUnownedDevice: true }),
+    ).toThrow(/no booted emulator/)
   })
 })
 

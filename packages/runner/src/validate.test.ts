@@ -3,6 +3,7 @@ import {
   androidConfigFixture,
   androidDevClientConfigFixture,
   configFixture,
+  iosConfigFixture,
   iosDevClientConfigFixture,
 } from './fixtures'
 import { ConfigValidationError, assertValid, validateConfig } from './validate'
@@ -174,6 +175,46 @@ describe('validateConfig', () => {
     expect(result.ok).toBe(false)
     expect(result.errors).toContainEqual(
       expect.stringContaining('config.ios.allowProvisioningUpdates: expected a boolean'),
+    )
+  })
+
+  it('REQ-OWN-005: accepts the ownership opt-in keys as booleans on both platforms', () => {
+    const config = configFixture({
+      ios: iosConfigFixture({
+        adoptUnownedDevice: true,
+        terminateOnOtherSimulators: true,
+        companion: { port: 9973, freeUnownedPort: true },
+      }),
+      android: androidConfigFixture({
+        adoptUnownedDevice: true,
+        companion: { port: 9973, freeUnownedPort: true },
+      }),
+    })
+    expect(validateConfig(config, ['ios', 'android'])).toEqual({ ok: true, errors: [] })
+  })
+
+  it('REQ-OWN-005: rejects non-boolean ownership keys naming each field', () => {
+    const config = configFixture({
+      ios: iosConfigFixture({
+        adoptUnownedDevice: 'yes' as unknown as boolean,
+        terminateOnOtherSimulators: 1 as unknown as boolean,
+        companion: { freeUnownedPort: 'true' as unknown as boolean },
+      }),
+      android: androidConfigFixture({
+        adoptUnownedDevice: 'yes' as unknown as boolean,
+        companion: { freeUnownedPort: 0 as unknown as boolean },
+      }),
+    })
+    const result = validateConfig(config, ['ios', 'android'])
+    expect(result.ok).toBe(false)
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('config.ios.adoptUnownedDevice: expected a boolean'),
+        expect.stringContaining('config.ios.terminateOnOtherSimulators: expected a boolean'),
+        expect.stringContaining('config.ios.companion.freeUnownedPort: expected a boolean'),
+        expect.stringContaining('config.android.adoptUnownedDevice: expected a boolean'),
+        expect.stringContaining('config.android.companion.freeUnownedPort: expected a boolean'),
+      ]),
     )
   })
 

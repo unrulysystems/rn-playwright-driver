@@ -3,7 +3,7 @@ import { COMPANION_FAILURE_MARKERS, DEFAULTS, E2E_MARKER_ENV } from '../constant
 import { buildAndroidDriverEnv } from './env'
 import type { ResolvedAndroidTarget, ResolvedMetro } from './resolved'
 import { metroStartStep, packageBin, playwrightCommand, projectPath } from './shared'
-import type { CleanupAction, CommandSpec, Plan, Step } from './types'
+import type { CleanupAction, CommandSpec, FreePortSpec, Plan, Step } from './types'
 
 export interface PlanAndroidInput {
   readonly android: AndroidConfig
@@ -48,8 +48,26 @@ export function planAndroid(input: PlanAndroidInput): Plan {
   const appApk = projectPath(projectCwd, android.appApkPath ?? DEFAULTS.androidAppApkPath)
   const testApk = projectPath(projectCwd, android.testApkPath ?? DEFAULTS.androidTestApkPath)
 
+  // The companion port is reached through `adb forward`, whose host-side holder is
+  // the shared adb server: ownership is the forward row for this serial, never a
+  // pid (REQ-OWN-003).
+  const freePort: FreePortSpec = {
+    port: resolved.touchPort,
+    owner: { platform: 'android', serial },
+    freeUnowned: resolved.freeUnownedPort,
+  }
+
   const steps: Step[] = []
   const push = (step: Step) => steps.push(step)
+
+  // device — a forward another serial registered on the companion port fails here,
+  // before prebuild and Gradle spend minutes (REQ-OWN-004); a stale own forward is removed.
+  push({
+    id: 'android.port-preflight',
+    stage: 'device',
+    description: `Check companion port ${resolved.touchPort} is free or forwarded for ${serial}`,
+    action: { type: 'free-port', spec: freePort },
+  })
 
   // build — regenerate project, build APKs, install both.
   push({
@@ -201,22 +219,26 @@ export function planAndroid(input: PlanAndroidInput): Plan {
   // companion — forward the port (clearing any stale mapping first) and start
   // the instrumentation server, then wait for an authenticated hello.
   push({
-    id: 'android.forward-clean',
+    id: 'android.free-port',
     stage: 'companion',
-    description: `Clear stale adb forward tcp:${resolved.touchPort}`,
-    action: {
-      type: 'command',
-      command: adb(serial, ['forward', '--remove', `tcp:${resolved.touchPort}`]),
-      allowFailure: true,
-    },
+    description: `Clear stale adb forward tcp:${resolved.touchPort} for ${serial}`,
+    action: { type: 'free-port', spec: freePort },
   })
+  // `--no-rebind`: adb otherwise replaces an existing mapping on the local port, so a
+  // forward another lane registered between the free and here would be stolen
+  // silently; with it the bind fails loudly at this companion step (REQ-AND-006).
   push({
     id: 'android.forward',
     stage: 'companion',
-    description: `adb forward tcp:${resolved.touchPort}`,
+    description: `adb forward --no-rebind tcp:${resolved.touchPort}`,
     action: {
       type: 'command',
-      command: adb(serial, ['forward', `tcp:${resolved.touchPort}`, `tcp:${resolved.touchPort}`]),
+      command: adb(serial, [
+        'forward',
+        '--no-rebind',
+        `tcp:${resolved.touchPort}`,
+        `tcp:${resolved.touchPort}`,
+      ]),
     },
   })
   push({
@@ -288,9 +310,9 @@ export function planAndroid(input: PlanAndroidInput): Plan {
           },
         ]),
     {
-      type: 'command',
-      command: adb(serial, ['forward', '--remove', `tcp:${resolved.touchPort}`]),
-      description: 'Remove companion forward',
+      type: 'free-port',
+      spec: freePort,
+      description: `Remove companion forward for ${serial}`,
     },
     {
       type: 'command',

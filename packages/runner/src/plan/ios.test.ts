@@ -49,6 +49,7 @@ describe('planIos', () => {
   it('produces the iOS lifecycle stages in order for a plain app', () => {
     const ids = stepIds(planIos(inputFor('plain')))
     expect(ids).toEqual([
+      'ios.port-preflight',
       'ios.boot',
       'ios.boot-wait',
       'ios.prebuild',
@@ -294,7 +295,139 @@ describe('planIos', () => {
     const plan = planIos(inputFor('plain'))
     const startupFree = plan.steps.find((s) => s.id === 'ios.free-port')
     expect(startupFree?.action.type).toBe('free-port')
-    expect(plan.cleanup).toContainEqual(expect.objectContaining({ type: 'free-port', port: 9999 }))
+    expect(plan.cleanup).toContainEqual(
+      expect.objectContaining({ type: 'free-port', spec: expect.objectContaining({ port: 9999 }) }),
+    )
+  })
+
+  it('REQ-OWN-004: the first step is an ownership-scoped port preflight at the device stage, never skippable', () => {
+    const plan = planIos(inputFor('plain'))
+    const first = plan.steps[0]!
+    expect(first.id).toBe('ios.port-preflight')
+    expect(first.stage).toBe('device')
+    expect(first.skippable).toBeFalsy()
+    expect(first.action).toEqual({
+      type: 'free-port',
+      spec: {
+        port: 9999,
+        owner: {
+          platform: 'ios',
+          kind: 'simulator',
+          simUdid: '<sim-udid>',
+          runnerExecutable: 'exampleUITests-Runner',
+        },
+        freeUnowned: false,
+      },
+    })
+  })
+
+  it('REQ-OWN-003: every free-port (preflight, pre-companion, cleanup) carries the selected target as owner', () => {
+    const plan = planIos(inputFor('plain'))
+    const owner = {
+      platform: 'ios',
+      kind: 'simulator',
+      simUdid: '<sim-udid>',
+      runnerExecutable: 'exampleUITests-Runner',
+    } as const
+    const preCompanion = plan.steps.find((s) => s.id === 'ios.free-port')?.action
+    expect(preCompanion).toEqual({
+      type: 'free-port',
+      spec: { port: 9999, owner, freeUnowned: false },
+    })
+    expect(plan.cleanup).toContainEqual(
+      expect.objectContaining({
+        type: 'free-port',
+        spec: { port: 9999, owner, freeUnowned: false },
+      }),
+    )
+  })
+
+  it('REQ-OWN-003: companion.freeUnownedPort propagates into every free-port spec', () => {
+    const ios = iosConfigFixture({ companion: { port: 9973, freeUnownedPort: true } })
+    const metro = resolveMetro({ command: 'npx expo start' })
+    const plan = planIos(inputFor('plain', { ios, resolved: placeholderIos(ios, metro) }))
+    const specs = [
+      ...plan.steps.flatMap((s) => (s.action.type === 'free-port' ? [s.action.spec] : [])),
+      ...plan.cleanup.flatMap((c) => (c.type === 'free-port' ? [c.spec] : [])),
+    ]
+    expect(specs).toHaveLength(3)
+    for (const spec of specs) expect(spec).toMatchObject({ port: 9973, freeUnowned: true })
+  })
+
+  it('REQ-OWN-003: a physical device owns its port by the hardware UDID the usbmux forward is emitted with — not the CoreDevice identifier', () => {
+    const ios = iosDevClientConfigFixture({
+      target: 'device',
+      launch: { mode: 'attach', kind: 'expo-dev-client', initialUrl: 'http://10.0.0.5:8081' },
+    })
+    const metro = resolveMetro({ command: 'npx expo start' })
+    const plan = planIos(inputFor('expo-dev-client', { ios, resolved: placeholderIos(ios, metro) }))
+    const preflight = plan.steps[0]?.action
+    expect(preflight).toMatchObject({
+      type: 'free-port',
+      spec: { owner: { platform: 'ios', kind: 'device', serial: '<ios-device-udid>' } },
+    })
+    // Attribution identity regression: the forward command and the port owner must name the SAME
+    // identifier — the planner previously attributed ownership to the CoreDevice identifier while
+    // emitting `--serial` with the hardware UDID, so a crashed prior forward was never reclaimed.
+    const forward = plan.steps.find((s) => s.id === 'ios.port-forward')?.action
+    expect(forward?.type === 'command' && forward.command.args).toEqual([
+      'usbmux',
+      'forward',
+      '--serial',
+      '<ios-device-udid>',
+      '9999',
+      '9999',
+    ])
+  })
+
+  it('REQ-OWN-003: the simulator owner names the runner executable derived from the configured uitestScheme', () => {
+    const ios = iosConfigFixture({ uitestScheme: 'CustomE2E' })
+    const metro = resolveMetro({ command: 'npx expo start' })
+    const plan = planIos(inputFor('plain', { ios, resolved: placeholderIos(ios, metro) }))
+    expect(plan.steps[0]?.action).toMatchObject({
+      type: 'free-port',
+      spec: {
+        owner: {
+          platform: 'ios',
+          kind: 'simulator',
+          simUdid: '<sim-udid>',
+          runnerExecutable: 'CustomE2E-Runner',
+        },
+      },
+    })
+  })
+
+  it('REQ-OWN-002 / REQ-IOS-002: no cross-simulator terminate is planned by default', () => {
+    const plan = planIos(inputFor('plain'))
+    expect(stepIds(plan).some((id) => id.startsWith('ios.terminate-other.'))).toBe(false)
+    const terminates = allCommandStrings(plan).filter((s) => s === 'terminate')
+    // The only `simctl terminate` allowed touches the selected simulator (dev-client terminate-first).
+    expect(terminates).toHaveLength(0)
+  })
+
+  it('REQ-IOS-002: with terminateOnOtherSimulators, one device-stage best-effort terminate per other booted sim, before the build', () => {
+    const ios = iosConfigFixture({ terminateOnOtherSimulators: true })
+    const metro = resolveMetro({ command: 'npx expo start' })
+    const resolved = placeholderIos(ios, metro)
+    if (resolved.kind !== 'simulator') throw new Error('expected a simulator placeholder')
+    const plan = planIos(
+      inputFor('plain', {
+        ios,
+        resolved: { ...resolved, otherBootedSimUdids: ['AAAA-1', 'BBBB-2'] },
+      }),
+    )
+    const ids = stepIds(plan)
+    expect(ids.indexOf('ios.terminate-other.AAAA-1')).toBeLessThan(ids.indexOf('ios.prebuild'))
+    const step = plan.steps.find((s) => s.id === 'ios.terminate-other.BBBB-2')
+    expect(step?.stage).toBe('device')
+    expect(step?.action).toEqual({
+      type: 'command',
+      command: {
+        command: 'xcrun',
+        args: ['simctl', 'terminate', 'BBBB-2', 'com.unrulyfall.example'],
+      },
+      allowFailure: true,
+    })
   })
 
   it('REQ-IOS-004: xcodebuild runs under `env -u LD`', () => {

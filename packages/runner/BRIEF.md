@@ -34,9 +34,10 @@ failure, a message that names the stage that broke.
 
 ## Floors (the gate, not the ceiling — each with its measurement)
 
-- **Both example e2e gates pass through the runner.** `nub run test:e2e:ios` and
-  `nub run test:e2e:android` (rewired to `rn-driver test`) are green on a real
-  simulator/emulator. _Measured by:_ the live e2e run (the oracle).
+- **Both example e2e gates pass through the runner with explicit devices.**
+  `nub run test:e2e:ios --device <simulator-id>` and
+  `nub run test:e2e:android --device <android-serial>` (through `rn-driver test`)
+  are green on a real simulator/emulator. _Measured by:_ the live e2e run (the oracle).
 - **Planner is pure and unit-pinned.** `planIos`/`planAndroid` emit the expected
   ordered Steps for representative configs (both launch kinds, `--skip-build`).
   _Measured by:_ unit tests asserting the `Step[]`; same input ⇒ same plan, zero I/O.
@@ -100,6 +101,10 @@ failure, a message that names the stage that broke.
 - Project env overriding runner-owned `RN_*` control-plane variables.
 - The core driver package acquiring a dependency on the runner or the companions.
 - Cleanup terminating a Metro the runner did not start.
+- Adopting a device the run was not given, writing to a device the run did not
+  select, or killing a companion-port holder the run cannot attribute to its own
+  target. On a shared host those belong to another lane; each is opt-in by a
+  named config key, never a default.
 - Publishing, version-bumping, opening PRs, or filing/closing issues from the
   loop.
 
@@ -118,10 +123,41 @@ failure, a message that names the stage that broke.
 - **Companion readiness default 300s, configurable.** _Why:_ FU-2 — the iOS
   companion binds its port only after `xcodebuild test` finishes _building_
   (JS bundle + codesign every run); 60s expires mid-build on non-trivial apps.
-- **Free the companion port (`lsof`+kill) at startup _and_ cleanup.** _Why:_ FU-3
-  — killing the `xcodebuild`/`am instrument` parent does not always reap the
-  sim/device-hosted child that holds the port; idempotent startup-free matters
-  because a crashed run never reaches cleanup.
+- **Free the companion port at startup _and_ cleanup, scoped to holders the
+  selected target owns.** _Why:_ FU-3 — killing the `xcodebuild`/`am instrument`
+  parent does not always reap the sim/device-hosted child that holds the port;
+  idempotent startup-free matters because a crashed run never reaches cleanup.
+  The scope (iOS: a recognized companion/forwarding process with an exact
+  device-identifier match; Android: `adb forward` row for the serial) keeps
+  re-run idempotency for this lane without killing
+  another lane's companion; a foreign holder fails naming pid/command or serial.
+  `companion.freeUnownedPort` restores the unconditional kill. _(Ratified
+  2026-09-07: fail-closed default + opt-in knob; attribution tightened and
+  ratified 2026-09-08.)_ Each lane supplies its own device; attribution does
+  not lock a device against concurrent runs deliberately targeting it.
+- **Ownership is fail-closed with one named opt-in key per resource.**
+  `adoptUnownedDevice` (auto-pick), `terminateOnOtherSimulators` (REQ-IOS-002),
+  `companion.freeUnownedPort` (unconditional free). _Why:_ house style of
+  `metro.reuseExisting`: verify, fail fast, never mutate what you did not start
+  — extended from Metro to devices and the companion port after a run on a
+  shared host adopted and terminated another lane's simulators. _(Ratified
+  2026-09-07; key names ratified 2026-09-08.)_
+- **Opted-in cross-simulator terminations are explicit plan steps.** Each step
+  names the simulator and app bundle; `--dry-run` uses placeholder simulator IDs,
+  and the execution plan uses resolved IDs. With the opt-in disabled, those steps
+  are absent. _Why:_ cross-device writes must be visible and auditable through
+  the same planner/executor as other lifecycle actions. _(Ratified 2026-09-08.)_
+- **Companion-port preflight precedes builds; Android forwarding never rebinds.**
+  Ownership is checked at stage `device` after device resolution and before
+  prebuild, Xcode, or Gradle. `adb forward --no-rebind` fails if a mapping appears
+  between the ownership check and binding. _Why:_ existing conflicts should fail
+  before costly builds, and a later conflict must not replace another lane's
+  forward. _(Ratified 2026-09-08.)_
+- **The example requires explicit devices on both platforms.** The shipped
+  config retains the runner's fail-closed adoption default, and gate recipes
+  pass `--device` separately for iOS and Android. Auto-adoption is documented
+  only as an optional single-user setting. _Why:_ the example must demonstrate
+  the same device isolation rule as the runner. _(Ratified 2026-09-08.)_
 - **Explicit config over magic discovery (v1).** Prefer actionable validation
   errors to auto-detection of bundle id / schemes / Gradle tasks.
 - **Tokens by file, never inline.** Emit `RN_TOUCH_*_TOKEN_FILE`, never

@@ -349,9 +349,13 @@ up the companion process/ports:
 
 ```bash
 cd examples/basic-app
-nub run test:e2e:android # Android instrumentation companion
-nub run test:e2e:ios     # iOS XCTest companion
+nub run test:e2e:android --device '<android-serial>'
+nub run test:e2e:ios --device '<simulator-name-or-udid>'
 ```
+
+Replace each placeholder with the target assigned to that run. The example
+requires explicit device selection; see its [run instructions](examples/basic-app/README.md#run-e2e-tests)
+for target discovery and the optional single-user auto-adoption setting.
 
 For your app:
 
@@ -361,16 +365,20 @@ For your app:
 3. Run the lane:
 
 ```bash
-rn-driver test --platform ios
-rn-driver test --platform android
-rn-driver test --platform all
+rn-driver test --platform ios --device '<simulator-name-or-udid>'
+rn-driver test --platform android --device '<android-serial>'
 ```
+
+Use separate platform runs to select different targets. `--platform all` has one
+shared `--device` value, so it cannot accept an iOS target and an Android serial
+separately.
 
 `rn-driver test` owns the whole lifecycle: it runs `expo prebuild` with
 `RN_E2E=1`, starts Metro with the marker, builds and installs the app, launches
 it, starts the platform companion, selects the matching touch backend, runs
-Playwright, and frees the ports it took. Add `--device <name-or-id>` to pin a
-simulator or emulator, `--skip-build` to reuse the installed app, and
+Playwright, and frees the ports it took. Simulator/emulator selection fails when
+no explicit target is supplied unless that platform opts into
+`adoptUnownedDevice: true`. Add `--skip-build` to reuse the installed app and
 `--dry-run` to print the plan without touching a device. `--dry-run` does not
 resolve `--device`; only a real run does.
 

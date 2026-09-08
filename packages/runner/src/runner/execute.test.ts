@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { buildDryRunPlan } from '../build-plan'
 import { configFixture, iosDevClientConfigFixture } from '../fixtures'
-import type { CommandSpec, ProbeWatch, ProcessRunner, ReadinessProbe } from '../plan/types'
+import type {
+  CommandSpec,
+  FreePortSpec,
+  ProbeWatch,
+  ProcessRunner,
+  ReadinessProbe,
+} from '../plan/types'
 import { executePlan, StageError } from './execute'
 import { ProbeFailure } from './probe-failure'
 
@@ -28,7 +34,7 @@ function makeRunner(
     execCode?: (spec: CommandSpec) => number
     spawnError?: (spec: CommandSpec) => Error | null
     writeFileError?: (path: string) => Error | null
-    freePortError?: (port: number) => Error | null
+    freePortError?: (spec: FreePortSpec) => Error | null
     installError?: () => Error | null
     seedError?: (stepEntries: string) => Error | null
     probeResult?: (probe: ReadinessProbe) => boolean
@@ -72,9 +78,9 @@ function makeRunner(
       calls.push({ type: 'rm', label: path })
       return Promise.resolve()
     },
-    freePort(port) {
-      calls.push({ type: 'free', label: String(port) })
-      const error = opts.freePortError?.(port)
+    freePort(spec) {
+      calls.push({ type: 'free', label: `${spec.port} owner=${ownerLabel(spec)}` })
+      const error = opts.freePortError?.(spec)
       if (error) return Promise.reject(error)
       return Promise.resolve()
     },
@@ -111,6 +117,11 @@ function makeRunner(
   }
   return { runner, calls }
 }
+
+const ownerLabel = (spec: FreePortSpec): string =>
+  spec.owner.platform === 'ios' && spec.owner.kind === 'simulator'
+    ? spec.owner.simUdid
+    : spec.owner.serial
 
 const labels = (calls: Recorded[], type: Recorded['type']) =>
   calls.filter((c) => c.type === type).map((c) => c.label)
@@ -179,7 +190,7 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(error).toMatchObject({ stage: 'companion', stepId: 'ios.companion-ready' })
     // Cleanup is defensive and runs on the failure path.
     expect(labels(calls, 'kill')).toEqual(expect.arrayContaining(['companion', 'metro']))
-    expect(labels(calls, 'free')).toContain('9999')
+    expect(labels(calls, 'free')).toContain('9999 owner=<sim-udid>')
     expect(labels(calls, 'rm')).toContain('<token-file>')
     // Playwright never ran.
     expect(calls.some(isPlaywrightExec)).toBe(false)
@@ -215,13 +226,48 @@ describe('executePlan (iOS plan against a mock runner)', () => {
     expect(writeFailure).toBeInstanceOf(StageError)
     expect(writeFailure).toMatchObject({ stage: 'build', stepId: 'ios.runtime-config' })
 
+    // Fail only the SECOND free (the pre-companion one); the preflight passes.
+    let frees = 0
     const freePortFailure = await executePlan(
       plan,
-      makeRunner({ freePortError: () => new Error('lsof failed') }).runner,
+      makeRunner({ freePortError: () => (++frees === 2 ? new Error('lsof failed') : null) }).runner,
       { logDir: '/tmp/logs' },
     ).catch((e: unknown) => e)
     expect(freePortFailure).toBeInstanceOf(StageError)
     expect(freePortFailure).toMatchObject({ stage: 'companion', stepId: 'ios.free-port' })
+  })
+
+  it('REQ-OWN-004: a foreign companion-port holder fails the port preflight at the device stage before any build or spawn', async () => {
+    const { runner, calls } = makeRunner({
+      freePortError: (spec) =>
+        spec.owner.platform === 'ios' &&
+        spec.owner.kind === 'simulator' &&
+        spec.owner.simUdid === '<sim-udid>'
+          ? new Error('companion port 9999 is held by another target: pid 777')
+          : null,
+    })
+    const failure = await executePlan(plan, runner, { logDir: '/tmp/logs' }).catch(
+      (e: unknown) => e,
+    )
+    expect(failure).toBeInstanceOf(StageError)
+    expect(failure).toMatchObject({ stage: 'device', stepId: 'ios.port-preflight' })
+    expect((failure as Error).message).toContain('pid 777')
+    // Nothing was built, spawned, or installed: the preflight is the first step.
+    expect(labels(calls, 'spawn')).toEqual([])
+    expect(labels(calls, 'install')).toEqual([])
+    expect(calls.filter((c) => c.type === 'exec' && c.spec?.command === 'xcodebuild')).toEqual([])
+    // The failed preflight freed nothing; every free-port the executor issued carried the owner.
+    expect(labels(calls, 'free').every((l) => l.endsWith('owner=<sim-udid>'))).toBe(true)
+  })
+
+  it('REQ-OWN-003: cleanup frees the companion port with the selected target as owner', async () => {
+    const { runner, calls } = makeRunner()
+    await executePlan(plan, runner, { logDir: '/tmp/logs' })
+    expect(labels(calls, 'free')).toEqual([
+      '9999 owner=<sim-udid>',
+      '9999 owner=<sim-udid>',
+      '9999 owner=<sim-udid>',
+    ])
   })
 
   it('seeds the app container through the runner after the install and before the companion, attributing failures to the device stage (REQ-IOS-005, REQ-IOS-016)', async () => {

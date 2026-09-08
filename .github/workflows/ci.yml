@@ -73,6 +73,6 @@ jobs:
 
   # E2E tests require a real device/simulator and are run locally or on self-hosted runners.
   # Official example confidence gates:
-  # - cd examples/basic-app && nub run test:e2e:android  # Android instrumentation companion
-  # - cd examples/basic-app && nub run test:e2e:ios      # iOS XCTest companion
+  # - cd examples/basic-app && nub run test:e2e:android --device '<android-serial>'
+  # - cd examples/basic-app && nub run test:e2e:ios --device '<simulator-name-or-udid>'
   # See docs/CI.md for iOS Simulator and Android Emulator setup.

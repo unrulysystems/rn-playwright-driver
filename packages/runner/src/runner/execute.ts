@@ -125,7 +125,7 @@ async function runStep(
         return
       }
       case 'free-port': {
-        await runner.freePort(action.port)
+        await runner.freePort(action.spec)
         return
       }
       case 'install-ios-app': {
@@ -200,7 +200,7 @@ async function runCleanup(
           break
         }
         case 'free-port':
-          await runner.freePort(action.port)
+          await runner.freePort(action.spec)
           break
         case 'remove-file':
           await runner.removeFile(action.path)
