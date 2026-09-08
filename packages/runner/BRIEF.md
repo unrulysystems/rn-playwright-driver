@@ -34,9 +34,10 @@ failure, a message that names the stage that broke.
 
 ## Floors (the gate, not the ceiling — each with its measurement)
 
-- **Both example e2e gates pass through the runner.** `nub run test:e2e:ios` and
-  `nub run test:e2e:android` (rewired to `rn-driver test`) are green on a real
-  simulator/emulator. _Measured by:_ the live e2e run (the oracle).
+- **Both example e2e gates pass through the runner with explicit devices.**
+  `nub run test:e2e:ios --device <simulator-id>` and
+  `nub run test:e2e:android --device <android-serial>` (through `rn-driver test`)
+  are green on a real simulator/emulator. _Measured by:_ the live e2e run (the oracle).
 - **Planner is pure and unit-pinned.** `planIos`/`planAndroid` emit the expected
   ordered Steps for representative configs (both launch kinds, `--skip-build`).
   _Measured by:_ unit tests asserting the `Step[]`; same input ⇒ same plan, zero I/O.
@@ -141,6 +142,22 @@ failure, a message that names the stage that broke.
   — extended from Metro to devices and the companion port after a run on a
   shared host adopted and terminated another lane's simulators. _(Ratified
   2026-09-07; key names ratified 2026-09-08.)_
+- **Opted-in cross-simulator terminations are explicit plan steps.** Each step
+  names the simulator and app bundle; `--dry-run` uses placeholder simulator IDs,
+  and the execution plan uses resolved IDs. With the opt-in disabled, those steps
+  are absent. _Why:_ cross-device writes must be visible and auditable through
+  the same planner/executor as other lifecycle actions. _(Ratified 2026-09-08.)_
+- **Companion-port preflight precedes builds; Android forwarding never rebinds.**
+  Ownership is checked at stage `device` after device resolution and before
+  prebuild, Xcode, or Gradle. `adb forward --no-rebind` fails if a mapping appears
+  between the ownership check and binding. _Why:_ existing conflicts should fail
+  before costly builds, and a later conflict must not replace another lane's
+  forward. _(Ratified 2026-09-08.)_
+- **The example requires explicit devices on both platforms.** The shipped
+  config retains the runner's fail-closed adoption default, and gate recipes
+  pass `--device` separately for iOS and Android. Auto-adoption is documented
+  only as an optional single-user setting. _Why:_ the example must demonstrate
+  the same device isolation rule as the runner. _(Ratified 2026-09-08.)_
 - **Explicit config over magic discovery (v1).** Prefer actionable validation
   errors to auto-detection of bundle id / schemes / Gradle tasks.
 - **Tokens by file, never inline.** Emit `RN_TOUCH_*_TOKEN_FILE`, never

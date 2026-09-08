@@ -187,14 +187,14 @@ Lower-fidelity Android fallback for diagnostics when adb input is sufficient.
 
 ```bash
 cd examples/basic-app
-nub run test:e2e:ios
+nub run test:e2e:ios --device <simulator-id>
 ```
 
 ### Android with Instrumentation Companion
 
 ```bash
 cd examples/basic-app
-nub run test:e2e:android
+nub run test:e2e:android --device <android-serial>
 ```
 
 ### Force Specific Backend
@@ -214,6 +214,6 @@ const device = createDevice({
 
 ```bash
 cd examples/basic-app
-nub run test:e2e:android
-nub run test:e2e:ios
+nub run test:e2e:android --device <android-serial>
+nub run test:e2e:ios --device <simulator-id>
 ```

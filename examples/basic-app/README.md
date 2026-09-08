@@ -39,13 +39,26 @@ This performs a native build and starts Metro. Leave it running while you execut
 ## Run E2E tests
 
 From `examples/basic-app/`, the platform gates run through the `rn-driver` CLI,
-configured by [`rn-driver.config.ts`](./rn-driver.config.ts):
+configured by [`rn-driver.config.ts`](./rn-driver.config.ts). Discover the targets,
+then replace the placeholders with the simulator or emulator assigned to this run:
 
 ```bash
-nub run test:e2e:android   # rn-driver test --platform android
-nub run test:e2e:ios       # rn-driver test --platform ios
-nub run test:e2e           # rn-driver test --platform all
+adb devices -l
+xcrun simctl list devices available
+nub run test:e2e:android --device '<android-serial>'
+nub run test:e2e:ios --device '<simulator-name-or-udid>'
 ```
+
+The example requires `--device` for both platforms. Omitting it fails device
+selection even when a simulator or emulator is already booted. An iOS simulator
+name or UDID and an Android serial identify different targets: run the platform
+scripts separately. The `test:e2e` script uses `--platform all`, whose single
+shared `--device` flag cannot supply a separate target for each platform.
+
+On a single-user host, automatic selection is an optional convenience: explicitly
+set `ios.adoptUnownedDevice: true` or `android.adoptUnownedDevice: true` in the
+config to enable it for that platform. The example leaves both options at their
+default `false` because a booted device may belong to another run.
 
 ### Real-device verification
 
@@ -56,12 +69,12 @@ adb devices -l
 xcrun devicectl list devices
 ```
 
-Android can run against either an emulator or a USB-attached Android device. If
-more than one target is visible, pin the serial:
+Android can run against either an emulator or a USB-attached Android device.
+Always pass the selected target's serial:
 
 ```bash
-nub run test:e2e:android -- --device emulator-5554
-nub run test:e2e:android -- --device <android-serial>
+nub run test:e2e:android --device emulator-5554
+nub run test:e2e:android --device <android-serial>
 ```
 
 Physical iOS uses a dedicated Expo-dev-client config because real iPhones need a

@@ -4,7 +4,7 @@ import { defineRnDriverConfig } from '@unrulysystems/rn-playwright-driver-runner
  * Runner config for the example app's native e2e lifecycle. This is the
  * config-backed equivalent of `scripts/e2e-ios-xctest.sh` /
  * `scripts/e2e-android-instrumentation.sh`; run it with
- * `rn-driver test --platform <ios|android|all>`.
+ * `rn-driver test --platform <ios|android> --device <name-or-id>`.
  *
  * The example is an Expo dev-client build (`expo-dev-client` is installed), so
  * the runner owns the launch on both platforms: iOS cold-launches with
@@ -23,21 +23,18 @@ export default defineRnDriverConfig({
     host: 'localhost',
     port: 8083,
   },
-  // The example runs on a single-user machine, so it opts into adopting whatever
-  // simulator/emulator is booted when `--device` is absent. On a shared host leave
-  // this off and pass `--device`: the booted device may belong to another run.
+  // Pass --device for each platform: a booted simulator/emulator may belong to
+  // another run, so the example keeps the runner's explicit-selection default.
   ios: {
     bundleId: 'com.unrulyfall.example',
     workspace: 'ios/example.xcworkspace',
     appScheme: 'example',
-    adoptUnownedDevice: true,
     launch: { mode: 'attach', kind: 'expo-dev-client' },
   },
   android: {
     packageName: 'com.unrulyfall.example',
     activity: '.MainActivity',
     scheme: 'exp+example',
-    adoptUnownedDevice: true,
     launch: { mode: 'launch', kind: 'expo-dev-client' },
   },
   playwright: {

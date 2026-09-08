@@ -123,8 +123,8 @@ ports/processes:
 
 ```bash
 cd examples/basic-app
-nub run test:e2e:android # RN_TOUCH_BACKEND=instrumentation
-nub run test:e2e:ios     # RN_TOUCH_BACKEND=xctest
+nub run test:e2e:android --device <android-serial> # RN_TOUCH_BACKEND=instrumentation
+nub run test:e2e:ios --device <simulator-id>       # RN_TOUCH_BACKEND=xctest
 ```
 
 Those commands are the official example confidence gates. They replace older
@@ -136,6 +136,11 @@ This is a starting point for hosted or self-hosted CI. The example app scripts
 own simulator/emulator boot, Metro startup, companion startup, Playwright
 execution, and cleanup. Keep those responsibilities in one script when adapting
 this to an app repo.
+
+Provision a dedicated target for each job and export its `IOS_SIMULATOR_UDID`
+or `ANDROID_SERIAL` before the gate step. The example below requires those
+values; the runner does not adopt an arbitrary booted target. With `nub run`,
+pass `--device` directly after the script name, without an intervening `--`.
 
 ```yaml
 name: E2E Tests
@@ -160,7 +165,7 @@ jobs:
 
       - name: Run XCTest companion E2E
         working-directory: examples/basic-app
-        run: nub run test:e2e:ios
+        run: nub run test:e2e:ios --device "${IOS_SIMULATOR_UDID:?Set the job-owned simulator UDID}"
 
   android-e2e:
     runs-on: ubuntu-latest
@@ -191,7 +196,7 @@ jobs:
           profile: pixel_6
           script: |
             cd examples/basic-app
-            nub run test:e2e:android
+            nub run test:e2e:android --device "${ANDROID_SERIAL:?Set the job-owned Android serial}"
 ```
 
 ## Environment Variables

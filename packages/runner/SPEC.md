@@ -267,7 +267,10 @@ one named config key per resource restores the previous behaviour.
   install step, naming the booted candidates it saw and both ways forward
   (`--device <id|name>`, or `<platform>.adoptUnownedDevice: true`). With
   `adoptUnownedDevice` the platform's auto-selection (REQ-IOS-001, REQ-AND-001)
-  applies. `--device` keeps precedence (REQ-CLI-007).
+  applies. `--device` keeps precedence (REQ-CLI-007). The example app retains
+  this fail-closed default on both platforms; its live gate recipes pass an
+  explicit device per platform. Auto-adoption is documented only as an optional
+  single-user setting.
 - **REQ-OWN-002** The runner writes only to the device it selected: it does not
   terminate, install, launch, or seed anything on another booted device.
   REQ-IOS-002's cross-simulator terminate exists only behind
@@ -632,7 +635,7 @@ Implementation-time gates (not satisfied by this SPEC; tracked for the build):
       readiness default is configurable; the companion port is freed at startup
       and in cleanup (REQ-IOS-007/008, REQ-CLEAN-002).
 - [x] Example app migrated to `rn-driver.config.ts`; `nub run test:e2e:ios` and
-      `nub run test:e2e:android` pass through the runner on a real
+      `nub run test:e2e:android`, each with `--device` for its platform, pass through the runner on a real
       simulator/emulator (the independent oracle).
 - [x] Re-run idempotency: two consecutive runner invocations both pass without
       manual port/process cleanup between them (REQ-CLEAN-001).
@@ -682,7 +685,8 @@ Added during/after TDD: `REQ-* → test file:line`.
 - REQ-OWN-002 / REQ-IOS-002 → `src/plan/ios.test.ts` ("no cross-simulator
   terminate is planned by default", "with terminateOnOtherSimulators")
 - REQ-OWN-003 → `src/runner/port-ownership.test.ts` (`classifyPortHolders`,
-  `PortOwnershipError`), `src/plan/ios.test.ts` and `src/plan/android.test.ts`
+  `PortOwnershipError`), `src/runner/port-observation.test.ts` (real host-process
+  observations and foreign-holder survival), `src/plan/ios.test.ts` and `src/plan/android.test.ts`
   ("every free-port carries the selected target as owner", `freeUnownedPort`,
   `--no-rebind`), `src/runner/execute.test.ts` ("cleanup frees the companion port
   with the selected target as owner")
@@ -697,7 +701,7 @@ Added during/after TDD: `REQ-* → test file:line`.
 
 - 2026-09-08 — Knob names: `ios.adoptUnownedDevice`, `android.adoptUnownedDevice`, `ios.terminateOnOtherSimulators`, `<platform>.companion.freeUnownedPort` (flat booleans, like `allowProvisioningUpdates`). "Unowned" means not owned by this run; another lane may own the resource. `terminateOnOtherSimulators` names its actual scope: every other booted simulator, without an ownership check. **ratified (human)**
 - 2026-09-08 — Port-holder attribution requires a recognized iOS companion or forwarding process and an exact device-identifier match (REQ-OWN-003); arbitrary command-line mentions do not establish ownership. Ownership is device-scoped, assuming one device per lane, without same-device run locking. Android ownership is the `adb forward` row for the serial; the shared adb server is never a kill target. A foreign holder fails the step before anything is freed unless explicitly overridden. **ratified (human)**
-- 2026-09-07 — REQ-IOS-002's cross-sim terminate moves from the resolver into plan steps (ios.terminate-other.<udid>) so --dry-run shows the cross-device write when opted in. **provisional (driver)**
-- 2026-09-07 — Port ownership is checked as a device-stage preflight step before prebuild/xcodebuild/Gradle (REQ-OWN-004); android.forward uses --no-rebind. **provisional (driver)**
-- 2026-09-07 — The example app opts into adoptUnownedDevice on both platforms (single-user recipe) so its live gates keep running without --device. **provisional (driver)**
+- 2026-09-08 — REQ-IOS-002's opted-in cross-simulator terminations are explicit plan steps (`ios.terminate-other.<udid>`), naming the simulator and app bundle. `--dry-run` shows the action with placeholder simulator IDs; the execution plan uses resolved IDs. No cross-simulator termination steps exist with the opt-in disabled. **ratified (human)**
+- 2026-09-08 — Port ownership is checked as a device-stage preflight step after device resolution and before prebuild/xcodebuild/Gradle (REQ-OWN-004). `android.forward` uses `--no-rebind` so a mapping registered between the ownership check and binding causes a failure instead of being replaced. **ratified (human)**
+- 2026-09-08 — The example app requires `--device` on both platforms and retains the runner's default refusal to adopt an unowned device. Its documentation shows separate iOS and Android invocations with explicit targets; auto-adoption is an optional single-user setting, disabled in the shipped example. The example demonstrates the same isolation rule as the runner. **ratified (human)**
 - 2026-09-07 — Busy companion port or unowned device fails by default; one named opt-in knob per resource restores today's behaviour (house style of metro.reuseExisting). **ratified (human)**

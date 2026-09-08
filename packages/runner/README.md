@@ -8,10 +8,11 @@ Instead of copying ~400-line per-app shell recipes, you describe your app's fact
 once in `rn-driver.config.ts` and run:
 
 ```bash
-rn-driver test --platform ios
-rn-driver test --platform android
-rn-driver test --platform all
+rn-driver test --platform ios --device <simulator-id>
+rn-driver test --platform android --device <android-serial>
 ```
+
+Run the platforms separately to supply each lane's device explicitly.
 
 The runner owns the generic lifecycle — simulator/emulator selection, Metro
 ownership, touch-companion startup, secure token passing, cold-launch semantics,
@@ -278,15 +279,15 @@ defaults.
 rn-driver test --platform ios --dry-run
 
 # Run the full lifecycle + Playwright:
-rn-driver test --platform ios
-rn-driver test --platform android
+rn-driver test --platform ios --device <simulator-id>
+rn-driver test --platform android --device <android-serial>
 
 # Reuse an already-built native project (skip prebuild/pods/gradle/install):
-rn-driver test --platform ios --skip-build
+rn-driver test --platform ios --device <simulator-id> --skip-build
 
 # Forward specs / Playwright args:
-rn-driver test --platform ios e2e/integration/counter.spec.ts
-rn-driver test --platform android -- --grep @smoke
+rn-driver test --platform ios --device <simulator-id> e2e/integration/counter.spec.ts
+rn-driver test --platform android --device <android-serial> -- --grep @smoke
 ```
 
 ### Options
@@ -344,8 +345,9 @@ By default:
   auto-selection (newest booted iPhone / first booted emulator).
 - **Only the selected device is written to.** The app is never terminated on
   other booted simulators; `ios.terminateOnOtherSimulators: true` restores that
-  pre-launch sweep, and `--dry-run` then lists one `ios.terminate-other.<udid>`
-  step per simulator.
+  pre-launch sweep. The execution plan lists one `ios.terminate-other.<udid>`
+  step per other booted simulator; `--dry-run` shows the action with a placeholder
+  simulator ID.
 - **The companion port is freed only of holders this target owns.** A
   `port-preflight` step runs before the build: on iOS a recognized XCTest
   companion for the configured UI-test scheme on the selected simulator, or a
@@ -365,7 +367,8 @@ Each lane supplies its own device. Port attribution does not lock a device
 against concurrent runs deliberately targeting it.
 
 Every `free-port` in `--dry-run` shows its owner
-(`free-port 9999 (owner: ios <sim-udid>)`), so the audited plan is the real plan.
+(`free-port 9999 (owner: ios simulator <sim-udid> (exampleUITests-Runner))`),
+so the audited plan is the real plan.
 
 ### Playwright lifecycle boundary
 
