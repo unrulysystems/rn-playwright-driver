@@ -308,13 +308,27 @@ describe('planIos', () => {
     expect(first.skippable).toBeFalsy()
     expect(first.action).toEqual({
       type: 'free-port',
-      spec: { port: 9999, owner: { platform: 'ios', targetId: '<sim-udid>' }, freeUnowned: false },
+      spec: {
+        port: 9999,
+        owner: {
+          platform: 'ios',
+          kind: 'simulator',
+          simUdid: '<sim-udid>',
+          runnerExecutable: 'exampleUITests-Runner',
+        },
+        freeUnowned: false,
+      },
     })
   })
 
   it('REQ-OWN-003: every free-port (preflight, pre-companion, cleanup) carries the selected target as owner', () => {
     const plan = planIos(inputFor('plain'))
-    const owner = { platform: 'ios', targetId: '<sim-udid>' }
+    const owner = {
+      platform: 'ios',
+      kind: 'simulator',
+      simUdid: '<sim-udid>',
+      runnerExecutable: 'exampleUITests-Runner',
+    } as const
     const preCompanion = plan.steps.find((s) => s.id === 'ios.free-port')?.action
     expect(preCompanion).toEqual({
       type: 'free-port',
@@ -340,16 +354,46 @@ describe('planIos', () => {
     for (const spec of specs) expect(spec).toMatchObject({ port: 9973, freeUnowned: true })
   })
 
-  it('REQ-OWN-003: a physical device owns its port by CoreDevice identifier', () => {
+  it('REQ-OWN-003: a physical device owns its port by the hardware UDID the usbmux forward is emitted with — not the CoreDevice identifier', () => {
     const ios = iosDevClientConfigFixture({
       target: 'device',
       launch: { mode: 'attach', kind: 'expo-dev-client', initialUrl: 'http://10.0.0.5:8081' },
     })
     const metro = resolveMetro({ command: 'npx expo start' })
     const plan = planIos(inputFor('expo-dev-client', { ios, resolved: placeholderIos(ios, metro) }))
+    const preflight = plan.steps[0]?.action
+    expect(preflight).toMatchObject({
+      type: 'free-port',
+      spec: { owner: { platform: 'ios', kind: 'device', serial: '<ios-device-udid>' } },
+    })
+    // Attribution identity regression: the forward command and the port owner must name the SAME
+    // identifier — the planner previously attributed ownership to the CoreDevice identifier while
+    // emitting `--serial` with the hardware UDID, so a crashed prior forward was never reclaimed.
+    const forward = plan.steps.find((s) => s.id === 'ios.port-forward')?.action
+    expect(forward?.type === 'command' && forward.command.args).toEqual([
+      'usbmux',
+      'forward',
+      '--serial',
+      '<ios-device-udid>',
+      '9999',
+      '9999',
+    ])
+  })
+
+  it('REQ-OWN-003: the simulator owner names the runner executable derived from the configured uitestScheme', () => {
+    const ios = iosConfigFixture({ uitestScheme: 'CustomE2E' })
+    const metro = resolveMetro({ command: 'npx expo start' })
+    const plan = planIos(inputFor('plain', { ios, resolved: placeholderIos(ios, metro) }))
     expect(plan.steps[0]?.action).toMatchObject({
       type: 'free-port',
-      spec: { owner: { platform: 'ios', targetId: '<ios-coredevice-id>' } },
+      spec: {
+        owner: {
+          platform: 'ios',
+          kind: 'simulator',
+          simUdid: '<sim-udid>',
+          runnerExecutable: 'CustomE2E-Runner',
+        },
+      },
     })
   })
 

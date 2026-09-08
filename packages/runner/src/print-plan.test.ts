@@ -63,7 +63,9 @@ describe('renderPlan', () => {
 
   it('renders every free-port with its owner so the dry run shows the ownership scope (REQ-OWN-005)', () => {
     const ios = renderPlan(buildDryRunPlan(configFixture(), 'ios'))
-    expect(ios).toContain('free-port 9999 (owner: ios <sim-udid>)')
+    expect(ios).toContain(
+      'free-port 9999 (owner: ios simulator <sim-udid> (exampleUITests-Runner))',
+    )
     const android = renderPlan(buildDryRunPlan(configFixture(), 'android'))
     expect(android).toContain('free-port 9999 (owner: android <android-serial>)')
     const forced = renderPlan(
@@ -73,7 +75,7 @@ describe('renderPlan', () => {
       ),
     )
     expect(forced).toContain(
-      'free-port 9999 (owner: ios <sim-udid>, freeUnownedPort: kills any holder)',
+      'free-port 9999 (owner: ios simulator <sim-udid> (exampleUITests-Runner), freeUnownedPort: kills any holder)',
     )
   })
 

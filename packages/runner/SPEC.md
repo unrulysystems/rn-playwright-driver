@@ -274,14 +274,21 @@ one named config key per resource restores the previous behaviour.
   `ios.terminateOnOtherSimulators: true`.
 - **REQ-OWN-003** Freeing the companion port is ownership-scoped. A `free-port`
   action carries the selected target, and the executor frees only a holder
-  attributable to it: on iOS, a `LISTEN` holder whose command line carries the
-  selected simulator UDID or CoreDevice identifier (the sim- or device-hosted
-  companion, or this run's port forward); on Android, an `adb forward` mapping
+  attributable to it: on iOS, a recognized XCTest companion for the configured
+  UI-test scheme on the selected simulator, or a recognized
+  `pymobiledevice3 usbmux forward` process for the selected physical device.
+  Attribution requires the exact device identifier in its structural position
+  (the CoreSimulator device path component or the forward's `--serial` value)
+  plus the recognized executable/command shape; a substring in arbitrary
+  arguments is insufficient. Physical forwards use the hardware UDID passed
+  to `--serial`, not the distinct CoreDevice identifier. On Android, an `adb forward` mapping
   listed for the selected serial (`adb forward --list`), removed with
   `adb -s <serial> forward --remove`. Any other holder fails the run at the
   step's stage naming the port and the holder (pid and command, or serial);
   nothing is killed. `<platform>.companion.freeUnownedPort: true` restores the
   unconditional `lsof`+kill (iOS) or forward removal (Android).
+  Ownership is device-scoped: each lane supplies its own device; this rule
+  does not provide locking between concurrent runs targeting the same device.
 - **REQ-OWN-004** The companion port is checked before the build. A
   `<platform>.port-preflight` step at stage `device` runs the ownership-scoped
   free (REQ-OWN-003) right after device resolution, so a foreign holder fails
@@ -688,8 +695,8 @@ Added during/after TDD: `REQ-* → test file:line`.
 
 ## Decisions
 
-- 2026-09-07 — Knob names: ios.adoptUnownedDevice, android.adoptUnownedDevice, ios.terminateOnOtherSimulators, <platform>.companion.freeUnownedPort (flat booleans, like allowProvisioningUpdates). **provisional (driver)**
-- 2026-09-07 — Port-holder attribution: iOS holder argv carries the target UDID/CoreDevice id; Android ownership is the adb forward row for the serial; the adb server is never a kill target; foreign holder fails the step, nothing killed. **provisional (driver)**
+- 2026-09-08 — Knob names: `ios.adoptUnownedDevice`, `android.adoptUnownedDevice`, `ios.terminateOnOtherSimulators`, `<platform>.companion.freeUnownedPort` (flat booleans, like `allowProvisioningUpdates`). "Unowned" means not owned by this run; another lane may own the resource. `terminateOnOtherSimulators` names its actual scope: every other booted simulator, without an ownership check. **ratified (human)**
+- 2026-09-08 — Port-holder attribution requires a recognized iOS companion or forwarding process and an exact device-identifier match (REQ-OWN-003); arbitrary command-line mentions do not establish ownership. Ownership is device-scoped, assuming one device per lane, without same-device run locking. Android ownership is the `adb forward` row for the serial; the shared adb server is never a kill target. A foreign holder fails the step before anything is freed unless explicitly overridden. **ratified (human)**
 - 2026-09-07 — REQ-IOS-002's cross-sim terminate moves from the resolver into plan steps (ios.terminate-other.<udid>) so --dry-run shows the cross-device write when opted in. **provisional (driver)**
 - 2026-09-07 — Port ownership is checked as a device-stage preflight step before prebuild/xcodebuild/Gradle (REQ-OWN-004); android.forward uses --no-rebind. **provisional (driver)**
 - 2026-09-07 — The example app opts into adoptUnownedDevice on both platforms (single-user recipe) so its live gates keep running without --device. **provisional (driver)**

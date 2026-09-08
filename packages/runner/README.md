@@ -347,14 +347,22 @@ By default:
   pre-launch sweep, and `--dry-run` then lists one `ios.terminate-other.<udid>`
   step per simulator.
 - **The companion port is freed only of holders this target owns.** A
-  `port-preflight` step runs before the build: on iOS a listener whose command
-  line carries the selected simulator UDID (or CoreDevice id) is this lane's
-  stale companion and is reaped; on Android the `adb forward` row for the
+  `port-preflight` step runs before the build: on iOS a recognized XCTest
+  companion for the configured UI-test scheme on the selected simulator, or a
+  recognized `pymobiledevice3 usbmux forward` for the selected physical device,
+  can be reaped. The device identifier must match exactly in the simulator
+  executable path or the forward's `--serial` argument; merely mentioning the
+  identifier in another command does not establish ownership. Physical forwards
+  use the hardware UDID, matching `--serial`. On Android the `adb forward` row for the
   selected serial is removed (`adb forward --list`, then `adb -s <serial>
 forward --remove`), and the forward is re-registered with `--no-rebind`. Any
   other holder fails the step naming its pid and command (or its serial) with
   nothing killed. `<platform>.companion.freeUnownedPort: true` restores the
   unconditional free; the better fix is a port of your own.
+
+"Unowned" means not owned by this run; another lane may own the resource.
+Each lane supplies its own device. Port attribution does not lock a device
+against concurrent runs deliberately targeting it.
 
 Every `free-port` in `--dry-run` shows its owner
 (`free-port 9999 (owner: ios <sim-udid>)`), so the audited plan is the real plan.

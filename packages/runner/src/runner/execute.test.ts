@@ -119,7 +119,9 @@ function makeRunner(
 }
 
 const ownerLabel = (spec: FreePortSpec): string =>
-  spec.owner.platform === 'ios' ? spec.owner.targetId : spec.owner.serial
+  spec.owner.platform === 'ios' && spec.owner.kind === 'simulator'
+    ? spec.owner.simUdid
+    : spec.owner.serial
 
 const labels = (calls: Recorded[], type: Recorded['type']) =>
   calls.filter((c) => c.type === type).map((c) => c.label)
@@ -238,7 +240,9 @@ describe('executePlan (iOS plan against a mock runner)', () => {
   it('REQ-OWN-004: a foreign companion-port holder fails the port preflight at the device stage before any build or spawn', async () => {
     const { runner, calls } = makeRunner({
       freePortError: (spec) =>
-        spec.owner.platform === 'ios' && spec.owner.targetId === '<sim-udid>'
+        spec.owner.platform === 'ios' &&
+        spec.owner.kind === 'simulator' &&
+        spec.owner.simUdid === '<sim-udid>'
           ? new Error('companion port 9999 is held by another target: pid 777')
           : null,
     })

@@ -42,15 +42,21 @@ export function planIos(input: PlanIosInput): Plan {
   const isDevClient = ios.launch.kind === 'expo-dev-client'
   const runtimeConfigFile = projectPath(projectCwd, resolved.runtimeConfigFile)
 
-  // The companion port is owned by the selected target: the sim-hosted companion's
-  // command line carries the simulator UDID; a device-hosted one (or this run's
-  // usbmux forward) carries the CoreDevice identifier (REQ-OWN-003).
+  // The companion port is owned by the selected target (REQ-OWN-003): the sim-hosted companion
+  // is recognized by its runner executable inside the selected simulator's device path; a
+  // device-hosted one (or this run's usbmux forward) by the exact `--serial` hardware UDID the
+  // forward command below is emitted with — NOT the distinct CoreDevice identifier.
   const freePort: FreePortSpec = {
     port: resolved.touchPort,
-    owner: {
-      platform: 'ios',
-      targetId: resolved.kind === 'device' ? resolved.coreDeviceIdentifier : resolved.simUdid,
-    },
+    owner:
+      resolved.kind === 'device'
+        ? { platform: 'ios', kind: 'device', serial: resolved.id }
+        : {
+            platform: 'ios',
+            kind: 'simulator',
+            simUdid: resolved.simUdid,
+            runnerExecutable: `${resolved.uitestScheme}-Runner`,
+          },
     freeUnowned: resolved.freeUnownedPort,
   }
 

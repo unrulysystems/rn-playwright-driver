@@ -123,12 +123,30 @@ export type StepAction =
     }
 
 /**
- * Who may hold the companion port (REQ-OWN-003). iOS: the sim- or device-hosted
- * companion, whose host-side command line carries the target's UDID or CoreDevice
- * identifier. Android: the `adb forward` mapping registered for the serial.
+ * Who may hold the companion port (REQ-OWN-003).
+ *
+ * iOS simulator: the sim-hosted XCTest companion, recognized by its AUTHORITATIVE executable
+ * path (`ps -o comm=`): the configured `<uitestScheme>-Runner` executable inside the selected
+ * simulator's CoreSimulator device path. iOS physical device: the host-side
+ * `pymobiledevice3 usbmux forward` process this runner emits, recognized by its command shape
+ * (direct script, Python entry-point script, or `python -m`), the exact `--serial` hardware
+ * UDID, and the local port argument. Android: the `adb forward` mapping for the serial.
  */
 export type PortOwner =
-  | { readonly platform: 'ios'; readonly targetId: string }
+  | {
+      readonly platform: 'ios'
+      readonly kind: 'simulator'
+      /** The selected simulator's UDID — matched as an exact CoreSimulator device path component. */
+      readonly simUdid: string
+      /** Basename of the XCTest runner executable derived from the resolved UI-test scheme. */
+      readonly runnerExecutable: string
+    }
+  | {
+      readonly platform: 'ios'
+      readonly kind: 'device'
+      /** Hardware UDID passed to `pymobiledevice3 usbmux forward --serial` (NOT the CoreDevice identifier). */
+      readonly serial: string
+    }
   | { readonly platform: 'android'; readonly serial: string }
 
 /**

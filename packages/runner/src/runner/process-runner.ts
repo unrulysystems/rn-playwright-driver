@@ -137,7 +137,7 @@ export class NodeProcessRunner implements ProcessRunner {
     // an Android companion is reached through the shared adb server's forward.
     // Only holders the selected target can claim are freed (REQ-OWN-003): a
     // foreign holder belongs to another lane on this host and fails the step.
-    const listeners = await this.listenersOn(spec.port)
+    const listeners = await observePortListeners(spec.port)
     const forwards = parseAdbForwardList(await this.adbForwardList(), spec.port)
     const plan = classifyPortHolders(spec, { listeners, forwards })
     if (plan.foreign.length > 0) throw new PortOwnershipError(spec, plan.foreign)
@@ -267,43 +267,73 @@ export class NodeProcessRunner implements ProcessRunner {
     })
   }
 
-  /** LISTEN holders of `port` with their command lines; a pid that exits between the two reads is dropped. */
-  private async listenersOn(port: number): Promise<PortListener[]> {
-    const pids = await this.lsofPids(port)
-    const listeners: PortListener[] = []
-    for (const pid of pids) {
-      const ps = await this.capture('ps', ['-o', 'args=', '-p', String(pid)]).catch(() => null)
-      if (ps === null || ps.code !== 0) continue
-      listeners.push({ pid, args: ps.stdout.trim() })
-    }
-    return listeners
-  }
-
   /** `adb forward --list` output, or "" when adb is absent or has no server (nothing forwarded). */
   private async adbForwardList(): Promise<string> {
     const result = await this.capture('adb', ['forward', '--list']).catch(() => null)
     return result !== null && result.code === 0 ? result.stdout : ''
   }
+}
 
-  private lsofPids(port: number): Promise<number[]> {
-    return new Promise((resolve) => {
-      const child = nodeSpawn('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'], {
-        stdio: ['ignore', 'pipe', 'ignore'],
-      })
-      let out = ''
-      child.stdout?.on('data', (chunk: Buffer) => {
-        out += chunk.toString()
-      })
-      child.on('error', () => resolve([]))
-      child.on('close', () => {
-        const pids = out
-          .split('\n')
-          .map((line) => Number.parseInt(line.trim(), 10))
-          .filter((pid) => Number.isInteger(pid) && pid > 0)
-        resolve(pids)
-      })
-    })
+/**
+ * Observe one pid's kernel-reported executable path (`ps -ww -o comm=`) and command line
+ * (`ps -ww -o args=`). Returns undefined when the process vanished between listing and
+ * observation. Exported for the real-OS observation tests.
+ */
+export async function observeProcess(pid: number): Promise<PortListener | undefined> {
+  const [comm, args] = await Promise.all([
+    capturePs(['-ww', '-o', 'comm=', '-p', String(pid)]),
+    capturePs(['-ww', '-o', 'args=', '-p', String(pid)]),
+  ])
+  if (comm === undefined || args === undefined) return undefined
+  return { pid, comm, args }
+}
+
+/**
+ * LISTEN holders of `port` with their executable path and command line; a pid that exits
+ * between the lsof listing and the ps observation is dropped.
+ */
+export async function observePortListeners(port: number): Promise<PortListener[]> {
+  const pids = await lsofPids(port)
+  const listeners: PortListener[] = []
+  for (const pid of pids) {
+    const observed = await observeProcess(pid)
+    if (observed) listeners.push(observed)
   }
+  return listeners
+}
+
+/** One `ps` column value for a pid; undefined when ps fails or the pid is gone. */
+function capturePs(args: string[]): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    const child = nodeSpawn('ps', args, { stdio: ['ignore', 'pipe', 'ignore'] })
+    let out = ''
+    child.stdout?.on('data', (chunk: Buffer) => {
+      out += chunk.toString()
+    })
+    child.on('error', () => resolve(undefined))
+    child.on('close', (code) => resolve(code === 0 ? out.trim() : undefined))
+  })
+}
+
+/** `lsof -nP -iTCP:<port> -sTCP:LISTEN -t` pid list; [] when lsof is unavailable. */
+function lsofPids(port: number): Promise<number[]> {
+  return new Promise((resolve) => {
+    const child = nodeSpawn('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'], {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    let out = ''
+    child.stdout?.on('data', (chunk: Buffer) => {
+      out += chunk.toString()
+    })
+    child.on('error', () => resolve([]))
+    child.on('close', () => {
+      const pids = out
+        .split('\n')
+        .map((line) => Number.parseInt(line.trim(), 10))
+        .filter((pid) => Number.isInteger(pid) && pid > 0)
+      resolve(pids)
+    })
+  })
 }
 
 export function resolvePackageBin(bin: string, cwd = process.cwd()): string {

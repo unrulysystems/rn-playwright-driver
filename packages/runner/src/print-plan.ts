@@ -3,6 +3,7 @@ import type {
   CommandSpec,
   FreePortSpec,
   Plan,
+  PortOwner,
   ReadinessProbe,
   StepAction,
 } from './plan/types'
@@ -43,10 +44,16 @@ export function renderPlan(plan: Plan): string {
 
 /** Ownership scope is what the free DOES, so the audited plan shows it (REQ-OWN-005). */
 function renderFreePort(spec: FreePortSpec): string {
-  const owner =
-    spec.owner.platform === 'ios' ? `ios ${spec.owner.targetId}` : `android ${spec.owner.serial}`
+  const owner = renderOwner(spec.owner)
   const force = spec.freeUnowned ? ', freeUnownedPort: kills any holder' : ''
   return `free-port ${spec.port} (owner: ${owner}${force})`
+}
+
+function renderOwner(owner: PortOwner): string {
+  if (owner.platform === 'android') return `android ${owner.serial}`
+  return owner.kind === 'simulator'
+    ? `ios simulator ${owner.simUdid} (${owner.runnerExecutable})`
+    : `ios device ${owner.serial}`
 }
 
 function renderAction(action: StepAction): string {
