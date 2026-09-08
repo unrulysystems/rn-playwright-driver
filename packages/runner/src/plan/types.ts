@@ -125,8 +125,8 @@ export type StepAction =
 /**
  * Who may hold the companion port (REQ-OWN-003).
  *
- * iOS simulator: the sim-hosted XCTest companion, recognized by its AUTHORITATIVE executable
- * path (`ps -o comm=`): the configured `<uitestScheme>-Runner` executable inside the selected
+ * iOS simulator: the sim-hosted XCTest companion, recognized by an OS-observed executable
+ * mapping: the configured `<uitestScheme>-Runner` executable inside the selected
  * simulator's CoreSimulator device path. iOS physical device: the host-side
  * `pymobiledevice3 usbmux forward` process this runner emits, recognized by its command shape
  * (direct script, Python entry-point script, or `python -m`), the exact `--serial` hardware

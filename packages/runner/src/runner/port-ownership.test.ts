@@ -12,8 +12,8 @@ const RUNNER = 'exampleUITests-Runner'
 const OTHER_RUNNER = 'SendPreviewUITests-Runner'
 const PORT = 9973
 
-/** The real XCTest-runner path shape, from an actual crashed companion (`ps -o comm=`). */
-const runnerComm = (udid: string, appUuid: string, name: string): string =>
+/** The real XCTest-runner path shape, from an actual crashed companion. */
+const runnerPath = (udid: string, appUuid: string, name: string): string =>
   `/Users/me/Library/Developer/CoreSimulator/Devices/${udid}/data/Containers/Bundle/Application/${appUuid}/${name}.app/${name}`
 
 const simRunnerListener = (
@@ -22,8 +22,8 @@ const simRunnerListener = (
   name: string,
   appUuid = '1F',
 ): PortListener => {
-  const comm = runnerComm(udid, appUuid, name)
-  return { pid, comm, args: comm }
+  const executable = runnerPath(udid, appUuid, name)
+  return { pid, executablePaths: [executable], args: executable }
 }
 
 const iosSimSpec = (freeUnowned = false): FreePortSpec => ({
@@ -44,18 +44,18 @@ const androidSpec = (freeUnowned = false): FreePortSpec => ({
 
 const adbServer = {
   pid: 9001,
-  comm: '/opt/android/platform-tools/adb',
+  executablePaths: ['/opt/android/platform-tools/adb'],
   args: 'adb -L tcp:5037 fork-server server --reply-fd 4',
 }
 const otherSimRunner = simRunnerListener(777, OTHER_SIM, OTHER_RUNNER, '2A')
 
-/** Representative python interpreter path, as `ps` reports it on macOS (may be a framework binary). */
+/** Representative python interpreter path, observed on macOS (may be a framework binary). */
 const PY =
   '/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python'
 
-const forwardListener = (pid: number, args: string, comm: string): PortListener => ({
+const forwardListener = (pid: number, args: string, executable: string): PortListener => ({
   pid,
-  comm,
+  executablePaths: [executable],
   args,
 })
 
@@ -68,10 +68,34 @@ describe('classifyPortHolders (REQ-OWN-003)', () => {
       expect(plan).toEqual({ killPids: [501], removeForwardSerials: [], foreign: [] })
     })
 
-    it('supports a home-directory path with spaces (comm is a single observed field, not re-tokenized)', () => {
-      const comm = runnerComm(SIM, '1F', RUNNER).replace('/Users/me/', '/Users/me With Space/')
+    it('does not depend on the order of executable and library mappings', () => {
+      const executable = runnerPath(SIM, '1F', RUNNER)
+      for (const executablePaths of [
+        ['/usr/lib/dyld', executable],
+        [executable, '/usr/lib/dyld'],
+      ]) {
+        const plan = classifyPortHolders(iosSimSpec(), {
+          listeners: [{ pid: 503, executablePaths, args: executable }],
+          forwards: [],
+        })
+        expect(plan).toEqual({ killPids: [503], removeForwardSerials: [], foreign: [] })
+      }
+    })
+
+    it('missing executable mappings cannot be replaced by a recognized argv0', () => {
+      const listener = { pid: 504, executablePaths: [], args: runnerPath(SIM, '1F', RUNNER) }
+      const plan = classifyPortHolders(iosSimSpec(), { listeners: [listener], forwards: [] })
+      expect(plan.killPids).toEqual([])
+      expect(plan.foreign).toEqual([{ kind: 'process', pid: 504, args: listener.args }])
+    })
+
+    it('supports a home-directory path with spaces (executable is a single observed field, not re-tokenized)', () => {
+      const executable = runnerPath(SIM, '1F', RUNNER).replace(
+        '/Users/me/',
+        '/Users/me With Space/',
+      )
       const plan = classifyPortHolders(iosSimSpec(), {
-        listeners: [{ pid: 502, comm, args: comm }],
+        listeners: [{ pid: 502, executablePaths: [executable], args: executable }],
         forwards: [],
       })
       expect(plan.killPids).toEqual([502])
@@ -91,8 +115,8 @@ describe('classifyPortHolders (REQ-OWN-003)', () => {
       {
         name: 'an unrelated app on the SAME simulator',
         listener: (() => {
-          const comm = runnerComm(SIM, '9C', 'OtherApp')
-          return { pid: 778, comm, args: comm }
+          const executable = runnerPath(SIM, '9C', 'OtherApp')
+          return { pid: 778, executablePaths: [executable], args: executable }
         })(),
         owned: false,
       },
@@ -104,38 +128,38 @@ describe('classifyPortHolders (REQ-OWN-003)', () => {
       {
         name: 'an executable name with the runner name as a mere prefix',
         listener: (() => {
-          const comm = `${runnerComm(SIM, '1F', RUNNER)}X`
-          return { pid: 780, comm, args: comm }
+          const executable = `${runnerPath(SIM, '1F', RUNNER)}X`
+          return { pid: 780, executablePaths: [executable], args: executable }
         })(),
         owned: false,
       },
       {
         name: 'a partial simulator UDID path component',
         listener: (() => {
-          const comm = runnerComm(PARTIAL_SIM, '1F', RUNNER)
-          return { pid: 781, comm, args: comm }
+          const executable = runnerPath(PARTIAL_SIM, '1F', RUNNER)
+          return { pid: 781, executablePaths: [executable], args: executable }
         })(),
         owned: false,
       },
       {
         name: 'the bare executable name without any device path',
-        listener: { pid: 782, comm: RUNNER, args: RUNNER },
+        listener: { pid: 782, executablePaths: [RUNNER], args: RUNNER },
         owned: false,
       },
       {
-        name: 'args that merely MENTION the runner path while comm is an unrelated executable',
+        name: 'args that merely MENTION the runner path while executable is an unrelated executable',
         listener: {
           pid: 783,
-          comm: '/usr/bin/nice',
-          args: `nice ${runnerComm(SIM, '1F', RUNNER)}`,
+          executablePaths: ['/usr/bin/nice'],
+          args: `nice ${runnerPath(SIM, '1F', RUNNER)}`,
         },
         owned: false,
       },
       {
         name: 'a runner path with a Devices component but no CoreSimulator pair',
         listener: (() => {
-          const comm = `/mnt/shared/Devices/${SIM}/data/Containers/Bundle/Application/1F/${RUNNER}.app/${RUNNER}`
-          return { pid: 784, comm, args: comm }
+          const executable = `/mnt/shared/Devices/${SIM}/data/Containers/Bundle/Application/1F/${RUNNER}.app/${RUNNER}`
+          return { pid: 784, executablePaths: [executable], args: executable }
         })(),
         owned: false,
       },
@@ -161,21 +185,21 @@ describe('classifyPortHolders (REQ-OWN-003)', () => {
     const FORWARD_SHAPES: ReadonlyArray<{
       readonly name: string
       readonly args: string
-      readonly comm: string
+      readonly executable: string
       readonly owned: boolean
     }> = [
       // Owned: the exact command this runner emits (cmd('pymobiledevice3', …)), argv[0] as typed.
       {
         name: 'direct script, argv[0] as typed',
         args: `pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: true,
       },
-      // Owned: PATH-resolved argv[0] (a real binary would report this comm).
+      // Owned: PATH-resolved argv[0] (a real binary would report this executable).
       {
         name: 'direct script, resolved path',
         args: `/usr/local/bin/pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: '/usr/local/bin/pymobiledevice3',
+        executable: '/usr/local/bin/pymobiledevice3',
         owned: true,
       },
       // Owned: the shape macOS actually reports for a shebang script — the kernel records the
@@ -183,101 +207,101 @@ describe('classifyPortHolders (REQ-OWN-003)', () => {
       {
         name: 'python script entry point (interpreter + script path)',
         args: `${PY} /usr/local/bin/pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: PY,
+        executable: PY,
         owned: true,
       },
       // Owned: module invocation.
       {
         name: 'python -m pymobiledevice3',
         args: `${PY} -m pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: PY,
+        executable: PY,
         owned: true,
       },
       // Foreign: arbitrary processes that merely mention the UDID/port.
       {
         name: 'a node process whose args carry the UDID and ports',
         args: `node /lanes/other/tools/forward.js usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: 'node',
+        executable: 'node',
         owned: false,
       },
       {
         name: 'python -c whose code string mentions the command',
         args: `${PY} -c import os; os.system("pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}")`,
-        comm: PY,
+        executable: PY,
         owned: false,
       },
       {
         name: 'a python module that is NOT pymobiledevice3',
         args: `${PY} -m other.tool usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: PY,
+        executable: PY,
         owned: false,
       },
       {
         name: 'an unrelated script name next to a python interpreter',
         args: `${PY} /usr/local/bin/not-pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: PY,
+        executable: PY,
         owned: false,
       },
       // Foreign: right shape, wrong identity.
       {
         name: 'a PARTIAL hardware UDID as --serial value',
         args: `pymobiledevice3 usbmux forward --serial 00008101-001C ${PORT} ${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: false,
       },
       {
         name: 'a DIFFERENT device --serial',
         args: `pymobiledevice3 usbmux forward --serial ${OTHER_DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: false,
       },
       {
         name: 'a different LOCAL port argument',
         args: `pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT + 1} ${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: false,
       },
       {
         name: 'no --serial at all',
         args: `pymobiledevice3 usbmux forward ${PORT} ${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: false,
       },
       // Foreign: ambiguous / unrecognized command shapes fail closed.
       {
         name: 'an unrecognized extra option',
         args: `pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} --daemonize ${PORT} ${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: false,
       },
       {
         name: 'the --serial=value form (this runner never emits it)',
         args: `pymobiledevice3 usbmux forward --serial=${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: false,
       },
       {
         name: 'a non-numeric port argument',
         args: `pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT} usb:${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: false,
       },
       {
         name: 'a missing remote port argument',
         args: `pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT}`,
-        comm: 'pymobiledevice3',
+        executable: 'pymobiledevice3',
         owned: false,
       },
       {
         name: 'a non-python, non-pymobiledevice3 executable',
         args: `pymobiledevice3 usbmux forward --serial ${DEVICE_UDID} ${PORT} ${PORT}`,
-        comm: '/usr/bin/env',
+        executable: '/usr/bin/env',
         owned: false,
       },
     ]
 
     it.each(FORWARD_SHAPES.map((s) => [s.name, s] as const))('iOS device: %s', (_name, shape) => {
-      const listener = forwardListener(610, shape.args, shape.comm)
+      const listener = forwardListener(610, shape.args, shape.executable)
       const plan = classifyPortHolders(iosDeviceSpec(), { listeners: [listener], forwards: [] })
       if (shape.owned) {
         expect(plan).toEqual({ killPids: [610], removeForwardSerials: [], foreign: [] })

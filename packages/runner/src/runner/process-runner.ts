@@ -1,9 +1,10 @@
-import { type ChildProcess, spawn as nodeSpawn } from 'node:child_process'
+import { type ChildProcess, execFile, spawn as nodeSpawn } from 'node:child_process'
 import { createReadStream, existsSync, openSync } from 'node:fs'
 import {
   chmod,
   copyFile as fsCopyFile,
   readFile,
+  readlink,
   rm,
   writeFile as fsWriteFile,
 } from 'node:fs/promises'
@@ -275,22 +276,62 @@ export class NodeProcessRunner implements ProcessRunner {
 }
 
 /**
- * Observe one pid's kernel-reported executable path (`ps -ww -o comm=`) and command line
- * (`ps -ww -o args=`). Returns undefined when the process vanished between listing and
- * observation. Exported for the real-OS observation tests.
+ * Observe executable mappings independently of argv[0], plus the full command line.
+ * Only a confirmed vanished process is omitted; failed or unavailable observation fails closed.
+ * Exported for the real-OS observation tests.
  */
 export async function observeProcess(pid: number): Promise<PortListener | undefined> {
-  const [comm, args] = await Promise.all([
-    capturePs(['-ww', '-o', 'comm=', '-p', String(pid)]),
-    capturePs(['-ww', '-o', 'args=', '-p', String(pid)]),
+  try {
+    const [executablePaths, args] = await Promise.all([
+      observeExecutablePaths(pid),
+      captureObservation('ps', ['-ww', '-o', 'args=', '-p', String(pid)]),
+    ])
+    if (args.length === 0) throw new Error('ps returned no command line')
+    return { pid, executablePaths, args: args.trim() }
+  } catch (error) {
+    try {
+      process.kill(pid, 0)
+    } catch (probeError) {
+      if ((probeError as NodeJS.ErrnoException).code === 'ESRCH') return undefined
+    }
+    throw new Error(`cannot observe companion-port holder pid ${pid}: ${String(error)}`, {
+      cause: error,
+    })
+  }
+}
+
+async function observeExecutablePaths(pid: number): Promise<readonly string[]> {
+  if (process.platform === 'linux') return [await readlink(`/proc/${pid}/exe`)]
+  if (process.platform !== 'darwin') {
+    throw new Error(`executable observation is unsupported on ${process.platform}`)
+  }
+  // Darwin lsof enumerates mapped vnodes, including dylibs: no record is assumed to be first
+  // or uniquely executable. NUL-separated fields keep path boundaries independent of spaces.
+  const output = await captureObservation('lsof', [
+    '-nP',
+    '-a',
+    '-p',
+    String(pid),
+    '-d',
+    'txt',
+    '-F',
+    'n0',
   ])
-  if (comm === undefined || args === undefined) return undefined
-  return { pid, comm, args }
+  const names = output
+    .split('\0')
+    .map((field) => field.replace(/^\n/, ''))
+    .filter((field) => field.startsWith('n'))
+  // lsof may put a region-access error in a NAME field after reporting valid mappings.
+  if (names.length === 0 || names.some((field) => !field.startsWith('n/'))) {
+    throw new Error('lsof returned incomplete executable mappings')
+  }
+  const executablePaths = names.map((field) => field.slice(1))
+  return [...new Set(executablePaths)]
 }
 
 /**
- * LISTEN holders of `port` with their executable path and command line; a pid that exits
- * between the lsof listing and the ps observation is dropped.
+ * LISTEN holders of `port` with executable mappings and command lines; a pid that exits
+ * between the listing and observation is dropped.
  */
 export async function observePortListeners(port: number): Promise<PortListener[]> {
   const pids = await lsofPids(port)
@@ -302,38 +343,39 @@ export async function observePortListeners(port: number): Promise<PortListener[]
   return listeners
 }
 
-/** One `ps` column value for a pid; undefined when ps fails or the pid is gone. */
-function capturePs(args: string[]): Promise<string | undefined> {
-  return new Promise((resolve) => {
-    const child = nodeSpawn('ps', args, { stdio: ['ignore', 'pipe', 'ignore'] })
-    let out = ''
-    child.stdout?.on('data', (chunk: Buffer) => {
-      out += chunk.toString()
-    })
-    child.on('error', () => resolve(undefined))
-    child.on('close', (code) => resolve(code === 0 ? out.trim() : undefined))
+/** lsof exits 1 without output when no files match; every other failure is an observation error. */
+function captureObservation(command: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      command,
+      args,
+      { encoding: 'utf8', timeout: 5_000, maxBuffer: 1024 * 1024 },
+      (error, stdout, stderr) => {
+        if (command === 'lsof' && error?.code === 1 && stdout === '' && stderr === '') {
+          resolve('')
+        } else if (error || stderr !== '') {
+          reject(
+            new Error(`${command} observation failed: ${stderr.trim() || String(error)}`, {
+              cause: error,
+            }),
+          )
+        } else {
+          resolve(stdout)
+        }
+      },
+    )
   })
 }
 
-/** `lsof -nP -iTCP:<port> -sTCP:LISTEN -t` pid list; [] when lsof is unavailable. */
-function lsofPids(port: number): Promise<number[]> {
-  return new Promise((resolve) => {
-    const child = nodeSpawn('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'], {
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-    let out = ''
-    child.stdout?.on('data', (chunk: Buffer) => {
-      out += chunk.toString()
-    })
-    child.on('error', () => resolve([]))
-    child.on('close', () => {
-      const pids = out
-        .split('\n')
-        .map((line) => Number.parseInt(line.trim(), 10))
-        .filter((pid) => Number.isInteger(pid) && pid > 0)
-      resolve(pids)
-    })
-  })
+/** The listener list must be complete before any ownership decision permits a kill. */
+async function lsofPids(port: number): Promise<number[]> {
+  const output = await captureObservation('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'])
+  if (output.trim() === '') return []
+  const lines = output.trim().split('\n')
+  if (lines.some((line) => !/^[1-9]\d*$/.test(line) || !Number.isSafeInteger(Number(line)))) {
+    throw new Error(`lsof returned an invalid listener pid for companion port ${port}`)
+  }
+  return [...new Set(lines.map(Number))]
 }
 
 export function resolvePackageBin(bin: string, cwd = process.cwd()): string {

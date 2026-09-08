@@ -1,17 +1,18 @@
 import type { FreePortSpec, PortOwner } from '../plan/types'
 
 /**
- * A host process LISTENing on the companion port (`lsof`), with its kernel-reported executable
- * path (`ps -o comm=`) and command line (`ps -o args=`).
+ * A host process LISTENing on the companion port, with OS-observed executable paths and
+ * its full command line (`ps -o args=`).
  *
- * `comm` is authoritative process identity: it cannot be influenced by argv, so ownership is
- * anchored on it wherever possible. `args` is the space-joined argv (quoting is NOT preserved),
- * so it is only consumed in tokenized structural form and any shape that cannot be parsed
- * faithfully fails closed (foreign).
+ * macOS supplies all `lsof -d txt` mapped paths, including libraries; Linux supplies
+ * `/proc/<pid>/exe`. No ordering or unique-executable claim is made for macOS mappings.
+ * These paths anchor cooperative lane attribution independently of argv[0]; they do not
+ * authenticate a binary against a malicious same-user process. `args` is space-joined argv
+ * (quoting is NOT preserved), so unrecognized tokenized shapes fail closed (foreign).
  */
 export interface PortListener {
   readonly pid: number
-  readonly comm: string
+  readonly executablePaths: readonly string[]
   readonly args: string
 }
 
@@ -73,32 +74,33 @@ function ownsListener(spec: FreePortSpec, listener: PortListener): boolean {
 }
 
 /**
- * Sim-hosted companion: the observed executable must be the configured XCTest runner
+ * Sim-hosted companion: an observed executable mapping must be the configured XCTest runner
  * (`<uitestScheme>-Runner`) inside the SELECTED simulator's CoreSimulator device path. Both the
  * device-path component (exact UDID match — a partial ID is foreign) and the app/executable
- * basename must match; an unrelated app on the same simulator is foreign. Anchoring on `comm`
- * (not args) means a process whose arguments merely mention the path is never claimed.
+ * basename must match; an unrelated app on the same simulator is foreign. A process whose
+ * arguments merely mention the path is never claimed.
  */
 function ownsSimulatorCompanion(
   owner: Extract<PortOwner, { platform: 'ios'; kind: 'simulator' }>,
   listener: PortListener,
 ): boolean {
-  const executable = listener.comm
-  if (!executable.endsWith(`/${owner.runnerExecutable}.app/${owner.runnerExecutable}`)) {
-    return false
-  }
-  const components = executable.split('/')
-  const devices = components.findIndex(
-    (component, i) => component === 'CoreSimulator' && components[i + 1] === 'Devices',
-  )
-  return devices !== -1 && components[devices + 2] === owner.simUdid
+  return listener.executablePaths.some((executable) => {
+    if (!executable.endsWith(`/${owner.runnerExecutable}.app/${owner.runnerExecutable}`)) {
+      return false
+    }
+    const components = executable.split('/')
+    const devices = components.findIndex(
+      (component, i) => component === 'CoreSimulator' && components[i + 1] === 'Devices',
+    )
+    return devices !== -1 && components[devices + 2] === owner.simUdid
+  })
 }
 
 /**
  * Physical-device companion: the host-side holder is the `pymobiledevice3 usbmux forward` process
  * this runner emits. Recognition requires all of:
  *
- * - the kernel-reported executable is a Python interpreter or pymobiledevice3 itself — never node
+ * - an OS-observed executable mapping is a Python interpreter or pymobiledevice3 itself — never node
  *   or an arbitrary argv-mention (`ps` rewrites a shebang script's argv to `interpreter script …`,
  *   so the entry point is identified positionally, not by substring);
  * - the command shape is exactly `usbmux forward --serial <hardware UDID> <local> <remote>` in
@@ -114,8 +116,11 @@ function ownsDeviceForward(
   port: number,
   listener: PortListener,
 ): boolean {
-  const commBase = basename(listener.comm)
-  if (commBase !== 'pymobiledevice3' && !isPythonInterpreter(commBase)) return false
+  const hasForwardExecutable = listener.executablePaths.some((executable) => {
+    const name = basename(executable)
+    return name === 'pymobiledevice3' || isPythonInterpreter(name)
+  })
+  if (!hasForwardExecutable) return false
 
   const tokens = listener.args.split(/\s+/).filter((token) => token.length > 0)
   const rest = forwardArgv(tokens)
