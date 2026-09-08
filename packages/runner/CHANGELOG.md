@@ -11,7 +11,6 @@
   booted simulator, and killed whatever held the companion port. On a host running
   more than one lane, that silently corrupted another run's devices. Each of those
   behaviours is now off by default and restored by one named opt-in:
-
   - `ios.adoptUnownedDevice` / `android.adoptUnownedDevice` — adopt a booted device
     when `--device` is absent. Without it, the run fails at stage `device` naming
     the candidates it will not choose.
