@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { buildDryRunPlan } from './build-plan'
 import { configFixture } from './fixtures'
+import type { Plan } from './plan/types'
 import { renderPlan } from './print-plan'
+
+const stepAction = (plan: Plan, id: string) => plan.steps.find((step) => step.id === id)?.action
 
 describe('buildDryRunPlan', () => {
   it('threads the project cwd into project-bound package-bin and shell commands', () => {
@@ -23,6 +26,33 @@ describe('buildDryRunPlan', () => {
       packageBin: true,
       cwd: '/app',
     })
+  })
+
+  it('runs the app lifecycle in the project root and Playwright in the config directory (REQ-CFG-007)', () => {
+    const opts = { projectCwd: '/repo/app', configCwd: '/repo/app-e2e' }
+    const ios = buildDryRunPlan(configFixture(), 'ios', opts)
+    const android = buildDryRunPlan(configFixture(), 'android', opts)
+
+    for (const id of [
+      'ios.prebuild',
+      'ios.scaffold',
+      'ios.pods',
+      'ios.build-app',
+      'ios.companion-start',
+      'metro.start',
+    ]) {
+      expect(stepAction(ios, id), id).toMatchObject({ command: { cwd: '/repo/app' } })
+    }
+    expect(stepAction(ios, 'ios.install-app')).toMatchObject({ spec: { cwd: '/repo/app' } })
+    expect(stepAction(android, 'android.prebuild')).toMatchObject({ command: { cwd: '/repo/app' } })
+    expect(stepAction(android, 'android.gradle')).toMatchObject({
+      command: { cwd: '/repo/app/android' },
+    })
+    expect(stepAction(android, 'android.install-app')).toMatchObject({
+      command: { args: expect.arrayContaining([expect.stringMatching(/^\/repo\/app\//)]) },
+    })
+    expect(ios.playwright).toMatchObject({ command: 'playwright', cwd: '/repo/app-e2e' })
+    expect(android.playwright).toMatchObject({ command: 'playwright', cwd: '/repo/app-e2e' })
   })
 
   it('uses the default Expo package-bin Metro start when no custom command is configured', () => {

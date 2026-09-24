@@ -193,7 +193,8 @@ depend on transient Playwright setup state for prebuild decisions.
 - **REQ-CFG-005** A platform absent from config is a hard error only when that
   platform is selected; `--platform all` with only `ios` configured fails fast
   naming `android` as unconfigured.
-- **REQ-CFG-006** Config is validated against the app package next to it: when
+- **REQ-CFG-006** Config is validated against the app package in the project
+  root (REQ-CFG-007): when
   `expo-dev-client` is declared in that `package.json` (dependencies or
   devDependencies), a selected platform whose `launch.kind` is `plain` fails
   validation naming the field, the package.json path, and the dev-client fix.
@@ -201,6 +202,15 @@ depend on transient Playwright setup state for prebuild decisions.
   registers a Hermes target; on a simulator that once opened a Metro URL the
   launcher reloads it silently, so the defect otherwise only surfaces on a fresh
   device as a Hermes-target timeout. No package.json means no project check.
+- **REQ-CFG-007** The project root is the Expo app directory: `projectRoot`
+  resolved against the config file's directory, or that directory when unset.
+  Expo, CocoaPods, Gradle, Metro and the XCTest scaffold run there, and native
+  paths (built APKs, runtime and token files) resolve against it. Playwright runs
+  in the config file's directory, and the companion scaffold binary resolves from
+  it, so a package separate from the app can own the runner and its
+  dependencies. A `projectRoot` that is not a directory fails at the config
+  stage naming the resolved path. Hook steps keep their own `cwd`, or the
+  invocation directory when they name none.
 
 ### CLI surface & platform selection — `REQ-CLI-*`
 

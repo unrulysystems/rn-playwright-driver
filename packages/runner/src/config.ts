@@ -233,6 +233,14 @@ export interface PlaywrightConfig {
 }
 
 export interface RnDriverConfig {
+  /**
+   * The Expo app directory, relative to this config file. Defaults to the
+   * config file's directory. Expo, CocoaPods, Gradle and Metro run here and
+   * native paths resolve against it; Playwright and the XCTest companion
+   * scaffold still resolve from the config file's directory, so a separate
+   * e2e package can own the runner and its dependencies (REQ-CFG-007).
+   */
+  projectRoot?: string
   metro?: MetroConfig
   ios?: IosConfig
   android?: AndroidConfig

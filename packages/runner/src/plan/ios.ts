@@ -18,8 +18,13 @@ export interface PlanIosInput {
   readonly resolved: ResolvedIosTarget
   readonly playwright: PlaywrightConfig | undefined
   readonly timeoutMs: number | undefined
-  /** Project/config directory for commands that run relative to the app workspace. */
+  /** App directory: Expo, native builds, Metro and native paths run relative to it. */
   readonly projectCwd?: string
+  /**
+   * Directory of the rn-driver config file. Playwright runs here. Defaults to
+   * `projectCwd`; differs only when the config sets `projectRoot` (REQ-CFG-007).
+   */
+  readonly configCwd?: string
   /** Positional spec paths; override the config spec list when non-empty. */
   readonly specs: readonly string[]
   /** Args after `--`; always appended to the Playwright invocation. */
@@ -38,7 +43,8 @@ export interface PlanIosInput {
  * from the same `0600` file so token material stays out of argv/env/log output.
  */
 export function planIos(input: PlanIosInput): Plan {
-  const { ios, metro, resolved, playwright, timeoutMs, projectCwd, specs, passthrough } = input
+  const { ios, metro, resolved, playwright, timeoutMs, projectCwd, configCwd, specs, passthrough } =
+    input
   const isDevClient = ios.launch.kind === 'expo-dev-client'
   const runtimeConfigFile = projectPath(projectCwd, resolved.runtimeConfigFile)
 
@@ -479,7 +485,7 @@ export function planIos(input: PlanIosInput): Plan {
     steps,
     cleanup,
     driverEnv: buildIosDriverEnv(resolved, metro, timeoutMs, ios.bundleId),
-    playwright: playwrightCommand(playwright, specs, passthrough, projectCwd),
+    playwright: playwrightCommand(playwright, specs, passthrough, configCwd ?? projectCwd),
   }
 }
 

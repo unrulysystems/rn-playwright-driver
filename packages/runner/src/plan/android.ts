@@ -11,8 +11,13 @@ export interface PlanAndroidInput {
   readonly resolved: ResolvedAndroidTarget
   readonly playwright: PlaywrightConfig | undefined
   readonly timeoutMs: number | undefined
-  /** Project/config directory for commands that run relative to the app workspace. */
+  /** App directory: Expo, native builds, Metro and native paths run relative to it. */
   readonly projectCwd?: string
+  /**
+   * Directory of the rn-driver config file. Playwright runs here. Defaults to
+   * `projectCwd`; differs only when the config sets `projectRoot` (REQ-CFG-007).
+   */
+  readonly configCwd?: string
   /** Positional spec paths; override the config spec list when non-empty. */
   readonly specs: readonly string[]
   /** Args after `--`; always appended to the Playwright invocation. */
@@ -39,6 +44,7 @@ export function planAndroid(input: PlanAndroidInput): Plan {
     playwright,
     timeoutMs,
     projectCwd,
+    configCwd,
     specs,
     passthrough,
     hermesDeviceName,
@@ -346,7 +352,7 @@ export function planAndroid(input: PlanAndroidInput): Plan {
       timeoutMs,
       android.packageName,
     ),
-    playwright: playwrightCommand(playwright, specs, passthrough, projectCwd),
+    playwright: playwrightCommand(playwright, specs, passthrough, configCwd ?? projectCwd),
   }
 }
 

@@ -32,4 +32,4 @@ export type {
   Step,
   StepAction,
 } from './plan/types'
-export { readProjectContext } from './load-config'
+export { readProjectContext, resolveProjectRoot } from './load-config'

@@ -51,8 +51,8 @@ afterEach(async () => {
 })
 
 describe('resolveIosTarget', () => {
-  it('resolves the scaffold binary from the loaded config project cwd', async () => {
-    const projectCwd = await hoistedProjectWithCompanion()
+  it('resolves the scaffold binary from the config directory', async () => {
+    const configCwd = await hoistedProjectWithCompanion()
     const ios: IosConfig = {
       bundleId: 'com.example.app',
       workspace: 'ios/App.xcworkspace',
@@ -63,9 +63,9 @@ describe('resolveIosTarget', () => {
       adoptUnownedDevice: true,
     }
 
-    const resolved = await resolveIosTarget(ios, resolveMetro({}), { projectCwd })
+    const resolved = await resolveIosTarget(ios, resolveMetro({}), { configCwd })
 
-    const root = await realpath(path.dirname(path.dirname(projectCwd)))
+    const root = await realpath(path.dirname(path.dirname(configCwd)))
     expect(resolved.scaffoldBin).toBe(
       path.join(root, 'node_modules', COMPANION_PACKAGE, 'bin', 'scaffold.js'),
     )
@@ -73,7 +73,7 @@ describe('resolveIosTarget', () => {
   })
 
   it('resolves the scaffold dependency before touching simulators', async () => {
-    const projectCwd = await projectWithoutCompanion()
+    const configCwd = await projectWithoutCompanion()
     const ios: IosConfig = {
       bundleId: 'com.example.app',
       workspace: 'ios/App.xcworkspace',
@@ -81,7 +81,7 @@ describe('resolveIosTarget', () => {
       launch: { mode: 'launch', kind: 'plain' },
     }
 
-    await expect(resolveIosTarget(ios, resolveMetro({}), { projectCwd })).rejects.toThrow(
+    await expect(resolveIosTarget(ios, resolveMetro({}), { configCwd })).rejects.toThrow(
       /Cannot find module/,
     )
     expect(execFileMock).not.toHaveBeenCalled()

@@ -49,6 +49,16 @@ describe('validateConfig', () => {
     )
   })
 
+  it('accepts a projectRoot path and rejects a non-string or empty one (REQ-CFG-007)', () => {
+    expect(validateConfig({ ...configFixture(), projectRoot: '../app' }, ['ios']).ok).toBe(true)
+    for (const projectRoot of [42, '', '  ']) {
+      const result = validateConfig({ ...configFixture(), projectRoot }, ['ios'])
+      expect(result.errors).toContainEqual(
+        expect.stringContaining('config.projectRoot: required non-empty string'),
+      )
+    }
+  })
+
   it('accepts a target hook function', () => {
     const result = validateConfig(
       {

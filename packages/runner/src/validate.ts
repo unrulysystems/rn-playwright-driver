@@ -22,7 +22,15 @@ const LAUNCH_MODES = ['launch', 'activate', 'attach'] as const
 const LAUNCH_KINDS = ['plain', 'expo-dev-client'] as const
 const IOS_TARGET_KINDS = ['simulator', 'device'] as const
 
-const TOP_LEVEL_KEYS = new Set(['metro', 'ios', 'android', 'playwright', 'hooks', 'timeoutMs'])
+const TOP_LEVEL_KEYS = new Set([
+  'projectRoot',
+  'metro',
+  'ios',
+  'android',
+  'playwright',
+  'hooks',
+  'timeoutMs',
+])
 const METRO_KEYS = new Set(['url', 'command', 'host', 'port', 'reuseExisting', 'readyTimeoutMs'])
 const LAUNCH_KEYS = new Set(['mode', 'kind', 'initialUrl'])
 const COMPANION_KEYS = new Set(['port', 'readyTimeoutMs', 'freeUnownedPort'])
@@ -78,6 +86,9 @@ export function validateConfig(
   }
 
   reportUnknownKeys('config', config, TOP_LEVEL_KEYS, errors)
+  if (config.projectRoot !== undefined) {
+    requireString('config.projectRoot', config.projectRoot, errors)
+  }
   if (config.timeoutMs !== undefined && !isPositiveNumber(config.timeoutMs)) {
     errors.push('config.timeoutMs: expected a positive number')
   }

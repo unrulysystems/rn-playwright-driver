@@ -18,8 +18,13 @@ export interface MetroOverrides {
 
 export interface BuildPlanOptions {
   readonly metroOverrides?: MetroOverrides
-  /** Project/config directory for commands that run relative to the app workspace. */
+  /** App directory: Expo, native builds, Metro and native paths run relative to it. */
   readonly projectCwd?: string
+  /**
+   * Directory of the rn-driver config file. Playwright runs here. Defaults to
+   * `projectCwd`; differs only when the config sets `projectRoot` (REQ-CFG-007).
+   */
+  readonly configCwd?: string
   /** Positional spec paths; override the config spec list when non-empty. */
   readonly specs?: readonly string[]
   /** Args after `--`; always appended to the Playwright invocation. */
@@ -51,6 +56,7 @@ export function buildDryRunPlan(
       playwright: config.playwright,
       timeoutMs: config.timeoutMs,
       ...(opts.projectCwd ? { projectCwd: opts.projectCwd } : {}),
+      ...(opts.configCwd ? { configCwd: opts.configCwd } : {}),
       specs,
       passthrough,
     })
@@ -68,6 +74,7 @@ export function buildDryRunPlan(
     playwright: config.playwright,
     timeoutMs: config.timeoutMs,
     ...(opts.projectCwd ? { projectCwd: opts.projectCwd } : {}),
+    ...(opts.configCwd ? { configCwd: opts.configCwd } : {}),
     specs,
     passthrough,
     hermesDeviceName,

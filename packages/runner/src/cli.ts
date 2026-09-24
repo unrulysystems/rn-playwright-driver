@@ -5,7 +5,12 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 import { buildDryRunPlan } from './build-plan'
 import type { Platform, RnDriverConfig } from './config'
-import { ConfigNotFoundError, loadConfig, readProjectContext } from './load-config'
+import {
+  ConfigNotFoundError,
+  loadConfig,
+  readProjectContext,
+  resolveProjectRoot,
+} from './load-config'
 import { planAndroid } from './plan/android'
 import { planIos } from './plan/ios'
 import { resolveMetro } from './plan/resolved'
@@ -70,12 +75,14 @@ export async function run(argv: string[]): Promise<number> {
 
   let config: RnDriverConfig
   let projectCwd = process.cwd()
+  let configCwd = process.cwd()
   try {
     const loaded = await loadConfig({
       cwd: process.cwd(),
       ...(flags.config ? { configPath: flags.config } : {}),
     })
-    projectCwd = path.dirname(loaded.path)
+    configCwd = path.dirname(loaded.path)
+    projectCwd = resolveProjectRoot(loaded.path, loaded.config)
     assertValid(loaded.config, platforms, await readProjectContext(projectCwd))
     config = loaded.config
   } catch (error) {
@@ -110,7 +117,7 @@ export async function run(argv: string[]): Promise<number> {
     try {
       for (const platform of platforms) {
         process.stdout.write(
-          `${renderPlan(buildDryRunPlan(config, platform, { projectCwd, specs, passthrough }))}\n\n`,
+          `${renderPlan(buildDryRunPlan(config, platform, { projectCwd, configCwd, specs, passthrough }))}\n\n`,
         )
       }
     } catch (error) {
@@ -155,6 +162,7 @@ export async function run(argv: string[]): Promise<number> {
         logDir,
         flags,
         projectCwd,
+        configCwd,
         specs,
         passthrough,
       })
@@ -172,6 +180,7 @@ interface RunContext {
   readonly logDir: string
   readonly flags: CliFlags
   readonly projectCwd: string
+  readonly configCwd: string
   readonly specs: readonly string[]
   readonly passthrough: readonly string[]
 }
@@ -258,7 +267,7 @@ async function buildPlatformPlan(
     if (!config.ios) throw new Error('config.ios is required for the ios platform')
     const resolved = await resolveIosTarget(config.ios, metro, {
       ...deviceOpt(ctx.flags.device),
-      projectCwd: ctx.projectCwd,
+      configCwd: ctx.configCwd,
     })
     try {
       const plan = planIos({
@@ -268,6 +277,7 @@ async function buildPlatformPlan(
         playwright: config.playwright,
         timeoutMs: config.timeoutMs,
         projectCwd: ctx.projectCwd,
+        configCwd: ctx.configCwd,
         specs: ctx.specs,
         passthrough: ctx.passthrough,
       })
@@ -294,6 +304,7 @@ async function buildPlatformPlan(
       playwright: config.playwright,
       timeoutMs: config.timeoutMs,
       projectCwd: ctx.projectCwd,
+      configCwd: ctx.configCwd,
       specs: ctx.specs,
       passthrough: ctx.passthrough,
       hermesDeviceName: deviceName,

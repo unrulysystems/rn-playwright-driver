@@ -33,7 +33,7 @@ export interface ResolvedIosTargetBase {
   readonly runtimeConfigFile: string
   /**
    * Absolute path to the `rn-driver-xctest-scaffold` entry, resolved hoist-safely
-   * from the project cwd (works in Yarn-berry monorepos where the bin is hoisted to
+   * from the config file's directory (works in Yarn-berry monorepos where the bin is hoisted to
    * the repo root). Spawned as `node <scaffoldBin>`.
    */
   readonly scaffoldBin: string
