@@ -47,6 +47,8 @@ Create `rn-driver.config.ts` in your test workspace:
 import { defineRnDriverConfig } from '@unrulysystems/rn-playwright-driver-runner'
 
 export default defineRnDriverConfig({
+  // The Expo app directory, relative to this file; defaults to this file's directory.
+  // projectRoot: '../app',
   metro: {
     command: 'npx expo start --localhost --port 8081',
     // reuseExisting: true,   // attach to an already-running packager
@@ -108,6 +110,14 @@ export default defineRnDriverConfig({
 A plain (non dev-client) Expo app uses `launch: { mode: 'launch', kind: 'plain' }`
 on both platforms. The companion launches the app itself on iOS; Android launches
 the configured `packageName`/`activity` directly.
+
+### A test workspace separate from the app
+
+`projectRoot` lets a package beside the app own the runner, the companions and
+Playwright, so the app declares none of them. Expo, CocoaPods, Gradle and Metro run
+in `projectRoot` and native paths resolve against it; Playwright and the XCTest
+companion scaffold resolve from the config file's directory. REQ-CFG-006 checks the
+`package.json` in `projectRoot`.
 
 For Expo dev-client, the host owns native app launch so the app starts on the
 test Metro instead of stopping at the launcher UI:

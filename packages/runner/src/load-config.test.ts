@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { ConfigNotFoundError, loadConfig, readProjectContext } from './load-config'
+import {
+  ConfigNotFoundError,
+  loadConfig,
+  readProjectContext,
+  resolveProjectRoot,
+} from './load-config'
+import { ConfigValidationError } from './validate'
 
 describe('loadConfig', () => {
   it('loads an explicit config path and extracts the default export', async () => {
@@ -71,5 +77,40 @@ describe('readProjectContext (REQ-CFG-006)', () => {
 
   it('propagates read failures other than a missing file', async () => {
     await expect(readProjectContext('/proj', failWith('EACCES'))).rejects.toThrow('EACCES')
+  })
+})
+
+const onlyDirectory =
+  (dir: string) =>
+  (p: string): boolean =>
+    p === dir
+
+describe('resolveProjectRoot (REQ-CFG-007)', () => {
+  const configPath = '/repo/apps/app-e2e/rn-driver.config.mjs'
+
+  it('is the config directory when projectRoot is unset', () => {
+    expect(resolveProjectRoot(configPath, {}, () => false)).toBe('/repo/apps/app-e2e')
+  })
+
+  it('resolves projectRoot against the config directory', () => {
+    const isDirectory = onlyDirectory('/repo/apps/app')
+    expect(resolveProjectRoot(configPath, { projectRoot: '../app' }, isDirectory)).toBe(
+      '/repo/apps/app',
+    )
+  })
+
+  it('refuses a projectRoot that is not a directory, naming the resolved path', () => {
+    expect(() =>
+      resolveProjectRoot(configPath, { projectRoot: '../missing' }, () => false),
+    ).toThrow(ConfigValidationError)
+    expect(() =>
+      resolveProjectRoot(configPath, { projectRoot: '../missing' }, () => false),
+    ).toThrow('config.projectRoot: /repo/apps/missing is not a directory')
+  })
+
+  it('leaves a mistyped projectRoot to validation', () => {
+    expect(resolveProjectRoot(configPath, { projectRoot: 42 }, () => false)).toBe(
+      '/repo/apps/app-e2e',
+    )
   })
 })

@@ -21,8 +21,11 @@ const run = promisify(execFile)
 export interface ResolveOptions {
   /** Explicit device id/serial/destination override from the CLI. */
   readonly device?: string
-  /** Project/config directory for package resolution that belongs to the app workspace. */
-  readonly projectCwd?: string
+  /**
+   * Directory of the rn-driver config file; the XCTest companion scaffold is
+   * resolved from here, where the package declaring the runner installs it.
+   */
+  readonly configCwd?: string
 }
 
 /**
@@ -36,12 +39,12 @@ export async function resolveIosTarget(
   opts: ResolveOptions,
 ): Promise<ResolvedIosTarget> {
   const scheme = uitestScheme(ios)
-  // Resolve the scaffold bin from the project cwd (same one the runner executes
-  // under) so a hoisted monorepo finds the repo-root-installed companion. This can
+  // Resolve the scaffold bin from the config directory, whose package declares the
+  // companion, walking up so a hoisted monorepo finds the repo-root install. This can
   // throw (companion not installed / no bin entry) — do it BEFORE simulator or
   // token-file side effects so a missing build dependency fails without touching
   // devices or orphaning a `0600` secret on disk.
-  const scaffoldBin = resolveScaffoldBin(opts.projectCwd ?? process.cwd())
+  const scaffoldBin = resolveScaffoldBin(opts.configCwd ?? process.cwd())
   if (ios.target === 'device') {
     const device = await selectPhysicalIosDevice(opts.device)
     const tokenFile = await mintTokenFile()

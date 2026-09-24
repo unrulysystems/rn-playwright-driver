@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -127,6 +127,53 @@ describe('run() --dry-run (REQ-CLI-002)', () => {
     expect(code).toBe(2)
     expect(stderr).toContain(
       `config.ios.launch.kind: "plain" but expo-dev-client is a dependency in ${packageJsonPath}`,
+    )
+    expect(stdout).not.toContain('Plan (ios)')
+  })
+
+  it('runs the app lifecycle in projectRoot and checks its package (REQ-CFG-007)', async () => {
+    const repo = path.dirname(configPath)
+    const appDir = path.join(repo, 'app')
+    const e2eDir = path.join(repo, 'app-e2e')
+    await mkdir(appDir)
+    await mkdir(e2eDir)
+    const e2eConfigPath = path.join(e2eDir, 'rn-driver.config.mjs')
+    await writeFile(
+      e2eConfigPath,
+      CONFIG_SRC.replace('export default {', "export default {\n  projectRoot: '../app',"),
+    )
+
+    const code = await run(['test', '--platform', 'ios', '--config', e2eConfigPath, '--dry-run'])
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      `expo prebuild --platform ios --no-install [package-bin] (cwd: ${appDir})`,
+    )
+    // An expo-dev-client beside the config is not the app's (REQ-CFG-006 reads projectRoot).
+    await writeFile(
+      path.join(e2eDir, 'package.json'),
+      JSON.stringify({ name: 'app-e2e', devDependencies: { 'expo-dev-client': '~56.0.0' } }),
+    )
+    expect(await run(['test', '--platform', 'ios', '--config', e2eConfigPath, '--dry-run'])).toBe(0)
+    expect(stdout).toMatch(new RegExp(`playwright test .*\\(cwd: ${e2eDir}\\)`))
+
+    const packageJsonPath = path.join(appDir, 'package.json')
+    await writeFile(
+      packageJsonPath,
+      JSON.stringify({ name: 'app', dependencies: { 'expo-dev-client': '~56.0.0' } }),
+    )
+    expect(await run(['test', '--platform', 'ios', '--config', e2eConfigPath, '--dry-run'])).toBe(2)
+    expect(stderr).toContain(`expo-dev-client is a dependency in ${packageJsonPath}`)
+  })
+
+  it('refuses a projectRoot that does not exist at the config stage (REQ-CFG-007)', async () => {
+    await writeFile(
+      configPath,
+      CONFIG_SRC.replace('export default {', "export default {\n  projectRoot: '../missing',"),
+    )
+    const code = await run(['test', '--platform', 'ios', '--config', configPath, '--dry-run'])
+    expect(code).toBe(2)
+    expect(stderr).toContain(
+      `config.projectRoot: ${path.resolve(path.dirname(configPath), '../missing')} is not a directory`,
     )
     expect(stdout).not.toContain('Plan (ios)')
   })

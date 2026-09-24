@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { ProjectContext } from './validate'
+import { ConfigValidationError, type ProjectContext } from './validate'
 
 /**
  * Loads an ES module by absolute path and returns its namespace. Injected in
@@ -81,7 +81,34 @@ function findConfigUp(startDir: string, fileExists: (p: string) => boolean): str
 }
 
 /**
- * Read the app package next to the config so validation can check the config
+ * The app directory the native lifecycle runs in (REQ-CFG-007): `projectRoot`
+ * resolved against the config file's directory, or that directory when unset.
+ * A `projectRoot` that is not a non-empty string resolves to the config
+ * directory so validation reports the field instead of a path error.
+ */
+export function resolveProjectRoot(
+  configPath: string,
+  config: unknown,
+  isDirectory: (p: string) => boolean = (p) => existsSync(p) && statSync(p).isDirectory(),
+): string {
+  const configDir = path.dirname(configPath)
+  const projectRoot =
+    typeof config === 'object' && config !== null
+      ? (config as Record<string, unknown>).projectRoot
+      : undefined
+  if (typeof projectRoot !== 'string' || projectRoot.trim() === '') return configDir
+
+  const resolved = path.resolve(configDir, projectRoot)
+  if (!isDirectory(resolved)) {
+    throw new ConfigValidationError([
+      `config.projectRoot: ${resolved} is not a directory (resolved from ${configDir})`,
+    ])
+  }
+  return resolved
+}
+
+/**
+ * Read the app package in the project root so validation can check the config
  * against what is installed (REQ-CFG-006). `undefined` when there is no
  * package.json; an unreadable one is an error naming the path.
  */
