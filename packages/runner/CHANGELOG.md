@@ -1,5 +1,11 @@
 # @unrulysystems/rn-playwright-driver-runner
 
+## 0.7.0
+
+### Minor Changes
+
+- [#54](https://github.com/unrulysystems/rn-playwright-driver/pull/54) [`ac56b56`](https://github.com/unrulysystems/rn-playwright-driver/commit/ac56b56d64c9e14ab6bdaa5d9e69d6c6966c9230) Thanks [@alleneubank](https://github.com/alleneubank)! - Add `projectRoot`: the Expo app directory, relative to the config file. Expo, native builds, Metro and native paths use it, while Playwright and the XCTest companion scaffold resolve from the config file's directory, so a test package separate from the app can own the runner and its dependencies. Unset, it is the config file's directory and nothing changes.
+
 ## 0.6.0
 
 ### Minor Changes
