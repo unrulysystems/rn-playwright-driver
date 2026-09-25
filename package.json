@@ -17,7 +17,7 @@
     "cpd": "nub run --filter '@unrulysystems/rn-playwright-driver' cpd && nub run --filter '@unrulysystems/rn-playwright-driver-runner' cpd && nub run --filter 'examples-basic-app' cpd",
     "check": "nub run typecheck && nub run lint && nub run format:check && nub run test",
     "changeset": "changeset",
-    "version": "changeset version",
+    "version": "changeset version && nub run format",
     "release": "nub run build && changeset publish",
     "prepare": "lefthook install"
   },
