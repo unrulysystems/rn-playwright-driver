@@ -86,11 +86,7 @@ function findConfigUp(startDir: string, fileExists: (p: string) => boolean): str
  * A `projectRoot` that is not a non-empty string resolves to the config
  * directory so validation reports the field instead of a path error.
  */
-export function resolveProjectRoot(
-  configPath: string,
-  config: unknown,
-  isDirectory: (p: string) => boolean = (p) => existsSync(p) && statSync(p).isDirectory(),
-): string {
+export function resolveProjectRoot(configPath: string, config: unknown): string {
   const configDir = path.dirname(configPath)
   const projectRoot =
     typeof config === 'object' && config !== null
@@ -99,7 +95,7 @@ export function resolveProjectRoot(
   if (typeof projectRoot !== 'string' || projectRoot.trim() === '') return configDir
 
   const resolved = path.resolve(configDir, projectRoot)
-  if (!isDirectory(resolved)) {
+  if (!existsSync(resolved) || !statSync(resolved).isDirectory()) {
     throw new ConfigValidationError([
       `config.projectRoot: ${resolved} is not a directory (resolved from ${configDir})`,
     ])
