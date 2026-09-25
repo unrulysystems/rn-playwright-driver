@@ -1,5 +1,11 @@
 # @unrulysystems/rn-playwright-driver-runner
 
+## 0.7.1
+
+### Patch Changes
+
+- [#58](https://github.com/unrulysystems/rn-playwright-driver/pull/58) [`dd18629`](https://github.com/unrulysystems/rn-playwright-driver/commit/dd186292115069fdb8972d3289ea3cbf6178ac83) Thanks [@alleneubank](https://github.com/alleneubank)! - `resolveProjectRoot` no longer takes an optional third `isDirectory` argument. It was a test seam. The function still checks that a `projectRoot` is a real directory, as before.
+
 ## 0.7.0
 
 ### Minor Changes
