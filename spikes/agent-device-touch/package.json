@@ -1,0 +1,16 @@
+{
+  "name": "agent-device-touch-spike",
+  "private": true,
+  "description": "Compile-only mapping from coordinate touch calls onto agent-device's published Node client. Not a package in the monorepo workspace.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "agent-device": "0.21.25"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3"
+  }
+}

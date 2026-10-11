@@ -72,7 +72,7 @@ Kernel-level touch injection via companion process. Enables system UI interactio
 
 Fallback to spawning idb/adb CLI commands for touch injection.
 
-- [ ] CliTouchBackend with idb support
+- [ ] CliTouchBackend with idb support. A 2026-10-11 spike recommends against replacing this seam with agent-device; see `docs/agent-device-backend.md`.
 - [x] CliTouchBackend with adb support
 
 ### Touch Backend Infrastructure
