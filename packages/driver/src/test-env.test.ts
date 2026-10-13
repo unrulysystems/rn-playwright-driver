@@ -61,6 +61,15 @@ describe('touchOptionsFromEnv', () => {
     expect(readTextFile).toHaveBeenCalledWith('/tmp/rn-token')
   })
 
+  it('forces the native-module backend without companion options', () => {
+    expect(touchOptionsFromEnv({ RN_TOUCH_BACKEND: 'native-module' }, () => '', undefined)).toEqual(
+      {
+        mode: 'force',
+        backend: 'native-module',
+      },
+    )
+  })
+
   it('uses the adb serial fallback order for the cli backend', () => {
     const result = touchOptionsFromEnv(
       {
