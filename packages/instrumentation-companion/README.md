@@ -4,6 +4,16 @@ Android instrumentation sidecar for `@unrulysystems/rn-playwright-driver`.
 It starts a small HTTP server in a separate instrumentation process and injects
 OS-level touch events through `UiAutomation.injectInputEvent`.
 
+This package is the `instrumentation` touch backend. It is not the launch path
+for `@unrulysystems/rn-driver-touch`. The in-app module looks up
+`Instrumentation` on the AndroidX test registries and returns `NOT_SUPPORTED`
+when that lookup fails. A plain app launch (`am start`) does not provide
+`Instrumentation`. `RNDriverTouchCompanion` extends `android.app.Instrumentation`
+and does not call `InstrumentationRegistry.registerInstance`, and the manifest
+below does not name `AndroidJUnitRunner`, so starting this companion does not
+fill the registry the native module reads. See the repository README section
+[Android native-module launch](../../README.md#android-native-module-launch).
+
 ## Consumption
 
 Install the package in the app under test and add the config plugin:

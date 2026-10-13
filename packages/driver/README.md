@@ -62,6 +62,23 @@ The default touch selection is companion-first and fail-closed:
 - Lower-fidelity `native-module` and `cli` backends are available only when
   explicitly selected.
 
+On Android, `@unrulysystems/rn-driver-touch` (`backend: "native-module"`, or
+`RN_TOUCH_BACKEND=native-module`) does not construct an `Instrumentation`. It
+reflects `getInstrumentation()` on
+`androidx.test.platform.app.InstrumentationRegistry` and then
+`androidx.test.InstrumentationRegistry`. A plain app launch does not provide
+`Instrumentation`: the runner starts the app with `am start` (`plain` activity
+or `expo-dev-client` deep link), and a failed lookup returns `NOT_SUPPORTED`.
+The module requires an app process already running under a registering
+instrumentation (`AndroidJUnitRunner` / `MonitoringInstrumentation`, which call
+`InstrumentationRegistry.registerInstance`). This repository does not launch
+the app that way. The companion `am instrument` target
+(`<package>.test/com.rndriver.touchcompanion.RNDriverTouchCompanion`) is the
+`instrumentation` backend; that class does not register with either registry.
+The repository README's
+[Android native-module launch](../../README.md#android-native-module-launch)
+section cites the source.
+
 See the companion package READMEs for platform launch steps:
 
 - `@unrulysystems/rn-playwright-driver-instrumentation-companion`
