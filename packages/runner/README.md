@@ -109,7 +109,17 @@ export default defineRnDriverConfig({
 
 A plain (non dev-client) Expo app uses `launch: { mode: 'launch', kind: 'plain' }`
 on both platforms. The companion launches the app itself on iOS; Android launches
-the configured `packageName`/`activity` directly.
+the configured `packageName`/`activity` directly with `am start -W -n
+<package>/<activity>`. An `expo-dev-client` Android app is also an `am start`
+(a `VIEW` deep link). Neither launch provides `android.app.Instrumentation` to
+`@unrulysystems/rn-driver-touch`. That module requires the app process to be
+running under a registering instrumentation (`AndroidJUnitRunner` /
+`MonitoringInstrumentation`). The runner's `am instrument` step starts the
+touch companion
+(`<package>.test/com.rndriver.touchcompanion.RNDriverTouchCompanion`) for the
+`instrumentation` backend and does not register `Instrumentation` for the
+in-app module. See
+[Android native-module launch](../../README.md#android-native-module-launch).
 
 ### A test workspace separate from the app
 

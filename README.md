@@ -301,9 +301,67 @@ The current source default is companion-first and fail-closed:
 - If the platform companion is not running, `auto` fails with setup diagnostics instead of silently falling back.
 - `instrumentation` is the Android confidence backend and injects input through the instrumentation process / `UiAutomation`.
 - `xctest` is the iOS confidence backend and drives input through XCTest.
-- `native-module` requires `@unrulysystems/rn-driver-touch` and is an explicit lower-fidelity in-app/current-window backend.
+- `native-module` requires `@unrulysystems/rn-driver-touch` and is an explicit lower-fidelity in-app/current-window backend. On Android, a plain app launch does not provide `Instrumentation`; see [Android native-module launch](#android-native-module-launch).
 - `cli` is an explicit Android adb backend for diagnostics and is limited to gestures expressible through adb input commands.
 - There is no JS harness touch fallback backend in the current release surface.
+
+### Android native-module launch
+
+`@unrulysystems/rn-driver-touch` injects Android touches from inside the app
+process. `RNDriverTouchInjectorModule.resolveInstrumentation()` does not
+construct an `android.app.Instrumentation`. It loads
+`androidx.test.platform.app.InstrumentationRegistry`, then
+`androidx.test.InstrumentationRegistry`, calls `getInstrumentation()`, and
+keeps the result only when that value is an `Instrumentation`
+(`packages/rn-driver-touch/android/src/main/java/expo/modules/rndrivertouch/RNDriverTouchInjectorModule.kt`).
+The module's `android/build.gradle` depends on `expo-modules-core`, the Kotlin
+stdlib, and `react-android`. It does not depend on `androidx.test`, so those
+registry classes are absent from an app APK that only links this module.
+
+A failed lookup makes every touch call return
+`{ success: false, code: "NOT_SUPPORTED", error: "Instrumentation not available. Run under Android instrumentation or install the touch companion." }`.
+
+Plain app launches do not provide `Instrumentation`. The runner starts the app
+with `am start` (`launchCommandFor` in `packages/runner/src/plan/android.ts`):
+
+- `launch.kind: "plain"` runs `am start -W -n <package>/<activity>`.
+- `launch.kind: "expo-dev-client"` runs
+  `am start -a android.intent.action.VIEW -d <scheme>://expo-development-client/?url=<metro-url>`.
+  The first launch's shell script force-stops the package and then runs that
+  `am start`. Later launches re-issue the deep link without the force-stop.
+
+Neither command is `am instrument`, so the app process is not an instrumentation
+process and neither registry is filled.
+
+The launch path `@unrulysystems/rn-driver-touch` requires is an app process in
+which one of those two registries already returns an `Instrumentation`.
+AndroidX `InstrumentationRegistry.getInstrumentation()` throws
+`IllegalStateException` ("No instrumentation registered! Must run under a
+registering instrumentation.") until `InstrumentationRegistry.registerInstance`
+has run. `androidx.test.runner.MonitoringInstrumentation.onCreate` registers
+both `androidx.test.platform.app.InstrumentationRegistry` and
+`androidx.test.InstrumentationRegistry`. `AndroidJUnitRunner` extends that
+class
+([`MonitoringInstrumentation`](https://github.com/android/android-test/blob/master/runner/monitor/java/androidx/test/runner/MonitoringInstrumentation.java),
+[`AndroidJUnitRunner`](https://github.com/android/android-test/blob/master/runner/android_junit_runner/java/androidx/test/runner/AndroidJUnitRunner.java)).
+This repository does not launch the app under `AndroidJUnitRunner`.
+
+The instrumentation companion is a separate touch backend. The runner and
+`packages/instrumentation-companion` start
+
+```text
+am instrument -e rnDriverAuthTokenFile <file> -e rnDriverPort <port> -w <package>.test/com.rndriver.touchcompanion.RNDriverTouchCompanion
+```
+
+`RNDriverTouchCompanion` extends `android.app.Instrumentation` and does not
+call `registerInstance`. The companion plugin writes an androidTest manifest
+that does not name `AndroidJUnitRunner`. The driver uses that process for
+`backend: "instrumentation"` (the Android `auto` default in
+`packages/driver/src/touch/index.ts`) over HTTP.
+`RN_TOUCH_BACKEND=native-module` forces `mode: "force"` and
+`backend: "native-module"` (`packages/driver/src/test-env.ts`), which still
+calls `RNDriverTouchInjector` in the app and still requires the registry lookup
+above. Installing the companion does not fill that registry.
 
 Example lower-fidelity Android CLI preference:
 

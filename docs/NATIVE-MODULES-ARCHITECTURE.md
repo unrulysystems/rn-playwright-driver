@@ -965,7 +965,7 @@ The driver supports multiple touch injection backends, organized in tiers by cap
 | Tier | Backend                                  | Injection Level                    | System UI | Network  | Requirements         |
 | ---- | ---------------------------------------- | ---------------------------------- | --------- | -------- | -------------------- |
 | 1    | XCTest (iOS) / Instrumentation (Android) | Kernel (IOHIDEvent / UiAutomation) | ✅        | ❌ Local | Companion process    |
-| 2    | Native Module (RNDriverTouchInjector)    | App (UIKit / MotionEvent)          | ❌        | ✅       | Native module in app |
+| 2    | Native Module (RNDriverTouchInjector)    | App (UIKit / Android Instrumentation) | ❌        | ✅       | Native module in app |
 | 3    | CLI (idb / adb)                          | Kernel                             | ✅        | ❌ Local | Tools installed      |
 
 ### Backend Selection
@@ -1078,23 +1078,18 @@ func synthesizeTap(at point: CGPoint) {
 }
 ```
 
-**Android (Kotlin)** - Uses `view.dispatchTouchEvent()` with `MotionEvent`:
-
-```kotlin
-// Synthesize touch via View event dispatch
-fun synthesizeTap(x: Float, y: Float) {
-  val view = findViewAt(activity.window.decorView, x, y) ?: return
-
-  val downTime = SystemClock.uptimeMillis()
-  val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0)
-  view.dispatchTouchEvent(down)
-  down.recycle()
-
-  val up = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0)
-  view.dispatchTouchEvent(up)
-  up.recycle()
-}
-```
+**Android (Kotlin)** — `RNDriverTouchInjectorModule` does not dispatch touches
+through `View.dispatchTouchEvent`. `resolveInstrumentation()` reflects
+`getInstrumentation()` on `androidx.test.platform.app.InstrumentationRegistry`,
+then `androidx.test.InstrumentationRegistry`, and accepts the result only when
+it is an `android.app.Instrumentation`. Injection goes through
+`instrumentation.uiAutomation.injectInputEvent`, with a fallback to
+`instrumentation.sendPointerSync`. A null lookup returns `NOT_SUPPORTED`
+(`"Instrumentation not available. Run under Android instrumentation or install the touch companion."`).
+The module's Gradle file does not depend on `androidx.test`. A plain `am start`
+does not provide `Instrumentation`. The launch path and the separate companion
+`am instrument` target are documented in the repository README under
+[Android native-module launch](../README.md#android-native-module-launch).
 
 #### Capabilities vs Limitations
 
