@@ -315,8 +315,7 @@ construct an `android.app.Instrumentation`. It loads
 keeps the result only when that value is an `Instrumentation`
 (`packages/rn-driver-touch/android/src/main/java/expo/modules/rndrivertouch/RNDriverTouchInjectorModule.kt`).
 The module's `android/build.gradle` depends on `expo-modules-core`, the Kotlin
-stdlib, and `react-android`. It does not depend on `androidx.test`, so those
-registry classes are absent from an app APK that only links this module.
+stdlib, and `react-android`. It does not declare a dependency on `androidx.test`.
 
 A failed lookup makes every touch call return
 `{ success: false, code: "NOT_SUPPORTED", error: "Instrumentation not available. Run under Android instrumentation or install the touch companion." }`.

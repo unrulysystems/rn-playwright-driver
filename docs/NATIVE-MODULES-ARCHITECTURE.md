@@ -965,7 +965,7 @@ The driver supports multiple touch injection backends, organized in tiers by cap
 | Tier | Backend                                  | Injection Level                    | System UI | Network  | Requirements         |
 | ---- | ---------------------------------------- | ---------------------------------- | --------- | -------- | -------------------- |
 | 1    | XCTest (iOS) / Instrumentation (Android) | Kernel (IOHIDEvent / UiAutomation) | ✅        | ❌ Local | Companion process    |
-| 2    | Native Module (RNDriverTouchInjector)    | App (UIKit / Android Instrumentation) | ❌        | ✅       | Native module in app |
+| 2    | Native Module (RNDriverTouchInjector)    | App (UIKit / MotionEvent)          | ❌        | ✅       | Native module in app |
 | 3    | CLI (idb / adb)                          | Kernel                             | ✅        | ❌ Local | Tools installed      |
 
 ### Backend Selection
