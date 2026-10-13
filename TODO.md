@@ -15,7 +15,7 @@ This checklist reflects the current source state and avoids older claims about a
 
 ## Release Blockers
 
-- [ ] Add targeted package tests for touch backend selection defaults and failure diagnostics.
+- [x] Add targeted package tests for touch backend selection defaults and failure diagnostics.
 - [x] Implement fixture env parsing for `RN_TOUCH_BACKEND` and `RN_TOUCH_INSTRUMENTATION_PORT`.
 - [ ] Add device-backed smoke coverage for `@unrulysystems/rn-driver-touch` on iOS DEBUG and Android Instrumentation.
 - [ ] Document the Android native-module launch requirement: plain app launches do not provide `Instrumentation`.
